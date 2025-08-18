@@ -3,13 +3,9 @@ import { PaginationParams } from "@/types/common";
 import { setupTokenInterceptors } from './tokenInterceptor';
 import { setupRequestMonitoring } from './httpInterceptor';
 
-const API_AUTH_BASE_URL = process.env.NODE_ENV === "development"
-  ? "http://localhost:5000/api/auth"
-  : "https://influencerstracker-back.vercel.app/api/auth";
+const API_AUTH_BASE_URL = "http://localhost:5000/api/auth";
 
-const API_BASE_URL = process.env.NODE_ENV === "development"
-  ? "http://localhost:5000/api"
-  : "https://influencerstracker-back.vercel.app/api";
+const API_BASE_URL = "http://localhost:5000/api";
 
 // Nueva URL para dubbinghits.app
 const DUBBINGHITS_API_AUTH_BASE_URL = process.env.NODE_ENV === "development"

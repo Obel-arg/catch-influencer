@@ -98,9 +98,7 @@ export class AuthService {
       const currentOrigin = window.location.origin;
       
       // Determinar la URL base según el entorno
-      const baseURL = process.env.NODE_ENV === "development"
-        ? "http://localhost:5000/api/auth"
-        : "https://influencerstracker-back.vercel.app/api/auth";
+      const baseURL = "http://localhost:5000/api/auth";
       
       // Llamar directamente al endpoint de Google Auth del backend
       // Esto permitirá que el backend detecte el dominio de origen

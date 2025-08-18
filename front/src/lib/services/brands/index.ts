@@ -290,15 +290,12 @@ export const brandService = {
     if (!externalUrl) return '';
     
     // Si ya es una URL del backend, devolverla tal como está
-    if (externalUrl.includes('influencerstracker-back.vercel.app') || 
-        externalUrl.includes('localhost:5000')) {
+    if (externalUrl.includes('localhost:5000')) {
       return externalUrl;
     }
     
     // Convertir URL externa a URL del proxy
-    const baseUrl = process.env.NODE_ENV === "development"
-      ? "http://localhost:5000/api"
-      : "https://influencerstracker-back.vercel.app/api";
+    const baseUrl = "http://localhost:5000/api";
     const encodedUrl = encodeURIComponent(externalUrl);
     return `${baseUrl}/proxy/image?url=${encodedUrl}`;
   },
@@ -310,8 +307,7 @@ export const brandService = {
     if (!logoUrl) return '';
     
     // Si ya es una URL del backend, devolverla tal como está
-    if (logoUrl.includes('influencerstracker-back.vercel.app') || 
-        logoUrl.includes('localhost:5000')) {
+    if (logoUrl.includes('localhost:5000')) {
       return logoUrl;
     }
     

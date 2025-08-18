@@ -195,9 +195,7 @@ export const setupTokenInterceptors = (axiosInstance: any) => {
           }
 
           // Intentar refrescar el token
-          const backendUrl = process.env.NODE_ENV === "development"
-            ? "http://localhost:5000/api/auth"
-            : "https://influencerstracker-back.vercel.app/api/auth";
+          const backendUrl = "http://localhost:5000/api/auth";
 
           const response = await fetch(`${backendUrl}/refresh`, {
             method: 'POST',

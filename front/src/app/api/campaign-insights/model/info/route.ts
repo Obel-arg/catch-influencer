@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
   try {
     // URL del backend
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://influencerstracker-back.vercel.app/api';
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
     const targetUrl = `${backendUrl}/campaign-insights/model/info`;
     
     console.log('🔄 Proxying model info request to:', targetUrl);

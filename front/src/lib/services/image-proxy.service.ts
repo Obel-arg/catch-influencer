@@ -1,9 +1,7 @@
 import { httpApiClient } from '@/lib/http';
 
 // Obtener la URL base del API desde la configuración
-const backendUrl = process.env.NODE_ENV === "development"
-  ? "http://localhost:5000"
-  : "https://influencerstracker-back.vercel.app";
+const backendUrl = "http://localhost:5000";
 
 export class ImageProxyService {
   /**
