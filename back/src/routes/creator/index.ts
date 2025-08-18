@@ -1,0 +1,1 @@
+export { default as creatorRoutes } from './creator.routes'; 

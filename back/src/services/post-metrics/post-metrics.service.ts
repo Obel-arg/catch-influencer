@@ -1,0 +1,827 @@
+import { PostMetricsRepository } from '../../repositories/post-metrics.repository';
+import { CreatorDBService } from '../creator/creator.service';
+import { YouTubeMetricsService } from '../youtube/youtube-metrics.service';
+import { TikTokMetricsService } from '../tiktok/tiktok-metrics.service';
+import { TwitterMetricsService } from '../twitter/twitter-metrics.service';
+import { InstagramMetricsService } from '../instagram/instagram-metrics.service';
+import { postgresCacheService } from '../cache/postgres-cache.service';
+
+// Interface que coincide exactamente con la tabla del usuario
+interface UserPostMetrics {
+  id?: string;
+  post_id: string;
+  platform: 'youtube' | 'instagram' | 'tiktok' | 'twitter';
+  content_id: string;
+  post_url: string;
+  title?: string;
+  likes_count: number;
+  comments_count: number;
+  views_count: number;
+  engagement_rate: number;
+  platform_data?: any;
+  quota_used: number;
+  api_timestamp?: number;
+  api_success: boolean;
+  api_error?: string;
+  raw_response?: any;
+  created_at?: Date;
+  updated_at?: Date;
+}
+
+export class PostMetricsService {
+  private postMetricsRepository = new PostMetricsRepository();
+  private youtubeMetricsService = YouTubeMetricsService.getInstance();
+  private tiktokMetricsService = TikTokMetricsService.getInstance();
+  private twitterMetricsService = TwitterMetricsService.getInstance();
+  private instagramMetricsService = InstagramMetricsService.getInstance();
+
+  // Control de concurrencia para evitar procesamiento duplicado
+  private static processingPosts = new Set<string>();
+  private static processingLock = new Map<string, Promise<any>>();
+
+  /**
+   * Verifica si un post ya está siendo procesado
+   */
+  private isPostBeingProcessed(postId: string): boolean {
+    return PostMetricsService.processingPosts.has(postId);
+  }
+
+  /**
+   * Marca un post como en procesamiento
+   */
+  private markPostAsProcessing(postId: string): void {
+    PostMetricsService.processingPosts.add(postId);
+  }
+
+  /**
+   * Marca un post como procesado
+   */
+  private markPostAsProcessed(postId: string): void {
+    PostMetricsService.processingPosts.delete(postId);
+  }
+
+  /**
+   * Obtiene o crea un lock para un post específico
+   */
+  private async getProcessingLock(postId: string, processor: () => Promise<any>): Promise<any> {
+    // Si ya hay un lock para este post, esperar a que termine
+    if (PostMetricsService.processingLock.has(postId)) {
+      return await PostMetricsService.processingLock.get(postId);
+    }
+
+    // Crear nuevo lock
+    const lockPromise = processor().finally(() => {
+      PostMetricsService.processingLock.delete(postId);
+    });
+
+    PostMetricsService.processingLock.set(postId, lockPromise);
+    return lockPromise;
+  }
+
+  /**
+   * Utilidad para reintentos automáticos optimizada para velocidad
+   */
+  private async withRetries<T>(fn: () => Promise<T>, retries = 2, delayMs = 500): Promise<T> {
+    let lastError;
+    for (let i = 0; i < retries; i++) {
+      try {
+        return await fn();
+      } catch (err) {
+        lastError = err;
+        if (i < retries - 1) {
+          await new Promise(res => setTimeout(res, delayMs * (i + 1)));
+        }
+      }
+    }
+    throw lastError;
+  }
+
+  /**
+   * Utilidad para esperar un tiempo específico
+   */
+  private async delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Extrae métricas de un post usando YouTube API para YouTube y CreatorDB para otras plataformas
+   */
+  async extractAndSaveMetrics(postId: string, postUrl: string, platform: string): Promise<{
+    success: boolean;
+    metrics?: UserPostMetrics;
+    error?: string;
+  }> {
+    // Usar control de concurrencia para evitar procesamiento duplicado
+    return this.getProcessingLock(postId, async () => {
+      const startTime = Date.now();
+
+      try {
+        // Verificar si ya existe un registro en post_metrics
+        const existingMetrics = await this.getPostMetricsByPostId(postId);
+        if (existingMetrics && existingMetrics.length > 0) {
+          return {
+            success: true,
+            metrics: existingMetrics[0]
+          };
+        }
+
+        // Marcar como en procesamiento
+        this.markPostAsProcessing(postId);
+
+        // Extraer ID del post de la URL
+        const postIdFromUrl = this.extractPostIdFromUrl(postUrl, platform);
+        if (!postIdFromUrl) {
+          console.error(`❌ [POST-METRICS] Failed to extract post ID from URL: ${postUrl}`);
+          return {
+            success: false,
+            error: `No se pudo extraer el ID del post de la URL: ${postUrl}`
+          };
+        }
+
+        let metricsData: any;
+
+        // Usar YouTube API para videos de YouTube
+        if (platform.toLowerCase() === 'youtube') {        
+          const youtubeResult = await this.youtubeMetricsService.getVideoMetrics(postUrl);
+          
+          if (!youtubeResult.success) {
+            console.error(`❌ [POST-METRICS] YouTube API failed:`, youtubeResult.error);
+            return {
+              success: false,
+              error: youtubeResult.error
+            };
+          }
+
+          // Convertir a formato del sistema
+          metricsData = this.youtubeMetricsService.convertToSystemFormat(
+            postId, 
+            postUrl, 
+            youtubeResult.data!
+          );
+
+        } else if (platform.toLowerCase() === 'tiktok') {
+          // Usar Apify para videos de TikTok        
+          const tiktokResult = await this.tiktokMetricsService.getVideoMetrics(postUrl);
+          
+          if (!tiktokResult.success) {
+            console.error(`❌ [POST-METRICS] TikTok API failed:`, tiktokResult.error);
+            return {
+              success: false,
+              error: tiktokResult.error
+            };
+          }
+
+          // Convertir a formato del sistema
+          metricsData = this.tiktokMetricsService.convertToSystemFormat(
+            postId, 
+            postUrl, 
+            tiktokResult.data!
+          );
+
+        } else if (platform.toLowerCase() === 'twitter') {
+          // Usar Apify para tweets de Twitter/X
+          const twitterResult = await this.twitterMetricsService.getTweetMetrics(postUrl);
+          
+          if (!twitterResult.success) {
+            console.error(`❌ [POST-METRICS] Twitter API failed:`, twitterResult.error);
+            return {
+              success: false,
+              error: twitterResult.error
+            };
+          }
+
+          // Convertir a formato del sistema
+          metricsData = this.twitterMetricsService.convertToSystemFormat(
+            postId, 
+            postUrl, 
+            twitterResult.data!
+          );
+
+        } else if (platform.toLowerCase() === 'instagram') {
+          // Usar Apify para posts de Instagram
+          const instagramResult = await this.instagramMetricsService.getPostMetrics(postUrl);
+          
+          if (!instagramResult.success) {
+            console.error(`❌ [POST-METRICS] Instagram API failed:`, instagramResult.error);
+            return {
+              success: false,
+              error: instagramResult.error
+            };
+          }
+
+          // Convertir a formato del sistema
+          metricsData = this.instagramMetricsService.convertToSystemFormat(
+            postId, 
+            postUrl, 
+            instagramResult.data!
+          );
+
+        } else {
+          // Usar CreatorDB para otras plataformas
+          const creatorDbData = await this.withRetries(
+              () => this.fetchPostMetricsFromCreatorDB(postIdFromUrl, platform, postUrl),
+              2, 1000
+          );
+          
+          if (!creatorDbData.success) {
+            console.error(`❌ [POST-METRICS] CreatorDB fetch failed:`, creatorDbData.error);
+            return {
+              success: false,
+              error: creatorDbData.error
+            };
+          }
+
+          // Convertir datos de CreatorDB a nuestro formato
+          metricsData = this.convertCreatorDbDataToUserMetrics(postId, postIdFromUrl, creatorDbData.data, platform, postUrl);
+        }
+        
+        // Guardar métricas en la base de datos
+        const savedMetrics = await this.createUserPostMetrics(metricsData);
+        
+        const processingTime = Date.now() - startTime;
+
+        return {
+          success: true,
+          metrics: savedMetrics
+        };
+
+      } catch (error) {
+        const processingTime = Date.now() - startTime;
+        console.error(`❌ [POST-METRICS] Critical error after ${processingTime}ms for post ${postId}:`, error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Error desconocido'
+        };
+      } finally {
+        // Marcar como procesado
+        this.markPostAsProcessed(postId);
+      }
+    });
+  }
+
+  /**
+   * Crear métricas usando la estructura de tabla del usuario
+   * GARANTIZA UN SOLO REGISTRO POR POST
+   */
+  public async createUserPostMetrics(metrics: UserPostMetrics): Promise<UserPostMetrics> {
+    const supabase = require('../../config/supabase').default;
+    
+    try {      
+      // Verificar si ya existe un registro para este post_id
+      const { data: existingRecords, error: checkError } = await supabase
+        .from('post_metrics')
+        .select('id, created_at')
+        .eq('post_id', metrics.post_id);
+
+      if (checkError) {
+        console.error(`❌ [DB-SAVE] Error checking existing records:`, checkError);
+        throw checkError;
+      }
+
+      // Si hay múltiples registros, eliminar todos excepto el más reciente
+      if (existingRecords && existingRecords.length > 1) {
+        console.warn(`⚠️ [DB-SAVE] Found ${existingRecords.length} duplicate records for post ${metrics.post_id}. Cleaning up...`);
+        
+        // Ordenar por fecha de creación y mantener solo el más reciente
+        const sortedRecords = existingRecords.sort((a: any, b: any) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        
+        const recordsToDelete = sortedRecords.slice(1).map((r: any) => r.id);
+        
+        if (recordsToDelete.length > 0) {
+          const { error: deleteError } = await supabase
+            .from('post_metrics')
+            .delete()
+            .in('id', recordsToDelete);
+            
+          if (deleteError) {
+            console.error(`❌ [DB-SAVE] Error deleting duplicate records:`, deleteError);
+            throw deleteError;
+          }
+          
+        }
+        
+        // Actualizar el registro restante
+        const { data, error } = await supabase
+          .from('post_metrics')
+          .update({
+            platform: metrics.platform,
+            content_id: metrics.content_id,
+            post_url: metrics.post_url,
+            title: metrics.title,
+            likes_count: metrics.likes_count,
+            comments_count: metrics.comments_count,
+            views_count: metrics.views_count,
+            engagement_rate: metrics.engagement_rate,
+            platform_data: metrics.platform_data,
+            quota_used: metrics.quota_used,
+            api_timestamp: metrics.api_timestamp,
+            api_success: metrics.api_success,
+            api_error: metrics.api_error,
+            raw_response: metrics.raw_response,
+            updated_at: new Date()
+          })
+          .eq('post_id', metrics.post_id)
+          .select()
+          .single();
+
+        if (error) {
+          console.error(`❌ [DB-SAVE] Error updating existing metrics:`, error);
+          throw error;
+        }
+
+        return data;
+        
+      } else if (existingRecords && existingRecords.length === 1) {
+        // Actualizar el registro existente
+        const { data, error } = await supabase
+          .from('post_metrics')
+          .update({
+            platform: metrics.platform,
+            content_id: metrics.content_id,
+            post_url: metrics.post_url,
+            title: metrics.title,
+            likes_count: metrics.likes_count,
+            comments_count: metrics.comments_count,
+            views_count: metrics.views_count,
+            engagement_rate: metrics.engagement_rate,
+            platform_data: metrics.platform_data,
+            quota_used: metrics.quota_used,
+            api_timestamp: metrics.api_timestamp,
+            api_success: metrics.api_success,
+            api_error: metrics.api_error,
+            raw_response: metrics.raw_response,
+            updated_at: new Date()
+          })
+          .eq('post_id', metrics.post_id)
+          .select()
+          .single();
+
+        if (error) {
+          console.error(`❌ [DB-SAVE] Error updating metrics:`, error);
+          throw error;
+        }
+
+        return data;
+        
+      } else {
+        // Crear nuevo registro
+        const { data, error } = await supabase
+          .from('post_metrics')
+          .insert([{
+            post_id: metrics.post_id,
+            platform: metrics.platform,
+            content_id: metrics.content_id,
+            post_url: metrics.post_url,
+            title: metrics.title,
+            likes_count: metrics.likes_count,
+            comments_count: metrics.comments_count,
+            views_count: metrics.views_count,
+            engagement_rate: metrics.engagement_rate,
+            platform_data: metrics.platform_data,
+            quota_used: metrics.quota_used,
+            api_timestamp: metrics.api_timestamp,
+            api_success: metrics.api_success,
+            api_error: metrics.api_error,
+            raw_response: metrics.raw_response,
+            created_at: new Date(),
+            updated_at: new Date()
+          }])
+          .select()
+          .single();
+
+        if (error) {
+          console.error(`❌ [DB-SAVE] Error saving new metrics:`, error);
+          throw error;
+        }
+
+        return data;
+      }
+    } catch (error) {
+      console.error(`❌ [DB-SAVE] Critical error saving metrics:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Llama a CreatorDB para obtener métricas del post con timeouts optimizados
+   */
+  private async fetchPostMetricsFromCreatorDB(postId: string, platform: string, postUrl: string): Promise<{
+    success: boolean;
+    data?: any;
+    error?: string;
+  }> {
+    // Pequeña espera para no saturar la API externa
+    await this.delay(200); // Reducido de 500ms a 200ms
+    
+    // Intentar obtener del caché primero
+    const cacheKey = `metrics:${platform}:${postId}`;
+    try {
+      const cachedMetrics = await this.getFromCache(cacheKey);
+      if (cachedMetrics) {
+        return {
+          success: true,
+          data: cachedMetrics
+        };
+      }
+    } catch (error) {
+      console.warn(`Error al leer caché:`, error);
+    }
+
+    try {
+      // Timeout optimizado para CreatorDB
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('CreatorDB timeout')), 30000); // 30s timeout
+      });
+
+      // Usar directamente getPostByLink ya que CreatorDB debe buscar por URL
+      
+      const response = await Promise.race([
+        CreatorDBService.getPostByLink(postUrl),
+        timeoutPromise
+      ]) as any;
+      
+      // Esperar después de la llamada
+      await this.delay(500);
+
+      // Si la llamada fue exitosa, guardar en caché
+      if (response.success && response.data) {
+        try {
+          await this.saveToCache(cacheKey, response, 3600); // Caché por 1 hora
+        } catch (error) {
+          console.warn(`Error al guardar en caché:`, error);
+        }
+      }
+
+      return {
+        success: true,
+        data: response
+      };
+
+    } catch (error) {
+      // Si hay error pero tenemos caché, usarlo como fallback
+      try {
+        const cachedMetrics = await this.getFromCache(cacheKey);
+        if (cachedMetrics) {
+          return {
+            success: true,
+            data: cachedMetrics
+          };
+        }
+      } catch (cacheError) {
+        // Ignorar errores de caché en modo fallback
+      }
+
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Error al llamar CreatorDB'
+      };
+    }
+  }
+
+  /**
+   * Reconstruye la URL del post basado en su ID y plataforma
+   */
+  private reconstructPostUrl(postId: string, platform: string): string | null {
+    switch (platform.toLowerCase()) {
+      case 'youtube':
+        return `https://www.youtube.com/watch?v=${postId}`;
+      case 'instagram':
+        // No podemos reconstruir URLs de Instagram sin el username
+        return null;
+      case 'tiktok':
+        // No podemos reconstruir URLs de TikTok sin el username
+        return null;
+      case 'twitter':
+        return `https://twitter.com/i/status/${postId}`;
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Convierte los datos de CreatorDB al formato de la tabla del usuario
+   */
+  private convertCreatorDbDataToUserMetrics(
+    postId: string, 
+    contentId: string, 
+    creatorDbData: any, 
+    platform: string, 
+    postUrl: string
+  ): UserPostMetrics {
+    const platformLower = platform.toLowerCase() as 'youtube' | 'instagram' | 'tiktok' | 'twitter';
+    
+    const baseMetrics: UserPostMetrics = {
+      post_id: postId,
+      platform: platformLower,
+      content_id: contentId,
+      post_url: postUrl,
+      title: '',
+      likes_count: 0,
+      comments_count: 0,
+      views_count: 0,
+      engagement_rate: 0,
+      platform_data: creatorDbData,
+      quota_used: creatorDbData.quotaUsed || 0,
+      api_timestamp: Date.now(),
+      api_success: creatorDbData.success || false,
+      api_error: undefined,
+      raw_response: creatorDbData
+    };
+
+    // Extraer métricas específicas según la plataforma
+    if (platformLower === 'youtube' && creatorDbData.data?.basicYoutubePost) {
+      const youtubeData = creatorDbData.data.basicYoutubePost;
+      
+      baseMetrics.likes_count = youtubeData.likes || 0;
+      baseMetrics.comments_count = youtubeData.comments || 0;
+      baseMetrics.views_count = youtubeData.views || 0;
+      baseMetrics.title = youtubeData.title || '';
+      baseMetrics.engagement_rate = youtubeData.engageRate || 0;
+    }
+    else if (platformLower === 'instagram' && creatorDbData.data?.basicInstagramPost) {
+      const instagramData = creatorDbData.data.basicInstagramPost;
+      
+      baseMetrics.likes_count = instagramData.likes || 0;
+      baseMetrics.comments_count = instagramData.comments || 0;
+      baseMetrics.views_count = instagramData.views || 0;
+      baseMetrics.title = instagramData.caption || '';
+      baseMetrics.engagement_rate = instagramData.engageRate || 0;
+    }
+    else if (platformLower === 'tiktok' && creatorDbData.data?.basicTikTokPost) {
+      const tiktokData = creatorDbData.data.basicTikTokPost;
+      
+      baseMetrics.likes_count = tiktokData.likes || 0;
+      baseMetrics.comments_count = tiktokData.comments || 0;
+      baseMetrics.views_count = tiktokData.views || 0;
+      baseMetrics.title = tiktokData.description || '';
+      baseMetrics.engagement_rate = tiktokData.engageRate || 0;
+    }
+    else if (platformLower === 'twitter' && creatorDbData.data?.basicTwitterPost) {
+      const twitterData = creatorDbData.data.basicTwitterPost;
+      
+      // Debug: Log de los datos de Twitter para verificar la estructura
+      console.log('🔍 [BACKEND DEBUG] Twitter data structure:', {
+        postId,
+        twitterData: twitterData,
+        allKeys: Object.keys(twitterData || {}),
+        views: twitterData.views,
+        likes: twitterData.likes,
+        replies: twitterData.replies,
+        retweets: twitterData.retweets
+      });
+      
+      baseMetrics.likes_count = twitterData.likes || twitterData.favorite_count || 0;
+      baseMetrics.comments_count = twitterData.replies || twitterData.reply_count || 0;
+      baseMetrics.views_count = twitterData.views || twitterData.impressions || 0;
+      baseMetrics.title = twitterData.text || twitterData.content || '';
+      baseMetrics.engagement_rate = twitterData.engageRate || 0;
+    }
+    else {
+      console.warn(`⚠️ [CONVERT] No platform-specific data found in response for platform: ${platformLower}`);
+      console.log('🔍 [CONVERT] Available data structure:', {
+        platform: platformLower,
+        hasData: !!creatorDbData.data,
+        dataKeys: creatorDbData.data ? Object.keys(creatorDbData.data) : [],
+        fullResponse: creatorDbData
+      });
+    }
+
+    return baseMetrics;
+  }
+
+  /**
+   * Extrae el ID del post de la URL según la plataforma
+   */
+  private extractPostIdFromUrl(postUrl: string, platform: string): string | null {
+    const platformLower = platform.toLowerCase();
+
+    try {
+      let postId: string | null = null;
+
+      if (platformLower === 'youtube') {
+        // Patrones para diferentes formatos de URLs de YouTube
+        const patterns = [
+          /(?:youtube\.com\/watch\?v=)([^&\n?#]+)/,
+          /(?:youtu\.be\/)([^&\n?#]+)/,
+          /(?:youtube\.com\/embed\/)([^&\n?#]+)/,
+          /(?:youtube\.com\/v\/)([^&\n?#]+)/,
+          /(?:youtube\.com\/shorts\/)([^&\n?#]+)/,
+          /(?:youtube\.com\/watch\?.*&v=)([^&\n?#]+)/
+        ];
+        
+        for (const pattern of patterns) {
+          const match = postUrl.match(pattern);
+          if (match && match[1]) {
+            postId = match[1];
+            break;
+          }
+        }
+        
+        // Fallback para URLs con parámetros complejos
+        if (!postId) {
+          try {
+        const urlObj = new URL(postUrl);
+        postId = urlObj.searchParams.get('v');
+          } catch (e) {
+            // Si falla el parsing de URL, continuar con null
+          }
+        }
+      }
+      else if (platformLower === 'instagram') {
+        const patterns = [
+          /instagram\.com\/p\/([A-Za-z0-9_-]+)/,
+          /instagram\.com\/reel\/([A-Za-z0-9_-]+)/,
+          /instagram\.com\/tv\/([A-Za-z0-9_-]+)/
+        ];
+        
+        for (const pattern of patterns) {
+          const match = postUrl.match(pattern);
+          if (match && match[1]) {
+            postId = match[1];
+            break;
+          }
+        }
+      }
+      else if (platformLower === 'tiktok') {
+        const match = postUrl.match(/\/video\/(\d+)/);
+        postId = match ? match[1] : null;
+      }
+      else if (platformLower === 'twitter') {
+        const patterns = [
+          /twitter\.com\/[^\/]+\/status\/(\d+)/,
+          /x\.com\/[^\/]+\/status\/(\d+)/,
+          /mobile\.twitter\.com\/[^\/]+\/status\/(\d+)/,
+          /twitter\.com\/i\/web\/status\/(\d+)/,
+          /x\.com\/i\/web\/status\/(\d+)/
+        ];
+        
+        for (const pattern of patterns) {
+          const match = postUrl.match(pattern);
+          if (match && match[1]) {
+            postId = match[1];
+            break;
+          }
+        }
+      }
+
+      if (postId) {
+        console.log(`✅ [URL-EXTRACT] Successfully extracted ID: ${postId} from ${platformLower} URL`);
+      } else {
+        console.warn(`⚠️ [URL-EXTRACT] Failed to extract ID from URL for platform: ${platformLower} - URL: ${postUrl}`);
+      }
+      
+      return postId;
+    } catch (error) {
+      console.error(`❌ [URL-EXTRACT] Error extracting post ID:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Obtiene métricas existentes de un post
+   */
+  async getPostMetricsByPostId(postId: string): Promise<UserPostMetrics[]> {
+    const supabase = require('../../config/supabase').default;
+    
+    const { data, error } = await supabase
+      .from('post_metrics')
+      .select('*')
+      .eq('post_id', postId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('❌ Error obteniendo métricas:', error);
+      throw error;
+    }
+
+    return data || [];
+  }
+
+  /**
+   * Actualiza métricas de un post existente
+   */
+  async fetchAndStorePostMetrics(postId: string, postUrl: string, platform: string): Promise<UserPostMetrics> {
+    const result = await this.extractAndSaveMetrics(postId, postUrl, platform);
+    
+    if (!result.success || !result.metrics) {
+      throw new Error(result.error || 'Error al obtener métricas');
+    }
+    
+    return result.metrics;
+  }
+
+  /**
+   * Guarda datos en caché
+   */
+  private async saveToCache(key: string, data: any, ttlSeconds: number): Promise<void> {
+    try {
+      await postgresCacheService.set(key, data, ttlSeconds);
+    } catch (error) {
+      console.error(`❌ [CACHE] Error saving to cache:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtiene datos de caché
+   */
+  private async getFromCache(key: string): Promise<any | null> {
+    try {
+      return await postgresCacheService.get(key);
+    } catch (error) {
+      console.error(`❌ [CACHE] Error reading from cache:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Limpia duplicados masivamente en post_metrics
+   * MANTIENE SOLO UN REGISTRO POR POST
+   */
+  async cleanupDuplicateMetrics(): Promise<{
+    totalPosts: number;
+    duplicatePosts: number;
+    cleanedPosts: number;
+    errors: string[];
+  }> {
+    const supabase = require('../../config/supabase').default;
+    const result = {
+      totalPosts: 0,
+      duplicatePosts: 0,
+      cleanedPosts: 0,
+      errors: [] as string[]
+    };
+
+    try {      
+      // Obtener todos los post_ids que tienen múltiples registros
+      const { data: duplicateGroups, error: groupError } = await supabase
+        .from('post_metrics')
+        .select('post_id')
+        .group('post_id')
+        .having('count(*)', 'gt', 1);
+
+      if (groupError) {
+        console.error('❌ [CLEANUP] Error finding duplicate groups:', groupError);
+        result.errors.push(`Error finding duplicates: ${groupError.message}`);
+        return result;
+      }
+
+      if (!duplicateGroups || duplicateGroups.length === 0) {
+        return result;
+      }
+
+      result.duplicatePosts = duplicateGroups.length;
+
+      // Procesar cada post con duplicados
+      for (const group of duplicateGroups) {
+        try {
+          const postId = group.post_id;
+          
+          // Obtener todos los registros para este post
+          const { data: records, error: recordsError } = await supabase
+            .from('post_metrics')
+            .select('id, created_at')
+            .eq('post_id', postId)
+            .order('created_at', { ascending: false });
+
+          if (recordsError) {
+            console.error(`❌ [CLEANUP] Error getting records for post ${postId}:`, recordsError);
+            result.errors.push(`Error getting records for ${postId}: ${recordsError.message}`);
+            continue;
+          }
+
+          if (records && records.length > 1) {
+            // Mantener solo el registro más reciente
+            const recordsToDelete = records.slice(1).map((r: any) => r.id);
+            
+            const { error: deleteError } = await supabase
+              .from('post_metrics')
+              .delete()
+              .in('id', recordsToDelete);
+
+            if (deleteError) {
+              console.error(`❌ [CLEANUP] Error deleting duplicates for post ${postId}:`, deleteError);
+              result.errors.push(`Error deleting duplicates for ${postId}: ${deleteError.message}`);
+            } else {
+              result.cleanedPosts++;
+            }
+          }
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+          console.error(`❌ [CLEANUP] Error processing post ${group.post_id}:`, error);
+          result.errors.push(`Error processing ${group.post_id}: ${errorMsg}`);
+        }
+      }
+
+      return result;
+
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ [CLEANUP] Critical error in mass cleanup:', error);
+      result.errors.push(`Critical error: ${errorMsg}`);
+      return result;
+    }
+  }
+}
