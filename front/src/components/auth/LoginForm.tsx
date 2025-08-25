@@ -9,7 +9,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { useToast } from "@/hooks/common/useToast";
 import { GoogleAuthButton } from "./GoogleAuthButton";
-import { InvitationInfo } from "./InvitationInfo";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -115,11 +114,6 @@ export function LoginForm() {
             Ingresa tus credenciales para acceder a la plataforma y potenciar
             tus campañas.
           </p>
-          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-700">
-              <strong>🔒 Sistema de invitaciones:</strong> Solo usuarios previamente invitados pueden acceder al sistema.
-            </p>
-          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -209,9 +203,6 @@ export function LoginForm() {
 
         {/* Google Auth Button */}
         <GoogleAuthButton />
-
-        {/* Información sobre el sistema de invitaciones */}
-        <InvitationInfo />
 
         <p className="text-center text-sm text-gray-500 mt-6">
           ¿No tienes una cuenta?{" "}
