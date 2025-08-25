@@ -65,15 +65,15 @@ export function MainSidebar() {
   // Renderizar un skeleton/loading mientras no está hidratado o cargando el rol
   if (!isClient || roleLoading) {
     return (
-      <div className="w-16 bg-zinc-900 text-white flex flex-col items-center py-2 border-r border-zinc-800 h-screen fixed">
-        <div className="mb-2">
-                  <div className="h-16 w-16 flex items-center justify-center overflow-hidden">
-          <img 
-            src="/dh-logo-white.png" 
-            alt="DH Logo" 
-            className="w-12 h-12 object-contain"
-          />
-        </div>
+      <div className="w-56 bg-zinc-900 text-white flex flex-col py-4 border-r border-zinc-800 h-screen fixed">
+        <div className="mb-8 px-4">
+          <div className="h-12 flex items-center justify-center overflow-hidden">
+            <img 
+              src="/logo_white.svg" 
+              alt="DH Logo" 
+              className="w-32 h-8 object-contain"
+            />
+          </div>
         </div>
         {/* No mostrar navegación mientras se carga el usuario */}
       </div>
@@ -81,38 +81,33 @@ export function MainSidebar() {
   }
 
   return (
-    <div className="w-16 bg-zinc-900 text-white flex flex-col items-center py-2 border-r border-zinc-800 h-screen fixed">
-      <div className="mb-2">
-        <div className="h-16 w-16 flex items-center justify-center overflow-hidden">
+    <div className="w-56 bg-zinc-900 text-white flex flex-col py-4 border-r border-zinc-800 h-screen fixed">
+      <div className="mb-8 px-4">
+        <div className="h-12 flex items-center justify-center overflow-hidden">
           <img 
-            src="/dh-logo-white.png" 
+            src="/logo_white.svg" 
             alt="DH Logo" 
-            className="w-12 h-12 object-contain"
+            className="w-32 h-8 object-contain"
           />
         </div>
       </div>
 
-      <nav className="flex flex-col items-center gap-6 flex-1">
+      <nav className="flex flex-col gap-2 flex-1 px-4">
         {navItems.map((item) => (
           <Link
             key={item.path}
             href={item.path}
             className={cn(
-              "flex flex-col items-center justify-center w-full py-2 px-1 text-center transition-colors",
+              "flex items-center gap-3 w-full py-3 px-3 rounded-lg transition-colors",
               isActive(item.path)
-                ? "text-white"
-                : "text-zinc-500 hover:text-zinc-300"
+                ? "text-white bg-blue-600"
+                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
             )}
           >
-            <div
-              className={cn(
-                "p-1.5 rounded-md mb-1",
-                isActive(item.path) ? "bg-blue-600" : "bg-transparent"
-              )}
-            >
+            <div className="flex-shrink-0">
               {item.icon}
             </div>
-            <span className="text-[10px]">{item.label}</span>
+            <span className="text-sm font-medium">{item.label}</span>
           </Link>
         ))}
       </nav>

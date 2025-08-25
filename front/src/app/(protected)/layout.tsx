@@ -163,7 +163,7 @@ function ProtectedLayoutContent({ children }: ProtectedLayoutProps) {
         <UsersProvider>
           <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
             <MainSidebar />
-            <div className="flex-1 ml-16">
+            <div className="flex-1 ml-56">
               <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-white/80 backdrop-blur-md px-4 md:px-6 shadow-sm">
                 <div className="ml-auto flex gap-2 items-center">
                   <FeedbackSystem userEmail={userEmail} />
