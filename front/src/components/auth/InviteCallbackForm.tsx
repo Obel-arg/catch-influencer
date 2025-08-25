@@ -113,12 +113,30 @@ export function InviteCallbackForm() {
           urlParams.get("refresh_token") || hashParams.get("refresh_token");
         let type = urlParams.get("type") || hashParams.get("type");
 
+        // Debug: Mostrar todos los parámetros encontrados
+        console.log('🔍 Parámetros encontrados:');
+        console.log('URL params:', Object.fromEntries(urlParams.entries()));
+        console.log('Hash params:', Object.fromEntries(hashParams.entries()));
+        console.log('Access token length:', accessToken?.length);
+        console.log('Refresh token length:', refreshToken?.length);
+
         // Si no hay type, asumir que es una invitación
         if (!type) {
           type = "invite";
         }
 
+        console.log('🔍 Procesando callback de invitación...');
+        console.log('URL params:', window.location.search);
+        console.log('Hash params:', window.location.hash);
+        console.log('Access token encontrado:', !!accessToken);
+        console.log('Refresh token encontrado:', !!refreshToken);
+        console.log('Type:', type);
+
         if (accessToken && refreshToken) {
+          console.log('✅ Tokens encontrados, estableciendo sesión...');
+          console.log('Access token (primeros 50 chars):', accessToken.substring(0, 50) + '...');
+          console.log('Refresh token:', refreshToken);
+          
           // Establecer la sesión en Supabase
           const { data, error } = await supabase.auth.setSession({
             access_token: accessToken,
@@ -129,6 +147,10 @@ export function InviteCallbackForm() {
             console.error("Error estableciendo sesión:", error);
             throw error;
           }
+
+          console.log('✅ Sesión establecida correctamente');
+          console.log('Usuario:', data.user?.email);
+          console.log('Metadatos:', data.user?.user_metadata);
 
           if (data.user) {
             const userData = {
@@ -160,28 +182,38 @@ export function InviteCallbackForm() {
           console.log("Parámetros de búsqueda:", window.location.search);
           console.log("Hash:", window.location.hash);
 
-          // Si no hay tokens, verificar si es una redirección desde Supabase
-          // y mostrar un mensaje más específico
-          if (
-            window.location.search.includes("error") ||
-            window.location.hash.includes("error")
-          ) {
-            throw new Error(
-              "Error en la invitación. El enlace puede haber expirado o ser inválido."
-            );
+          // Verificar si hay errores específicos en el hash
+          if (window.location.hash.includes("error")) {
+            const hashParams = new URLSearchParams(window.location.hash.substring(1));
+            const errorCode = hashParams.get("error_code");
+            const errorDescription = hashParams.get("error_description");
+            
+            if (errorCode === "otp_expired") {
+              throw new Error(
+                "El enlace de invitación ha expirado. Por favor solicita una nueva invitación."
+              );
+            } else if (errorCode === "access_denied") {
+              throw new Error(
+                "Acceso denegado. El enlace puede ser inválido o haber expirado."
+              );
+            } else {
+              throw new Error(
+                `Error en la invitación: ${errorDescription || errorCode || "Error desconocido"}`
+              );
+            }
           }
 
-          // Si no hay parámetros de error, puede ser que la URL no sea correcta
+          // Si no hay tokens ni errores específicos
           throw new Error(
-            "No se encontraron los parámetros de invitación. Verifica que el enlace sea correcto y no haya expirado."
+            "No se encontraron los parámetros de invitación. Verifica que el enlace sea correcto."
           );
         }
-      } catch (error: any) {
-        console.error("Error procesando callback:", error);
-        setError(
-          "Error al procesar la invitación. Por favor intenta de nuevo."
-        );
-      } finally {
+             } catch (error: any) {
+         console.error("Error procesando callback:", error);
+         setError(
+           error.message || "Error al procesar la invitación. Por favor intenta de nuevo."
+         );
+       } finally {
         setIsProcessingCallback(false);
       }
     };
@@ -371,12 +403,23 @@ export function InviteCallbackForm() {
               Error en la invitación
             </h2>
             <p className="text-gray-600 mb-6">{error}</p>
-            <Button
-              onClick={() => router.push("/auth/login")}
-              className="w-full !bg-blue-600 !text-white border-2 border-blue-600 font-bold py-3 rounded-lg text-lg shadow-md hover:!bg-blue-700 hover:!border-blue-700 transition-colors"
-            >
-              Ir al login
-            </Button>
+            <div className="space-y-3">
+              <Button
+                onClick={() => router.push("/auth/login")}
+                className="w-full !bg-blue-600 !text-white border-2 border-blue-600 font-bold py-3 rounded-lg text-lg shadow-md hover:!bg-blue-700 hover:!border-blue-700 transition-colors"
+              >
+                Ir al login
+              </Button>
+              {error.includes("expiró") && (
+                <Button
+                  onClick={() => router.push("/auth/register")}
+                  variant="outline"
+                  className="w-full border-gray-300 text-gray-700 font-medium py-3 rounded-lg"
+                >
+                  Solicitar nueva invitación
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
