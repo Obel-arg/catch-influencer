@@ -177,7 +177,7 @@ function AuthCallbackContent() {
 
         {status === "loading" && (
           <div>
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-black mb-4"></div>
             <p className="text-gray-600">Procesando autenticación...</p>
           </div>
         )}
