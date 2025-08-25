@@ -3,7 +3,7 @@ import { UserService } from '../../services/user';
 import { UserCreateDTO, UserLoginDTO } from '../../models/user/user.model';
 import { generateToken, verifyToken } from '../../services/auth';
 import { GoogleOAuthService } from '../../services/auth/google-oauth.service';
-import supabase from '../../config/supabase';
+import supabase, { supabaseAdmin } from '../../config/supabase';
 import { config } from '../../config/environment';
 
 export class AuthController {
@@ -584,6 +584,93 @@ export class AuthController {
     } catch (error) {
       console.error('Error en reset password:', error);
       res.status(500).json({ error: 'Error al resetear contraseña' });
+    }
+  }
+
+  /**
+   * Maneja las redirecciones de invitación de Supabase
+   * Redirige al frontend con los tokens correctos
+   */
+  async handleInviteRedirect(req: Request, res: Response) {
+    try {
+      console.log('🔄 Procesando redirección de invitación...');
+      
+      const { token, type, error, error_description } = req.query;
+      
+      // Si hay error, redirigir al login con el error
+      if (error) {
+        console.error('❌ Error en invitación:', error, error_description);
+        const frontendUrl = config.urls.frontend;
+        const errorUrl = `${frontendUrl}/auth/login?error=invite_error&details=${encodeURIComponent(String(error_description || error))}`;
+        return res.redirect(errorUrl);
+      }
+      
+      // Si no hay token, error
+      if (!token || typeof token !== 'string') {
+        console.error('❌ No se encontró token válido en la invitación');
+        const frontendUrl = config.urls.frontend;
+        const errorUrl = `${frontendUrl}/auth/login?error=no_token`;
+        return res.redirect(errorUrl);
+      }
+      
+      // Verificar que supabaseAdmin esté disponible
+      if (!supabaseAdmin) {
+        console.error('❌ Supabase Admin no está configurado');
+        const frontendUrl = config.urls.frontend;
+        const errorUrl = `${frontendUrl}/auth/login?error=admin_not_configured`;
+        return res.redirect(errorUrl);
+      }
+      
+      // Obtener el usuario directamente usando el token
+      const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(token);
+      
+      if (userError || !user) {
+        console.error('❌ Error obteniendo usuario:', userError);
+        const frontendUrl = config.urls.frontend;
+        const errorUrl = `${frontendUrl}/auth/login?error=invalid_token`;
+        return res.redirect(errorUrl);
+      }
+      
+      // Crear sesión temporal para el usuario
+      const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'magiclink',
+        email: user.email!,
+        options: {
+          redirectTo: `${config.urls.frontend}/auth/invite-callback`
+        }
+      });
+      
+      if (sessionError) {
+        console.error('❌ Error generando sesión:', sessionError);
+        const frontendUrl = config.urls.frontend;
+        const errorUrl = `${frontendUrl}/auth/login?error=session_error`;
+        return res.redirect(errorUrl);
+      }
+      
+      // Extraer tokens de la URL generada
+      const url = new URL(sessionData.properties.action_link);
+      const accessToken = url.searchParams.get('access_token');
+      const refreshToken = url.searchParams.get('refresh_token');
+      
+      if (!accessToken || !refreshToken) {
+        console.error('❌ No se pudieron extraer tokens de la sesión');
+        const frontendUrl = config.urls.frontend;
+        const errorUrl = `${frontendUrl}/auth/login?error=token_extraction_error`;
+        return res.redirect(errorUrl);
+      }
+      
+      // Redirigir al frontend con los tokens
+      const frontendUrl = config.urls.frontend;
+      const redirectUrl = `${frontendUrl}/auth/invite-callback?access_token=${encodeURIComponent(accessToken)}&refresh_token=${encodeURIComponent(refreshToken)}&type=invite`;
+      
+      console.log('✅ Redirigiendo a invitación:', redirectUrl);
+      res.redirect(redirectUrl);
+      
+    } catch (error) {
+      console.error('❌ Error procesando redirección de invitación:', error);
+      const frontendUrl = config.urls.frontend;
+      const errorUrl = `${frontendUrl}/auth/login?error=invite_processing_error`;
+      res.redirect(errorUrl);
     }
   }
 } 

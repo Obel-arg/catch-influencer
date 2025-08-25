@@ -20,6 +20,9 @@ router.get('/google', authController.googleAuth.bind(authController));
 router.get('/google/callback', authController.googleCallback.bind(authController));
 router.get('/google/url', authController.googleAuthJson.bind(authController));
 
+// Ruta para manejar redirecciones de invitación
+router.get('/invite-callback', authController.handleInviteRedirect.bind(authController));
+
 // Rutas protegidas
 router.get('/me', authenticateToken, authController.me.bind(authController));
 router.put('/profile', authenticateToken, userController.updateUser.bind(userController));
