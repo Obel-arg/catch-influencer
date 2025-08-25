@@ -123,7 +123,7 @@ export async function getTikTokThumbnailValidated(url: string): Promise<string> 
     
     // Determinar la URL base del backend
     const backendUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://influencerstracker-back.vercel.app' // URL de producción en Vercel
+      ? 'https://catch-influencer-back.vercel.app' // URL de producción en Vercel
       : 'http://localhost:5000'; // URL local del backend (puerto correcto)
     
     // Llamar a la API del backend
@@ -281,7 +281,7 @@ export async function getTikTokVideoInfoFromAPI(url: string): Promise<{
     
     // Determinar la URL base del backend
     const backendUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://influencerstracker-back.vercel.app' // URL de producción en Vercel
+      ? 'https://catch-influencer-back.vercel.app' // URL de producción en Vercel
       : 'http://localhost:5000'; // URL local del backend (puerto correcto)
     
     const response = await fetch(`${backendUrl}/api/social/tiktok/video-info?url=${encodeURIComponent(url)}`);
@@ -314,7 +314,7 @@ export async function getTikTokTrendingVideos(count: number = 10): Promise<any[]
     
     // Determinar la URL base del backend
     const backendUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://influencerstracker-back.vercel.app' // URL de producción en Vercel
+      ? 'https://catch-influencer-back.vercel.app' // URL de producción en Vercel
       : 'http://localhost:5000'; // URL local del backend (puerto correcto)
     
     const response = await fetch(`${backendUrl}/api/social/tiktok/trending?count=${count}`);

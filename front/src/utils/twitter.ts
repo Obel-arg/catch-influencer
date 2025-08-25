@@ -81,7 +81,7 @@ export async function getTwitterThumbnailValidated(url: string): Promise<string>
   try {
     // Determinar la URL base del backend
     const backendUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://influencerstracker-back.vercel.app' // URL de producción en Vercel
+      ? 'https://catch-influencer-back.vercel.app' // URL de producción en Vercel
       : 'http://localhost:5000'; // URL local del backend
     
     // Llamar a la API del backend

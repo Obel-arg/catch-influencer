@@ -93,7 +93,7 @@ export async function getInstagramImageWithFallback(url: string): Promise<string
   try {
     // Determinar la URL base del backend
     const backendUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://influencerstracker-back.vercel.app'
+      ? 'https://catch-influencer-back.vercel.app'
       : 'http://localhost:5000';
     
     // Llamar a la API del backend
@@ -166,7 +166,7 @@ export async function getInstagramThumbnailValidated(url: string): Promise<strin
   try {
     // Determinar la URL base del backend
     const backendUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://influencerstracker-back.vercel.app' // URL de producción en Vercel
+      ? 'https://catch-influencer-back.vercel.app' // URL de producción en Vercel
       : 'http://localhost:5000'; // URL local del backend
     
     // Llamar a la API del backend
@@ -246,7 +246,7 @@ export async function getInstagramPostInfoFromAPI(url: string): Promise<{
     
     // Determinar la URL base del backend
     const backendUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://influencerstracker-back.vercel.app' // URL de producción en Vercel
+      ? 'https://catch-influencer-back.vercel.app' // URL de producción en Vercel
       : 'http://localhost:5000'; // URL local del backend
     
     const response = await fetch(`${backendUrl}/api/social/instagram/post-info?url=${encodeURIComponent(url)}`);
@@ -337,7 +337,7 @@ export async function getInstagramAvatarValidated(avatarUrl: string): Promise<st
     
     // Opción 2: Usar nuestro backend como fallback
     const backendUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://influencerstracker-back.vercel.app'
+      ? 'https://catch-influencer-back.vercel.app'
       : 'http://localhost:5000';
     
     const response = await fetch(`${backendUrl}/api/social/instagram/avatar-proxy?url=${encodeURIComponent(avatarUrl)}`, {
@@ -403,7 +403,7 @@ export async function getInstagramImageAggressive(url: string): Promise<string> 
     async () => {
       try {
         const backendUrl = process.env.NODE_ENV === 'production' 
-          ? 'https://influencerstracker-back.vercel.app'
+          ? 'https://catch-influencer-back.vercel.app'
           : 'http://localhost:5000';
         
         const response = await fetch(`${backendUrl}/api/social/instagram/thumbnail?url=${encodeURIComponent(url)}`, {

@@ -3,18 +3,14 @@ import { PaginationParams } from "@/types/common";
 import { setupTokenInterceptors } from './tokenInterceptor';
 import { setupRequestMonitoring } from './httpInterceptor';
 
-const API_AUTH_BASE_URL = "http://localhost:5000/api/auth";
-
-const API_BASE_URL = "http://localhost:5000/api";
-
-// Nueva URL para dubbinghits.app
-const DUBBINGHITS_API_AUTH_BASE_URL = process.env.NODE_ENV === "development"
+// URLs para el backend principal
+const API_AUTH_BASE_URL = process.env.NODE_ENV === "development"
   ? "http://localhost:5000/api/auth"
-  : "https://dubbinghits.app/api/auth";
+  : "https://catch-influencer-back.vercel.app/api/auth";
 
-const DUBBINGHITS_API_BASE_URL = process.env.NODE_ENV === "development"
+const API_BASE_URL = process.env.NODE_ENV === "development"
   ? "http://localhost:5000/api"
-  : "https://dubbinghits.app/api";
+  : "https://catch-influencer-back.vercel.app/api";
 
 export class HttpClient {
   private static instance: HttpClient;
@@ -67,8 +63,4 @@ export class HttpClient {
 export const httpAuthClient = HttpClient.getInstance();
 export const httpApiClient = HttpClient.createInstance(API_BASE_URL);
 // Export httpClient for backward compatibility
-export const httpClient = httpApiClient;
-
-// Nuevos clientes para dubbinghits.app
-export const dubbinghitsHttpAuthClient = HttpClient.createInstance(DUBBINGHITS_API_AUTH_BASE_URL);
-export const dubbinghitsHttpApiClient = HttpClient.createInstance(DUBBINGHITS_API_BASE_URL); 
+export const httpClient = httpApiClient; 

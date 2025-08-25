@@ -85,10 +85,13 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_API_URL:
       process.env.NEXT_PUBLIC_API_URL ||
-      "https://influencerstracker-back.vercel.app/api",
-    NEXT_PUBLIC_SUPABASE_URL:
-      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      "https://catch-influencer-back.vercel.app/api",
+    SUPABASE_URL:
+      process.env.SUPABASE_URL ||
       "https://pbwmrrixgzvmwhurcvbx.supabase.co",
+    SUPABASE_ANON_KEY:
+      process.env.SUPABASE_ANON_KEY ||
+      "",
   },
   // Configuración para SPA (Single Page Application)
   trailingSlash: false,

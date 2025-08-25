@@ -169,7 +169,7 @@ export function AddCreatorModal({ isOpen, onClose }: AddCreatorModalProps) {
                 Enviando...
               </>
             ) : (
-              "Agregar a Dubbinghits"
+              "Agregar a la plataforma"
             )}
             
           </Button>
