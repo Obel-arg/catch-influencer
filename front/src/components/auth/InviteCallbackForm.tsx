@@ -272,6 +272,25 @@ export default function InviteCallbackForm() {
           "userName",
           user.user_metadata?.full_name || userInfo?.full_name || ""
         );
+
+        // Actualizar el perfil del usuario con el rol correcto
+        try {
+          const { error: profileError } = await supabase
+            .from('user_profiles')
+            .update({ 
+              role: userInfo?.role || 'user',
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', user.id);
+
+          if (profileError) {
+            console.warn('Error actualizando perfil:', profileError);
+          } else {
+            console.log('✅ Perfil actualizado con rol:', userInfo?.role);
+          }
+        } catch (error) {
+          console.warn('Error actualizando perfil del usuario:', error);
+        }
       }
 
       // Verificar si el usuario ya está en la organización antes de agregarlo
