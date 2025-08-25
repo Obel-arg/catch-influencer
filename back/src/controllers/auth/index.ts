@@ -267,17 +267,34 @@ export class AuthController {
    * Detecta el dominio de origen de la petición
    */
   private getOriginDomain(req: Request): string {
+    console.log('🔍 Detectando dominio de origen...');
+    console.log('Headers:', {
+      referer: req.headers.referer,
+      origin: req.headers.origin,
+      host: req.headers.host
+    });
+    console.log('Query params:', req.query);
+
     // Intentar obtener el dominio desde el state parameter (si se pasó)
     const state = req.query.state;
     if (state && typeof state === 'string') {
       try {
         const stateData = JSON.parse(decodeURIComponent(state));
+        console.log('State data:', stateData);
         if (stateData.origin) {
+          console.log('✅ Dominio detectado desde state:', stateData.origin);
           return stateData.origin;
         }
       } catch (e) {
-        console.log('No se pudo parsear el state parameter');
+        console.log('❌ No se pudo parsear el state parameter:', e);
       }
+    }
+
+    // Intentar obtener desde el origin header
+    const origin = req.headers.origin;
+    if (origin && config.corsOrigins.includes(origin)) {
+      console.log('✅ Dominio detectado desde origin header:', origin);
+      return origin;
     }
 
     // Intentar obtener desde el referer header
@@ -285,16 +302,19 @@ export class AuthController {
     if (referer) {
       try {
         const url = new URL(referer);
+        console.log('Referer URL:', url.origin);
         // Verificar que el dominio esté en la lista de CORS permitidos
         if (config.corsOrigins.includes(url.origin)) {
+          console.log('✅ Dominio detectado desde referer:', url.origin);
           return url.origin;
         }
       } catch (e) {
-        console.log('No se pudo parsear el referer header');
+        console.log('❌ No se pudo parsear el referer header:', e);
       }
     }
 
     // Fallback al dominio por defecto
+    console.log('⚠️ Usando dominio por defecto:', config.urls.frontend);
     return config.urls.frontend;
   }
 
