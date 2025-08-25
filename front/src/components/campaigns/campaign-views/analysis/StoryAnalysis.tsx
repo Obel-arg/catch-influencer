@@ -241,7 +241,7 @@ const StoryAnalysis: React.FC<StoryAnalysisProps> = ({ postUrl, platform, postId
       const token = localStorage.getItem('token');
       const apiBaseUrl = process.env.NODE_ENV === 'development' 
         ? 'http://localhost:5000/api' 
-        : 'https://influencerstracker-back.vercel.app/api';
+        : 'http://localhost:5000/api';
       
       const fetchResponse = await fetch(`${apiBaseUrl}/influencer-posts/${postId}/screenshot`, {
         method: 'POST',
