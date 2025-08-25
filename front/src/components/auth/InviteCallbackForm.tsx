@@ -17,6 +17,7 @@ import {
   User,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useRoleCache } from "@/hooks/auth/useRoleCache";
 
 interface OrganizationInfo {
   name: string;
@@ -31,6 +32,7 @@ interface InviterInfo {
 export default function InviteCallbackForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { saveRoleToCache } = useRoleCache();
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -287,6 +289,19 @@ export default function InviteCallbackForm() {
             console.warn('Error actualizando perfil:', profileError);
           } else {
             console.log('✅ Perfil actualizado con rol:', userInfo?.role);
+            
+            // Actualizar el caché de roles
+            try {
+              saveRoleToCache({
+                role: userInfo?.role || 'user',
+                organizationId: userInfo?.organization_id || '',
+                organizationName: userInfo?.organization_name || '',
+                permissions: []
+              });
+              console.log('✅ Caché de roles actualizado');
+            } catch (error) {
+              console.warn('Error actualizando caché de roles:', error);
+            }
           }
         } catch (error) {
           console.warn('Error actualizando perfil del usuario:', error);
