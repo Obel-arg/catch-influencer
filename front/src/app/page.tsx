@@ -37,7 +37,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Panel azul a la izquierda */}
-      <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-blue-600 to-blue-800 text-white p-12 flex-col justify-center">
+      <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-black via-blue-950 to-black text-white p-12 flex-col justify-center">
         <div>
           <div className="flex items-center gap-2 mb-12">
             <BarChart2 className="h-8 w-8" />

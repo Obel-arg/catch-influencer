@@ -36,7 +36,7 @@ export const LoginView = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-br from-black via-blue-950 to-black flex items-center justify-center p-6">
       {/* Formulario Elevado */}
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8">
         {/* Logo y título */}
