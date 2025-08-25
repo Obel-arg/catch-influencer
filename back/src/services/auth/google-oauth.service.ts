@@ -91,76 +91,25 @@ export class GoogleOAuthService {
       let user = await this.userService.getUserByEmail(userInfo.email);
 
       if (!user) {
-        console.log('User not found in user_profiles, checking Supabase Auth...');
+        console.log('❌ User not found in user_profiles - Access denied');
+        console.log('🔒 This system only allows access to invited users');
         
         // Verificar si el usuario existe en Supabase Auth pero no en user_profiles
         const authUser = await this.userService.getUserFromAuthByEmail(userInfo.email);
         
         if (authUser) {
-          console.log('User exists in Supabase Auth but not in user_profiles, creating profile...');
-          // Usuario existe en Auth pero no en profiles - crear solo el profile
-          const userData = {
-            email: userInfo.email,
-            full_name: userInfo.name,
-            avatar_url: userInfo.picture,
-            password: '', // No se usa para usuarios OAuth
-            role: 'user' as const
-          };
-
-          user = await this.userService.createUserProfileForExistingAuth(authUser.id, userData);
-          console.log('✅ User profile created for existing auth user:', {
-            id: user.id,
-            email: user.email
-          });
-
-          // Actualizar metadatos del usuario en Supabase Auth para OAuth
-          if (supabaseAdmin) {
-            try {
-              await supabaseAdmin.auth.admin.updateUserById(authUser.id, {
-                app_metadata: {
-                  provider: 'google',
-                  providers: ['google']
-                },
-                user_metadata: {
-                  avatar_url: userInfo.picture,
-                  full_name: userInfo.name,
-                  provider: 'google'
-                }
-              });
-              console.log('✅ Auth user metadata updated for OAuth');
-            } catch (updateError) {
-              console.warn('Error updating auth user metadata:', updateError);
-            }
+          console.log('⚠️ User exists in Supabase Auth but not in user_profiles - removing from Auth');
+          // Eliminar usuario de Supabase Auth si no está en profiles
+          try {
+            await supabaseAdmin.auth.admin.deleteUser(authUser.id);
+            console.log('✅ User removed from Supabase Auth');
+          } catch (deleteError) {
+            console.warn('Error removing user from Auth:', deleteError);
           }
-        } else {
-          console.log('User not found anywhere, creating new OAuth user...');
-          // Usuario no existe en ningún lado - crear usuario OAuth completo
-          const newUserData = {
-            email: userInfo.email,
-            full_name: userInfo.name,
-            avatar_url: userInfo.picture,
-            password: this.generateRandomPassword(), // Password temporal, no se usará
-            phone: '',
-            company: '',
-            position: '',
-            address: '',
-            city: '',
-            role: 'user' as const,
-            googleId: userInfo.id // ID de Google para crear la identidad OAuth correctamente
-          };
-
-          console.log('Creating user with data:', {
-            email: newUserData.email,
-            full_name: newUserData.full_name,
-            googleId: newUserData.googleId
-          });
-
-          user = await this.userService.createGoogleOAuthUser(newUserData);
-          console.log('✅ New user created successfully:', {
-            id: user.id,
-            email: user.email
-          });
         }
+        
+        // Lanzar error de acceso denegado
+        throw new Error('ACCESS_DENIED: Usuario no autorizado. Solo usuarios invitados pueden acceder al sistema.');
       } else {
         console.log('Existing user found, updating information...');
         // Usuario existe, actualizar información si es necesario

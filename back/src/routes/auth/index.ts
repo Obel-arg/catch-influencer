@@ -23,6 +23,9 @@ router.get('/google/url', authController.googleAuthJson.bind(authController));
 // Ruta para manejar redirecciones de invitación
 router.get('/invite-callback', authController.handleInviteRedirect.bind(authController));
 
+// Ruta para verificar autorización de usuario (pública)
+router.get('/check-authorization', authController.checkUserAuthorization.bind(authController));
+
 // Rutas protegidas
 router.get('/me', authenticateToken, authController.me.bind(authController));
 router.put('/profile', authenticateToken, userController.updateUser.bind(userController));

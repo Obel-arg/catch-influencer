@@ -9,6 +9,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { useToast } from "@/hooks/common/useToast";
 import { GoogleAuthButton } from "./GoogleAuthButton";
+import { InvitationInfo } from "./InvitationInfo";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -25,23 +26,37 @@ export function LoginForm() {
   // Detectar errores de Google Auth en la URL
   useEffect(() => {
     const error = searchParams.get("error");
-    if (error === "google_auth_failed" && !hasProcessedError.current) {
+    const message = searchParams.get("message");
+    
+    if (error && !hasProcessedError.current) {
       hasProcessedError.current = true;
 
-      setLoginError(
-        "Error al autenticar con Google. Por favor, intenta nuevamente."
-      );
-      toast({
-        title: "Error de autenticación",
-        description:
-          "Hubo un problema con la autenticación de Google. Intenta de nuevo.",
-        variant: "destructive",
-      });
+      if (error === "access_denied") {
+        setLoginError(
+          message || "Solo usuarios invitados pueden acceder al sistema."
+        );
+        toast({
+          title: "Acceso denegado",
+          description: message || "Solo usuarios invitados pueden acceder al sistema.",
+          variant: "destructive",
+        });
+      } else if (error === "google_auth_failed") {
+        setLoginError(
+          "Error al autenticar con Google. Por favor, intenta nuevamente."
+        );
+        toast({
+          title: "Error de autenticación",
+          description:
+            "Hubo un problema con la autenticación de Google. Intenta de nuevo.",
+          variant: "destructive",
+        });
+      }
 
       // Limpiar el parámetro de error de la URL después de un pequeño delay
       setTimeout(() => {
         const url = new URL(window.location.href);
         url.searchParams.delete("error");
+        url.searchParams.delete("message");
         router.replace(url.pathname + url.search, { scroll: false });
       }, 100);
     }
@@ -100,6 +115,11 @@ export function LoginForm() {
             Ingresa tus credenciales para acceder a la plataforma y potenciar
             tus campañas.
           </p>
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-700">
+              <strong>🔒 Sistema de invitaciones:</strong> Solo usuarios previamente invitados pueden acceder al sistema.
+            </p>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -189,6 +209,9 @@ export function LoginForm() {
 
         {/* Google Auth Button */}
         <GoogleAuthButton />
+
+        {/* Información sobre el sistema de invitaciones */}
+        <InvitationInfo />
 
         <p className="text-center text-sm text-gray-500 mt-6">
           ¿No tienes una cuenta?{" "}

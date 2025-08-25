@@ -256,6 +256,14 @@ export class AuthController {
       
       // Detectar el dominio de origen para redirigir correctamente
       const originDomain = this.getOriginDomain(req);
+      
+      // Manejar específicamente el error de acceso denegado
+      if (error instanceof Error && error.message.includes('ACCESS_DENIED')) {
+        console.log('🚫 Access denied - redirecting to login with specific error');
+        const errorUrl = `${originDomain}/auth/login?error=access_denied&message=${encodeURIComponent('Solo usuarios invitados pueden acceder al sistema.')}`;
+        return res.redirect(errorUrl);
+      }
+      
       const errorMessage = error instanceof Error ? error.message : 'unknown_error';
       const errorUrl = `${originDomain}/auth/login?error=google_auth_failed&details=${encodeURIComponent(errorMessage)}`;
       
@@ -331,6 +339,42 @@ export class AuthController {
     } catch (error) {
       console.error('Error obteniendo URL de Google OAuth:', error);
       res.status(500).json({ error: 'Error al generar URL de autenticación' });
+    }
+  }
+
+  /**
+   * Endpoint para verificar si un usuario está autorizado (existe en user_profiles)
+   */
+  async checkUserAuthorization(req: Request, res: Response) {
+    try {
+      const { email } = req.query;
+      
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ error: 'Email requerido como query parameter' });
+      }
+
+      // Verificar si el usuario existe en user_profiles
+      const user = await this.userService.getUserByEmail(email);
+      
+      if (!user) {
+        return res.status(403).json({ 
+          authorized: false, 
+          message: 'Usuario no autorizado. Solo usuarios invitados pueden acceder al sistema.' 
+        });
+      }
+
+      res.json({ 
+        authorized: true, 
+        user: {
+          id: user.id,
+          email: user.email,
+          full_name: user.full_name,
+          role: user.role
+        }
+      });
+    } catch (error) {
+      console.error('Error verificando autorización de usuario:', error);
+      res.status(500).json({ error: 'Error al verificar autorización' });
     }
   }
 
