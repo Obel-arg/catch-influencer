@@ -12,7 +12,7 @@ function getFrontendUrl(): string {
   }
 
   if (process.env.NODE_ENV === 'production') {
-    return 'https://influencerstracker.vercel.app';
+    return 'https://catch-influencer.vercel.app';
   } else {
     return 'http://localhost:3000';
   }
@@ -24,7 +24,7 @@ function getFrontendUrl(): string {
 function getBackendUrl(): string {
   if (process.env.NODE_ENV === 'production') {
     // En producción, usar siempre la URL principal
-    return 'https://influencerstracker-back.vercel.app';
+    return 'https://catch-influencer-back.vercel.app';
   } else {
     // Desarrollo local
     return 'http://localhost:5000';
@@ -52,8 +52,7 @@ export const config = {
   
   // CORS - Permitir peticiones desde localhost y dominios de producción
   corsOrigins: [
-    "https://influencerstracker.vercel.app",
-    "https://dubbinghits.app",
+    "https://catch-influencer.vercel.app",
     "http://localhost:3000",
     "http://localhost:5000",
     "http://127.0.0.1:3000",

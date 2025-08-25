@@ -64,7 +64,7 @@ async function testConnection() {
         console.log('\n🔑 PROBANDO CONEXIÓN ADMIN...');
         try {
             const supabaseAdmin = createClient(
-                process.env.NEXT_PUBLIC_SUPABASE_URL,
+                process.env.SUPABASE_URL,
                 process.env.SUPABASE_SERVICE_KEY,
                 {
                     auth: {
@@ -96,8 +96,8 @@ async function testConnection() {
     console.log('\n🏗️ VERIFICANDO ESTRUCTURA DE LA BASE DE DATOS...');
     try {
         const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_ANON_KEY
         );
 
         // Verificar algunas tablas principales
@@ -142,7 +142,7 @@ async function testConnection() {
     }
 
     console.log('\n📊 INFORMACIÓN DEL PROYECTO:');
-    console.log(`   URL: ${process.env.NEXT_PUBLIC_SUPABASE_URL}`);
+            console.log(`   URL: ${process.env.SUPABASE_URL}`);
     console.log(`   Proyecto: catch-influencers`);
     console.log(`   Estado: ${results.length === 0 ? 'LISTO' : 'NECESITA CORRECCIÓN'}`);
 }
