@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, Suspense } from "react"
 import { useParams, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -276,8 +276,10 @@ export default function CampaignDetailPage() {
   const campaignId = params.id as string
 
   return (
-    <CampaignProvider campaignId={campaignId}>
-      <CampaignDetailContent />
-    </CampaignProvider>
+    <Suspense fallback={<CampaignLoadingSkeleton />}>
+      <CampaignProvider campaignId={campaignId}>
+        <CampaignDetailContent />
+      </CampaignProvider>
+    </Suspense>
   )
 } 
