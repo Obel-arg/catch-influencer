@@ -136,18 +136,7 @@ export class AuthController {
     }
   }
 
-  async resetPassword(req: Request, res: Response) {
-    try {
-      const { email } = req.body;
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
-      if (error) throw error;
 
-      res.json({ message: 'Instrucciones de recuperación enviadas' });
-    } catch (error) {
-      console.error('Error en reset password:', error);
-      res.status(500).json({ error: 'Error al procesar la solicitud' });
-    }
-  }
 
   async me(req: Request, res: Response) {
     try {
@@ -478,6 +467,103 @@ export class AuthController {
     } catch (error) {
       console.error('Error en debug user consistency:', error);
       res.status(500).json({ error: 'Error al verificar consistencia del usuario' });
+    }
+  }
+
+  /**
+   * Endpoint para solicitar reset de contraseña
+   */
+  async forgotPassword(req: Request, res: Response) {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: 'Email requerido' });
+      }
+
+      // Verificar que el usuario existe
+      const user = await this.userService.getUserByEmail(email);
+      if (!user) {
+        // Por seguridad, no revelar si el email existe o no
+        return res.status(200).json({ 
+          message: 'Si el email existe en nuestro sistema, recibirás instrucciones para restablecer tu contraseña' 
+        });
+      }
+
+      // Generar token de reset (válido por 1 hora)
+      const resetToken = generateToken({ email, type: 'password_reset' } as any, '1h');
+      
+      // En un entorno real, aquí enviarías el email
+      // Por ahora, solo logueamos el token
+      console.log('🔐 Reset token generado para:', email, 'Token:', resetToken);
+
+      res.status(200).json({ 
+        message: 'Si el email existe en nuestro sistema, recibirás instrucciones para restablecer tu contraseña' 
+      });
+    } catch (error) {
+      console.error('Error en forgot password:', error);
+      res.status(500).json({ error: 'Error al procesar solicitud de reset de contraseña' });
+    }
+  }
+
+  /**
+   * Endpoint para verificar token de reset
+   */
+  async verifyResetToken(req: Request, res: Response) {
+    try {
+      const { token } = req.params;
+      
+      if (!token) {
+        return res.status(400).json({ error: 'Token requerido' });
+      }
+
+      // Verificar el token
+      const decoded = verifyToken(token);
+      
+      if (!decoded || decoded.type !== 'password_reset') {
+        return res.status(400).json({ error: 'Token inválido o expirado' });
+      }
+
+      res.status(200).json({ valid: true });
+    } catch (error) {
+      console.error('Error en verify reset token:', error);
+      res.status(400).json({ error: 'Token inválido o expirado' });
+    }
+  }
+
+  /**
+   * Endpoint para resetear contraseña
+   */
+  async resetPassword(req: Request, res: Response) {
+    try {
+      const { token, newPassword } = req.body;
+      
+      if (!token || !newPassword) {
+        return res.status(400).json({ error: 'Token y nueva contraseña requeridos' });
+      }
+
+      // Verificar el token
+      const decoded = verifyToken(token);
+      
+      if (!decoded || decoded.type !== 'password_reset') {
+        return res.status(400).json({ error: 'Token inválido o expirado' });
+      }
+
+      // Actualizar contraseña en Supabase
+      const { error } = await supabase.auth.admin.updateUserById(
+        decoded.id || decoded.email,
+        { password: newPassword }
+      );
+
+      if (error) {
+        console.error('Error actualizando contraseña en Supabase:', error);
+        return res.status(500).json({ error: 'Error al actualizar contraseña' });
+      }
+
+      res.status(200).json({ message: 'Contraseña actualizada correctamente' });
+    } catch (error) {
+      console.error('Error en reset password:', error);
+      res.status(500).json({ error: 'Error al resetear contraseña' });
     }
   }
 } 

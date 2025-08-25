@@ -84,12 +84,12 @@ export const useAuth = () => {
           for (const org of organizations) {
             const role = org.member?.role;
             if (role && getRolePriority(role) > getRolePriority(highestRole)) {
-              highestRole = role as 'owner' | 'admin' | 'member' | 'viewer';
+              highestRole = role as 'admin' | 'member' | 'viewer';
               primaryOrg = org;
             }
           }
           
-          const finalRole: 'owner' | 'admin' | 'member' | 'viewer' = isOnlyMember ? 'member' : highestRole;
+          const finalRole: 'admin' | 'member' | 'viewer' = isOnlyMember ? 'member' : highestRole;
           
           // Guardar rol en caché
           saveRoleToCache({
@@ -405,7 +405,7 @@ export const useAuth = () => {
           // Calcular el rol del usuario
           const isOnlyMember = organizations.every((org: any) => org.member?.role === 'member');
           
-          let highestRole: 'owner' | 'admin' | 'member' | 'viewer' = 'member';
+          let highestRole: 'admin' | 'member' | 'viewer' = 'member';
           let primaryOrg = organizations[0];
           
           const getRolePriority = (role: string): number => {
@@ -421,12 +421,12 @@ export const useAuth = () => {
           for (const org of organizations) {
             const role = org.member?.role;
             if (role && getRolePriority(role) > getRolePriority(highestRole)) {
-              highestRole = role as 'owner' | 'admin' | 'member' | 'viewer';
+              highestRole = role as 'admin' | 'member' | 'viewer';
               primaryOrg = org;
             }
           }
           
-          const finalRole: 'owner' | 'admin' | 'member' | 'viewer' = isOnlyMember ? 'member' : highestRole;
+          const finalRole: 'admin' | 'member' | 'viewer' = isOnlyMember ? 'member' : highestRole;
           
           // Guardar rol en caché
           saveRoleToCache({

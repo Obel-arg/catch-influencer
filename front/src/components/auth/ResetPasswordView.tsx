@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/common/useToast';
 export const ResetPasswordView = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { resetPassword, verifyResetToken } = useAuth();
+  const { resetPassword, requestPasswordReset, verifyResetToken } = useAuth();
   const [mode, setMode] = useState<"request" | "reset">("request");
   
   const [email, setEmail] = useState("");
@@ -71,6 +71,8 @@ export const ResetPasswordView = () => {
 
     if (token) {
       validateToken();
+    } else {
+      setIsLoading(false);
     }
   }, [token, verifyResetToken, router, toast]);
 
@@ -81,7 +83,7 @@ export const ResetPasswordView = () => {
     setSuccess("");
 
     try {
-      await resetPassword(email, password);
+      await requestPasswordReset(email);
       setSuccess("Se ha enviado un correo con las instrucciones para restablecer tu contraseña.");
     } catch (error: any) {
       setError(error.message || "Error al solicitar restablecimiento de contraseña");
@@ -105,7 +107,7 @@ export const ResetPasswordView = () => {
     );
   }
 
-  if (!isValidToken) {
+  if (token && !isValidToken) {
     return null;
   }
 

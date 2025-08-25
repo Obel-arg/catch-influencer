@@ -64,7 +64,7 @@ export class AuthService {
   }
 
   public async requestPasswordReset(email: string): Promise<void> {
-    await api.post('/auth/request-password-reset', { email });
+    await api.post('/auth/forgot-password', { email });
   }
 
   public async verifyResetToken(token: string): Promise<boolean> {
