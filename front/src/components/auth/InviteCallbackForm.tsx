@@ -479,28 +479,7 @@ export default function InviteCallbackForm() {
               )}
             </div>
 
-            {/* Usuario que invitó */}
-            <div className="bg-white/10 p-4 rounded-lg">
-              <div className="flex items-center gap-3 mb-2">
-                <User className="h-5 w-5" />
-                <h3 className="font-medium">Invitado por:</h3>
-              </div>
-              {loadingDetails ? (
-                <div className="animate-pulse">
-                  <div className="h-4 bg-white/20 rounded w-2/3 mb-2"></div>
-                  <div className="h-3 bg-white/20 rounded w-1/2"></div>
-                </div>
-              ) : inviterInfo ? (
-                <div>
-                  <p className="font-bold">{inviterInfo.full_name}</p>
-                  <p className="text-sm opacity-80">{inviterInfo.email}</p>
-                </div>
-              ) : (
-                <p className="text-sm opacity-80">
-                  Cargando información del usuario...
-                </p>
-              )}
-            </div>
+            
           </div>
         </div>
 
@@ -561,16 +540,7 @@ export default function InviteCallbackForm() {
                   </p>
                 </div>
               )}
-              {inviterInfo && (
-                <div className="bg-gray-50 p-3 rounded-lg text-left">
-                  <p className="text-sm font-medium text-gray-700">
-                    Invitado por:
-                  </p>
-                  <p className="font-bold text-gray-900">
-                    {inviterInfo.full_name}
-                  </p>
-                </div>
-              )}
+              
             </div>
           </div>
 
