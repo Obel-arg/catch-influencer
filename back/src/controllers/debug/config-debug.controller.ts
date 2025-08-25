@@ -47,8 +47,8 @@ export class ConfigDebugController {
           PORT: process.env.PORT || 'NOT_SET',
           OPENAI_API_KEY: process.env.OPENAI_API_KEY ? 'SET' : 'NOT_SET',
           CREATORDB_API_KEY: process.env.CREATORDB_API_KEY ? 'SET' : 'NOT_SET',
-          NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'NOT_SET',
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'NOT_SET',
+              SUPABASE_URL: process.env.SUPABASE_URL ? 'SET' : 'NOT_SET',
+    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ? 'SET' : 'NOT_SET',
           DATABASE_URL: process.env.DATABASE_URL ? 'SET' : 'NOT_SET'
         },
         
@@ -85,7 +85,7 @@ export class ConfigDebugController {
           type: 'DATABASE_CONFIG_MISSING',
           service: 'Supabase',
           description: 'Configuración de Supabase incompleta',
-          solution: 'Verificar NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY'
+          solution: 'Verificar SUPABASE_URL y SUPABASE_ANON_KEY'
         });
       }
       

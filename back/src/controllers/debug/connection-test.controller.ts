@@ -152,8 +152,8 @@ export const testAllConnections = async (req: Request, res: Response) => {
   const requiredEnvVars = [
     'NODE_ENV',
     'PORT',
-    'NEXT_PUBLIC_SUPABASE_URL',
-    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    'SUPABASE_URL',
+    'SUPABASE_ANON_KEY',
     'JWT_SECRET',
     'ENCRYPTION_KEY'
   ];

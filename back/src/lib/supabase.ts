@@ -2,11 +2,11 @@ import { createClient } from '@supabase/supabase-js';
 import config from '../config/environment';
 
 if (!config.supabase.url) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_URL es requerido');
+  throw new Error('SUPABASE_URL es requerido');
 }
 
 if (!config.supabase.anonKey) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY es requerido');
+  throw new Error('SUPABASE_ANON_KEY es requerido');
 }
 
 // Cliente normal para operaciones regulares

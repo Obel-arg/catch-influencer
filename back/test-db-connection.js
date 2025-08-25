@@ -9,8 +9,8 @@ async function testConnection() {
     // 1. Verificar variables de entorno
     console.log('📋 VERIFICANDO VARIABLES DE ENTORNO...');
     const requiredVars = {
-        'NEXT_PUBLIC_SUPABASE_URL': process.env.NEXT_PUBLIC_SUPABASE_URL,
-        'NEXT_PUBLIC_SUPABASE_ANON_KEY': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+          'SUPABASE_URL': process.env.SUPABASE_URL,
+  'SUPABASE_ANON_KEY': process.env.SUPABASE_ANON_KEY,
         'SUPABASE_SERVICE_KEY': process.env.SUPABASE_SERVICE_KEY,
         'SUPABASE_DB_URL': process.env.SUPABASE_DB_URL
     };
@@ -24,7 +24,7 @@ async function testConnection() {
         }
     }
 
-    if (!requiredVars.NEXT_PUBLIC_SUPABASE_URL || !requiredVars.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    if (!requiredVars.SUPABASE_URL || !requiredVars.SUPABASE_ANON_KEY) {
         console.log('\n❌ No se pueden hacer tests sin las variables básicas de Supabase');
         return;
     }
@@ -34,11 +34,11 @@ async function testConnection() {
     // 2. Test conexión Supabase
     try {
         const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_ANON_KEY
         );
 
-        console.log('📡 Conectando a:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+        console.log('📡 Conectando a:', process.env.SUPABASE_URL);
         
         // Test 1: Verificar que podemos hacer una consulta básica
         const { data: healthData, error: healthError } = await supabase
