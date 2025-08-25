@@ -98,13 +98,12 @@ export class GoogleOAuthService {
         const authUser = await this.userService.getUserFromAuthByEmail(userInfo.email);
         
         if (authUser) {
-          console.log('⚠️ User exists in Supabase Auth but not in user_profiles - removing from Auth');
-          // Eliminar usuario de Supabase Auth si no está en profiles
+          console.log('⚠️ User exists in Supabase Auth but not in user_profiles - removing completely');
+          // Eliminar usuario completamente de todas las tablas
           try {
-            await supabaseAdmin.auth.admin.deleteUser(authUser.id);
-            console.log('✅ User removed from Supabase Auth');
+            await this.deleteUserCompletely(authUser.id, userInfo.email);
           } catch (deleteError) {
-            console.warn('Error removing user from Auth:', deleteError);
+            console.warn('Error removing user completely:', deleteError);
           }
         }
         
@@ -229,5 +228,55 @@ export class GoogleOAuthService {
    */
   private generateRandomPassword(): string {
     return Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12);
+  }
+
+  /**
+   * Elimina completamente un usuario de todas las tablas relacionadas
+   */
+  private async deleteUserCompletely(userId: string, email: string) {
+    console.log(`🗑️ Eliminando usuario completamente: ${email} (${userId})`);
+    
+    try {
+      // 1. Eliminar de organization_members
+      const { error: orgError } = await supabase
+        .from('organization_members')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (orgError) {
+        console.warn('Error eliminando de organization_members:', orgError);
+      } else {
+        console.log('✅ Eliminado de organization_members');
+      }
+
+      // 2. Eliminar de user_profiles
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (profileError) {
+        console.warn('Error eliminando de user_profiles:', profileError);
+      } else {
+        console.log('✅ Eliminado de user_profiles');
+      }
+
+      // 3. Eliminar de Supabase Auth (si supabaseAdmin está disponible)
+      if (supabaseAdmin) {
+        try {
+          await supabaseAdmin.auth.admin.deleteUser(userId);
+          console.log('✅ Eliminado de Supabase Auth');
+        } catch (authError) {
+          console.warn('Error eliminando de Supabase Auth:', authError);
+        }
+      } else {
+        console.warn('⚠️ supabaseAdmin no disponible, no se puede eliminar de Auth');
+      }
+
+      console.log(`✅ Usuario ${email} eliminado completamente`);
+    } catch (error) {
+      console.error('❌ Error eliminando usuario completamente:', error);
+      throw error;
+    }
   }
 } 

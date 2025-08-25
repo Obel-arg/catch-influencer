@@ -275,36 +275,65 @@ export default function InviteCallbackForm() {
           user.user_metadata?.full_name || userInfo?.full_name || ""
         );
 
-        // Actualizar el perfil del usuario con el rol correcto
+        // Crear o actualizar el perfil del usuario con el rol correcto
         try {
-          const { error: profileError } = await supabase
+          // Primero verificar si el perfil ya existe
+          const { data: existingProfile } = await supabase
             .from('user_profiles')
-            .update({ 
-              role: userInfo?.role || 'user',
-              updated_at: new Date().toISOString()
-            })
-            .eq('user_id', user.id);
+            .select('id')
+            .eq('user_id', user.id)
+            .single();
 
-          if (profileError) {
-            console.warn('Error actualizando perfil:', profileError);
-          } else {
-            console.log('✅ Perfil actualizado con rol:', userInfo?.role);
-            
-            // Actualizar el caché de roles
-            try {
-              saveRoleToCache({
+          if (existingProfile) {
+            // Actualizar perfil existente
+            const { error: profileError } = await supabase
+              .from('user_profiles')
+              .update({ 
                 role: userInfo?.role || 'user',
-                organizationId: userInfo?.organization_id || '',
-                organizationName: userInfo?.organization_name || '',
-                permissions: []
+                updated_at: new Date().toISOString()
+              })
+              .eq('user_id', user.id);
+
+            if (profileError) {
+              console.warn('Error actualizando perfil:', profileError);
+            } else {
+              console.log('✅ Perfil actualizado con rol:', userInfo?.role);
+            }
+          } else {
+            // Crear nuevo perfil
+            const { error: profileError } = await supabase
+              .from('user_profiles')
+              .insert({
+                user_id: user.id,
+                email: user.email,
+                full_name: userInfo?.full_name || user.user_metadata?.full_name || '',
+                role: userInfo?.role || 'user',
+                avatar_url: user.user_metadata?.avatar_url || null,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
               });
-              console.log('✅ Caché de roles actualizado');
-            } catch (error) {
-              console.warn('Error actualizando caché de roles:', error);
+
+            if (profileError) {
+              console.warn('Error creando perfil:', profileError);
+            } else {
+              console.log('✅ Perfil creado con rol:', userInfo?.role);
             }
           }
+          
+          // Actualizar el caché de roles
+          try {
+            saveRoleToCache({
+              role: userInfo?.role || 'user',
+              organizationId: userInfo?.organization_id || '',
+              organizationName: userInfo?.organization_name || '',
+              permissions: []
+            });
+            console.log('✅ Caché de roles actualizado');
+          } catch (error) {
+            console.warn('Error actualizando caché de roles:', error);
+          }
         } catch (error) {
-          console.warn('Error actualizando perfil del usuario:', error);
+          console.warn('Error creando/actualizando perfil del usuario:', error);
         }
       }
 
@@ -421,8 +450,20 @@ export default function InviteCallbackForm() {
         }
       }
 
-      // Redirigir al explorer
-      router.push("/explorer");
+      // Verificar que el usuario tenga acceso completo antes de redirigir
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          console.log('✅ Sesión verificada, redirigiendo al explorer');
+          router.push("/explorer");
+        } else {
+          console.error('❌ No se pudo verificar la sesión');
+          setError("Error al verificar la sesión. Por favor intenta de nuevo.");
+        }
+      } catch (sessionError) {
+        console.error('❌ Error verificando sesión:', sessionError);
+        setError("Error al verificar la sesión. Por favor intenta de nuevo.");
+      }
     } catch (error: any) {
       console.error("Error estableciendo contraseña:", error);
       setError(
@@ -520,7 +561,12 @@ export default function InviteCallbackForm() {
           <h1 className="text-4xl font-bold mb-6">¡Bienvenido al equipo!</h1>
           <p className="text-lg opacity-90 mb-8">
             Has sido invitado como{" "}
-            <span className="font-bold">{userInfo?.role}</span> a la plataforma.
+            <span className="font-bold">
+              {userInfo?.role === 'admin' ? 'Administrador' : 
+               userInfo?.role === 'member' ? 'Miembro' : 
+               userInfo?.role === 'viewer' ? 'Visualizador' : 
+               userInfo?.role}
+            </span> a la plataforma.
             Establece tu contraseña para comenzar a colaborar.
           </p>
 
@@ -606,7 +652,10 @@ export default function InviteCallbackForm() {
             <p className="text-gray-500">
               Invitado como{" "}
               <span className="font-semibold text-blue-600">
-                {userInfo?.role}
+                {userInfo?.role === 'admin' ? 'Administrador' : 
+                 userInfo?.role === 'member' ? 'Miembro' : 
+                 userInfo?.role === 'viewer' ? 'Visualizador' : 
+                 userInfo?.role}
               </span>
               <br />
               <span className="text-sm">{userInfo?.email}</span>

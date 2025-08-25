@@ -26,6 +26,9 @@ router.get('/invite-callback', authController.handleInviteRedirect.bind(authCont
 // Ruta para verificar autorización de usuario (pública)
 router.get('/check-authorization', authController.checkUserAuthorization.bind(authController));
 
+// Ruta para eliminar usuario completamente (pública para debugging)
+router.post('/delete-user-completely', authController.deleteUserCompletely.bind(authController));
+
 // Rutas protegidas
 router.get('/me', authenticateToken, authController.me.bind(authController));
 router.put('/profile', authenticateToken, userController.updateUser.bind(userController));

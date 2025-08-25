@@ -482,6 +482,88 @@ export class AuthController {
   }
 
   /**
+   * Endpoint para eliminar completamente un usuario de todas las tablas
+   */
+  async deleteUserCompletely(req: Request, res: Response) {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: 'Email requerido' });
+      }
+
+      console.log(`🗑️ Eliminando usuario completamente: ${email}`);
+
+      // 1. Buscar en user_profiles
+      const profileUser = await this.userService.getUserByEmail(email);
+      
+      // 2. Buscar en Supabase Auth
+      const authUser = await this.userService.getUserFromAuthByEmail(email);
+
+      if (!profileUser && !authUser) {
+        return res.status(404).json({ 
+          message: 'Usuario no encontrado en ninguna tabla',
+          email 
+        });
+      }
+
+      // 3. Eliminar de organization_members si existe
+      if (profileUser || authUser) {
+        const userId = profileUser?.id || authUser?.id;
+        
+        if (userId) {
+          const { error: orgError } = await supabase
+            .from('organization_members')
+            .delete()
+            .eq('user_id', userId);
+          
+          if (orgError) {
+            console.warn('Error eliminando de organization_members:', orgError);
+          } else {
+            console.log('✅ Eliminado de organization_members');
+          }
+        }
+      }
+
+      // 4. Eliminar de user_profiles si existe
+      if (profileUser) {
+        const { error: profileError } = await supabase
+          .from('user_profiles')
+          .delete()
+          .eq('id', profileUser.id);
+        
+        if (profileError) {
+          console.warn('Error eliminando de user_profiles:', profileError);
+        } else {
+          console.log('✅ Eliminado de user_profiles');
+        }
+      }
+
+      // 5. Eliminar de Supabase Auth si existe
+      if (authUser && supabaseAdmin) {
+        try {
+          await supabaseAdmin.auth.admin.deleteUser(authUser.id);
+          console.log('✅ Eliminado de Supabase Auth');
+        } catch (authError) {
+          console.warn('Error eliminando de Supabase Auth:', authError);
+        }
+      }
+
+      res.json({ 
+        message: 'Usuario eliminado completamente',
+        email,
+        deletedFrom: {
+          userProfiles: !!profileUser,
+          supabaseAuth: !!authUser
+        }
+      });
+    } catch (error) {
+      console.error('Error eliminando usuario completamente:', error);
+      res.status(500).json({ error: 'Error al eliminar usuario' });
+    }
+  }
+
+  /**
    * Endpoint para verificar inconsistencias entre Supabase Auth y user_profiles
    */
   async debugUserConsistency(req: Request, res: Response) {
@@ -672,6 +754,15 @@ export class AuthController {
         console.error('❌ Error obteniendo usuario:', userError);
         const frontendUrl = config.urls.frontend;
         const errorUrl = `${frontendUrl}/auth/login?error=invalid_token`;
+        return res.redirect(errorUrl);
+      }
+      
+      // Verificar que el usuario existe en user_profiles
+      const userProfile = await this.userService.getUserByEmail(user.email!);
+      if (!userProfile) {
+        console.error('❌ Usuario no encontrado en user_profiles:', user.email);
+        const frontendUrl = config.urls.frontend;
+        const errorUrl = `${frontendUrl}/auth/login?error=user_not_found`;
         return res.redirect(errorUrl);
       }
       
