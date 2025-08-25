@@ -7,6 +7,7 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
+import { useRoleCache } from "@/hooks/auth/useRoleCache";
 
 interface User {
   id: string;
@@ -14,6 +15,8 @@ interface User {
   full_name?: string;
   avatar_url?: string;
   role?: string;
+  organization_id?: string;
+  organization_name?: string;
 }
 
 interface AuthContextType {
@@ -42,6 +45,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
+  const { saveRoleToCache } = useRoleCache();
 
   useEffect(() => {
     // Initialize auth state from localStorage (solo una vez)
@@ -61,6 +65,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           userEmail: parsedUser.email
         });
         setUser(parsedUser);
+        
+        // Sincronizar caché de roles si el usuario tiene rol
+        if (parsedUser.role) {
+          try {
+            saveRoleToCache({
+              role: parsedUser.role as any,
+              organizationId: parsedUser.organization_id || '',
+              organizationName: parsedUser.organization_name || '',
+              permissions: []
+            });
+            console.log('✅ AuthContext - Caché de roles sincronizado al cargar:', parsedUser.role);
+          } catch (error) {
+            console.warn('Error sincronizando caché de roles al cargar:', error);
+          }
+        }
       } catch (error) {
         console.error("❌ AuthContext - Error parsing user data:", error);
         localStorage.removeItem("userData");
@@ -86,12 +105,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.setItem("userData", JSON.stringify(userData));
     setUser(userData);
     
+    // Sincronizar caché de roles si el usuario tiene rol
+    if (userData.role) {
+      try {
+        saveRoleToCache({
+          role: userData.role as any,
+          organizationId: userData.organization_id || '',
+          organizationName: userData.organization_name || '',
+          permissions: []
+        });
+        console.log('✅ AuthContext - Caché de roles sincronizado:', userData.role);
+      } catch (error) {
+        console.warn('Error sincronizando caché de roles:', error);
+      }
+    }
+    
     console.log("✅ AuthContext - Login completado");
   };
 
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("userData");
+    localStorage.removeItem("userRoleCache");
     setUser(null);
   };
 

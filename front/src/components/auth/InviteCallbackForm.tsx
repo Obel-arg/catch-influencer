@@ -349,21 +349,69 @@ export default function InviteCallbackForm() {
               );
 
               if (addResponse.ok) {
-                console.log("Usuario agregado exitosamente a la organización");
+                console.log("✅ Usuario agregado exitosamente a la organización");
               } else {
-                console.warn(
-                  "No se pudo agregar automáticamente a la organización:",
-                  addResponse.statusText
+                const errorText = await addResponse.text();
+                console.error(
+                  "❌ No se pudo agregar automáticamente a la organización:",
+                  addResponse.status,
+                  addResponse.statusText,
+                  errorText
                 );
+                
+                // Intentar agregar directamente a la base de datos como fallback
+                try {
+                  const { error: dbError } = await supabase
+                    .from('organization_members')
+                    .insert({
+                      organization_id: userInfo.organization_id,
+                      user_id: user.id,
+                      role: userInfo.role,
+                      created_at: new Date().toISOString(),
+                      updated_at: new Date().toISOString()
+                    });
+                  
+                  if (dbError) {
+                    console.error('❌ Error agregando a organización directamente:', dbError);
+                  } else {
+                    console.log('✅ Usuario agregado a organización directamente');
+                  }
+                } catch (dbError) {
+                  console.error('❌ Error en fallback de organización:', dbError);
+                }
               }
             } else {
               console.log("Usuario ya es miembro de la organización");
             }
           } else {
-            console.warn(
-              "No se pudo verificar si el usuario está en la organización:",
-              checkResponse.statusText
+            const errorText = await checkResponse.text();
+            console.error(
+              "❌ No se pudo verificar si el usuario está en la organización:",
+              checkResponse.status,
+              checkResponse.statusText,
+              errorText
             );
+            
+            // Si no se puede verificar, intentar agregar directamente
+            try {
+              const { error: dbError } = await supabase
+                .from('organization_members')
+                .insert({
+                  organization_id: userInfo.organization_id,
+                  user_id: user.id,
+                  role: userInfo.role,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                });
+              
+              if (dbError) {
+                console.error('❌ Error agregando a organización directamente:', dbError);
+              } else {
+                console.log('✅ Usuario agregado a organización directamente (fallback)');
+              }
+            } catch (dbError) {
+              console.error('❌ Error en fallback de organización:', dbError);
+            }
           }
         } catch (error) {
           console.warn(
