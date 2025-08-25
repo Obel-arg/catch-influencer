@@ -112,11 +112,11 @@ export const ResetPasswordView = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-black via-blue-950 to-black">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 h-screen flex items-center justify-center">
         <div className="bg-white rounded-lg shadow-xl overflow-hidden w-full max-w-4xl flex flex-col md:flex-row">
           {/* Lado izquierdo - Imagen/Banner */}
-          <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white p-8 md:p-12 md:w-1/2 flex flex-col justify-between">
+          <div className="bg-gradient-to-br from-black via-blue-950 to-black text-white p-8 md:p-12 md:w-1/2 flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-2 mb-8">
                 <BarChart2 className="h-8 w-8" />

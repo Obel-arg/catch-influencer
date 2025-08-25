@@ -38,32 +38,34 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="container max-w-md py-10">
-      <div className="flex flex-col space-y-8">
-        <h1 className="text-3xl font-bold text-center">¿Olvidaste tu contraseña?</h1>
-        <p className="text-center text-gray-600">
-          Ingresa tu correo electrónico y te enviaremos las instrucciones para restablecer tu contraseña
-        </p>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Correo Electrónico</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="tu@email.com"
-              required
-            />
-          </div>
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Enviando...' : 'Enviar'}
-          </Button>
-        </form>
+    <div className="min-h-screen bg-gradient-to-br from-black via-blue-950 to-black flex items-center justify-center p-6">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8">
+        <div className="flex flex-col space-y-8">
+          <h1 className="text-3xl font-bold text-center">¿Olvidaste tu contraseña?</h1>
+          <p className="text-center text-gray-600">
+            Ingresa tu correo electrónico y te enviaremos las instrucciones para restablecer tu contraseña
+          </p>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Correo Electrónico</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="tu@email.com"
+                required
+              />
+            </div>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Enviando...' : 'Enviar'}
+            </Button>
+          </form>
+        </div>
       </div>
     </div>
   );
