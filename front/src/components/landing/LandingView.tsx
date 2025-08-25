@@ -31,7 +31,7 @@ export const LandingView = () => {
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Banner negro a la izquierda */}
-      <div className="hidden md:flex md:w-1/2 bg-black text-white p-12 flex-col justify-center">
+      <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-black via-blue-950 to-black text-white p-12 flex-col justify-center relative overflow-hidden">
         <div>
           <div className="flex items-center gap-2 mb-12">
             <img 
