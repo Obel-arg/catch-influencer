@@ -236,13 +236,17 @@ export const UsersProvider: React.FC<UsersProviderProps> = ({
         throw new Error("No hay organización seleccionada");
       }
 
+      console.log('🗑️ UsersContext - Iniciando eliminación de usuario:', userId);
+      
       try {
         setLoading(true);
         await usersService.removeUser(currentOrganizationId, userId);
         
+        console.log('✅ UsersContext - Usuario eliminado exitosamente');
+        
         showToast({
           title: "Éxito",
-          description: "Usuario eliminado correctamente",
+          description: "Usuario eliminado completamente de la organización",
           variant: "default",
         });
         
@@ -250,6 +254,7 @@ export const UsersProvider: React.FC<UsersProviderProps> = ({
         clearUsersCache();
         await getMembers(currentOrganizationId, true);
       } catch (err) {
+        console.error('❌ UsersContext - Error eliminando usuario:', err);
         handleHookError(err, setError, "Error al eliminar usuario");
         throw err;
       } finally {

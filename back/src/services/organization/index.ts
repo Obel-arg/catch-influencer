@@ -183,13 +183,76 @@ export class OrganizationService {
   }
 
   async removeMemberFromOrganization(organizationId: string, userId: string): Promise<void> {
-    const { error } = await supabase
-      .from('organization_members')
-      .delete()
-      .eq('organization_id', organizationId)
-      .eq('user_id', userId);
+    console.log('🗑️ Iniciando eliminación en cascada para usuario:', userId);
+    
+    try {
+      // 1. Eliminar de organization_members
+      const { error: orgError } = await supabase
+        .from('organization_members')
+        .delete()
+        .eq('organization_id', organizationId)
+        .eq('user_id', userId);
 
-    if (error) throw error;
+      if (orgError) {
+        console.error('❌ Error eliminando de organization_members:', orgError);
+        throw orgError;
+      }
+      console.log('✅ Usuario eliminado de organization_members');
+
+      // 2. Eliminar de campaign_members (si existe)
+      const { error: campaignError } = await supabase
+        .from('campaign_members')
+        .delete()
+        .eq('user_id', userId);
+
+      if (campaignError) {
+        console.warn('⚠️ Error eliminando de campaign_members:', campaignError);
+      } else {
+        console.log('✅ Usuario eliminado de campaign_members');
+      }
+
+      // 3. Eliminar de team_members (si existe)
+      const { error: teamError } = await supabase
+        .from('team_members')
+        .delete()
+        .eq('user_id', userId);
+
+      if (teamError) {
+        console.warn('⚠️ Error eliminando de team_members:', teamError);
+      } else {
+        console.log('✅ Usuario eliminado de team_members');
+      }
+
+      // 4. Eliminar de user_profiles
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .delete()
+        .eq('user_id', userId);
+
+      if (profileError) {
+        console.error('❌ Error eliminando de user_profiles:', profileError);
+        throw profileError;
+      }
+      console.log('✅ Usuario eliminado de user_profiles');
+
+      // 5. Eliminar de auth.users (usando Supabase Admin)
+      try {
+        const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+        if (authError) {
+          console.error('❌ Error eliminando de auth.users:', authError);
+          throw authError;
+        }
+        console.log('✅ Usuario eliminado de auth.users');
+      } catch (authError) {
+        console.error('❌ Error crítico eliminando de auth.users:', authError);
+        throw authError;
+      }
+
+      console.log('🎉 Eliminación en cascada completada exitosamente');
+    } catch (error) {
+      console.error('❌ Error en eliminación en cascada:', error);
+      throw error;
+    }
   }
 
   async updateMemberRole(organizationId: string, userId: string, role: string): Promise<void> {

@@ -411,20 +411,30 @@ export function UserTable({
       >
         <AlertDialogContent className="bg-white border border-gray-200 shadow-xl rounded-xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar usuario?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción eliminará al usuario de la organización. El usuario
-              perderá acceso a todas las campañas y datos asociados. Esta acción
-              no se puede deshacer.
+            <AlertDialogTitle className="text-red-600">⚠️ Eliminación Completa de Usuario</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p className="font-medium text-gray-900">
+                Esta acción eliminará <strong>completamente</strong> al usuario del sistema:
+              </p>
+              <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
+                <li>❌ Eliminado de la organización</li>
+                <li>❌ Eliminado de todas las campañas</li>
+                <li>❌ Eliminado de todos los equipos</li>
+                <li>❌ Eliminado del perfil de usuario</li>
+                <li>❌ Eliminado de la autenticación (auth.users)</li>
+              </ul>
+              <p className="text-red-600 font-medium">
+                ⚠️ Esta acción es <strong>irreversible</strong> y no se puede deshacer.
+              </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-600 hover:bg-red-700 text-white"
             >
-              Eliminar usuario
+              🗑️ Eliminar Completamente
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
