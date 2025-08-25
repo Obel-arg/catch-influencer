@@ -28,7 +28,7 @@ interface InviterInfo {
   email: string;
 }
 
-export function InviteCallbackForm() {
+export default function InviteCallbackForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
