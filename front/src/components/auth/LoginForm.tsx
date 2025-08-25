@@ -96,107 +96,128 @@ export function LoginForm() {
   };
 
   return (
-         <div className="min-h-screen bg-black flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-br from-black via-blue-950 to-black flex items-center justify-center p-6 relative overflow-hidden">
       {/* Formulario Elevado */}
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8">
-                 {/* Logo */}
-         <div className="text-center mb-8">
-           <div className="flex items-center justify-center mb-6">
-             <img 
-               src="/logo_black.svg" 
-               alt="Catch Logo" 
-               className="h-16 w-auto object-contain"
-             />
-           </div>
-         </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="email">Correo Electrónico</Label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                             <Input
-                 id="email"
-                 type="email"
-                 value={email}
-                 onChange={(e) => {
-                   setEmail(e.target.value);
-                   setLoginError(null);
-                 }}
-                 placeholder="tu@email.com"
-                 className="pl-10 bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200 focus:border-blue-400 focus:ring-blue-400"
-                 required
-               />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <Label htmlFor="password">Contraseña</Label>
-                             <Link
-                 href="/reset-password"
-                 className="text-sm text-black hover:text-gray-700"
-               >
-                 ¿Olvidaste tu contraseña?
-               </Link>
-            </div>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                             <Input
-                 id="password"
-                 type={showPassword ? "text" : "password"}
-                 value={password}
-                 onChange={(e) => {
-                   setPassword(e.target.value);
-                   setLoginError(null);
-                 }}
-                 placeholder="••••••••"
-                 className={`pl-10 bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200 focus:border-blue-400 focus:ring-blue-400 ${
-                   loginError ? "border-red-500 focus:border-red-500" : ""
-                 }`}
-                 required
-               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </button>
-            </div>
-            {loginError && (
-              <div className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                <span>⚠️</span>
-                {loginError}
+      <div className="w-full max-w-md relative z-10">
+        <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-8">
+          {/* Logo */}
+          <div className="text-center mb-10">
+            <div className="flex items-center justify-center mb-8">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-950 to-slate-900 rounded-2xl blur-lg opacity-10"></div>
+                <img 
+                  src="/logo_black.svg" 
+                  alt="Catch Logo" 
+                  className="relative h-20 w-auto object-contain"
+                />
               </div>
-            )}
+            </div>
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">Bienvenido de vuelta</h1>
+            <p className="text-gray-600 text-sm">Ingresa tus credenciales para continuar</p>
           </div>
-                     <Button
-             type="submit"
-             className={`w-full !bg-black !text-white border-2 border-black font-bold py-3 rounded-lg text-lg shadow-md transition-colors
-                 ${
-                   isLoading || !email || !password
-                     ? "opacity-60 cursor-not-allowed"
-                     : "hover:!bg-gray-800 hover:!border-gray-800"
-                 }
-               `}
-             disabled={isLoading || !email || !password}
-           >
-             {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
-           </Button>
-        </form>
-        {/* Divider */}
-        <div className="flex items-center my-6">
-          <div className="flex-1 border-t border-gray-300"></div>
-          <span className="px-4 text-sm text-gray-500">o</span>
-          <div className="flex-1 border-t border-gray-300"></div>
-        </div>
 
-                 {/* Google Auth Button */}
-         <GoogleAuthButton />
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-3">
+              <Label htmlFor="email" className="text-sm font-medium text-gray-700">Correo Electrónico</Label>
+              <div className="relative group">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-950 to-slate-900 rounded-xl blur opacity-0 group-focus-within:opacity-8 transition-opacity duration-300"></div>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 group-focus-within:text-blue-950 transition-colors duration-300" />
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setLoginError(null);
+                    }}
+                    placeholder="tu@email.com"
+                    className="pl-12 pr-4 h-14 bg-gray-50/80 border border-gray-200 rounded-xl focus:border-blue-950 focus:ring-4 focus:ring-blue-950/20 focus:bg-white transition-all duration-300 text-gray-800 placeholder-gray-500"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <Label htmlFor="password" className="text-sm font-medium text-gray-700">Contraseña</Label>
+                <Link
+                  href="/reset-password"
+                  className="text-sm text-blue-950 hover:text-black font-medium transition-colors duration-200"
+                >
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              </div>
+              <div className="relative group">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-950 to-slate-900 rounded-xl blur opacity-0 group-focus-within:opacity-8 transition-opacity duration-300"></div>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 group-focus-within:text-blue-950 transition-colors duration-300" />
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setLoginError(null);
+                    }}
+                    placeholder="••••••••"
+                    className={`pl-12 pr-12 h-14 bg-gray-50/80 border rounded-xl focus:border-blue-950 focus:ring-4 focus:ring-blue-950/20 focus:bg-white transition-all duration-300 text-gray-800 placeholder-gray-500 ${
+                      loginError ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : "border-gray-200"
+                    }`}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+              {loginError && (
+                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                  {loginError}
+                </div>
+              )}
+            </div>
+            
+            <Button
+              type="submit"
+              className={`w-full h-14 bg-gradient-to-r from-blue-950 to-black hover:from-black hover:to-blue-950 text-white font-semibold rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 border-0 focus:outline-none focus:ring-0 ${
+                isLoading || !email || !password
+                  ? "opacity-60 cursor-not-allowed transform-none"
+                  : ""
+              }`}
+              disabled={isLoading || !email || !password}
+            >
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  Iniciando sesión...
+                </div>
+              ) : (
+                "Iniciar Sesión"
+              )}
+            </Button>
+          </form>
+          
+          {/* Divider */}
+          <div className="flex items-center my-8">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
+            <span className="px-4 text-sm text-gray-500 font-medium">o continúa con</span>
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
+          </div>
+
+          {/* Google Auth Button */}
+          <GoogleAuthButton />
+        </div>
       </div>
     </div>
   );
