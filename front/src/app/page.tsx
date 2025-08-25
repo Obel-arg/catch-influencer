@@ -41,7 +41,7 @@ export default function Home() {
         <div>
           <div className="flex items-center gap-2 mb-12">
             <BarChart2 className="h-8 w-8" />
-            <span className="text-2xl font-bold">Influencer Tracker</span>
+            <span className="text-2xl font-bold">Catch</span>
           </div>
           <h1 className="text-4xl font-bold mb-6 leading-tight">Cargando...</h1>
           <p className="text-lg opacity-90 mb-8">

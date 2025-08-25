@@ -49,7 +49,7 @@ export function GoogleAuthButton({
       type="button"
       variant={variant}
       size={size}
-      className={`w-full flex items-center justify-center gap-2 ${
+      className={`w-full flex items-center justify-center gap-2 !bg-black !text-white border-2 border-black font-bold py-3 rounded-lg text-lg shadow-md transition-colors hover:!bg-gray-800 hover:!border-gray-800 ${
         className || ""
       }`}
       onClick={handleGoogleAuth}
@@ -79,7 +79,7 @@ export function GoogleAuthButton({
         />
       </svg>
 
-      {isLoading ? "Cargando..." : "Continuar con Google"}
+      {isLoading ? "Procesando autenticación..." : "Continuar con Google"}
     </Button>
   );
 }

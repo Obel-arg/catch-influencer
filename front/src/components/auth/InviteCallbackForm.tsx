@@ -481,7 +481,7 @@ export default function InviteCallbackForm() {
         <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-blue-600 to-blue-800 text-white p-12 flex-col justify-center">
           <div className="flex items-center gap-2 mb-12">
             <BarChart2 className="h-8 w-8" />
-            <span className="text-2xl font-bold">Influencer Tracker</span>
+            <span className="text-2xl font-bold">Catch</span>
           </div>
           <h1 className="text-4xl font-bold mb-6">Procesando invitación...</h1>
           <p className="text-lg opacity-90">
@@ -511,7 +511,7 @@ export default function InviteCallbackForm() {
         <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-blue-600 to-blue-800 text-white p-12 flex-col justify-center">
           <div className="flex items-center gap-2 mb-12">
             <BarChart2 className="h-8 w-8" />
-            <span className="text-2xl font-bold">Influencer Tracker</span>
+            <span className="text-2xl font-bold">Catch</span>
           </div>
           <h1 className="text-4xl font-bold mb-6">Error en la invitación</h1>
           <p className="text-lg opacity-90">
@@ -556,7 +556,7 @@ export default function InviteCallbackForm() {
         <div>
           <div className="flex items-center gap-2 mb-12">
             <BarChart2 className="h-8 w-8" />
-            <span className="text-2xl font-bold">Influencer Tracker</span>
+            <span className="text-2xl font-bold">Catch</span>
           </div>
           <h1 className="text-4xl font-bold mb-6">¡Bienvenido al equipo!</h1>
           <p className="text-lg opacity-90 mb-8">

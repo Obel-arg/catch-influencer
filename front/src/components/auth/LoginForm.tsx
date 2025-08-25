@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { BarChart2, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -96,71 +96,65 @@ export function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center p-6">
+         <div className="min-h-screen bg-black flex items-center justify-center p-6">
       {/* Formulario Elevado */}
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8">
-        {/* Logo y título */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-6">
-            <BarChart2 className="h-8 w-8 text-blue-600" />
-            <span className="text-2xl font-bold text-gray-900">
-              Influencer Tracker
-            </span>
-          </div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            Bienvenido de nuevo
-          </h2>
-          <p className="text-gray-600">
-            Ingresa tus credenciales para acceder a la plataforma y potenciar
-            tus campañas.
-          </p>
-        </div>
+                 {/* Logo */}
+         <div className="text-center mb-8">
+           <div className="flex items-center justify-center mb-6">
+             <img 
+               src="/logo_black.svg" 
+               alt="Catch Logo" 
+               className="h-16 w-auto object-contain"
+             />
+           </div>
+         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="email">Correo Electrónico</Label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  setLoginError(null);
-                }}
-                placeholder="tu@email.com"
-                className="pl-10"
-                required
-              />
+                             <Input
+                 id="email"
+                 type="email"
+                 value={email}
+                 onChange={(e) => {
+                   setEmail(e.target.value);
+                   setLoginError(null);
+                 }}
+                 placeholder="tu@email.com"
+                 className="pl-10 bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200 focus:border-blue-400 focus:ring-blue-400"
+                 required
+               />
             </div>
           </div>
           <div className="space-y-2">
             <div className="flex justify-between">
               <Label htmlFor="password">Contraseña</Label>
-              <Link
-                href="/reset-password"
-                className="text-sm text-blue-600 hover:text-blue-800"
-              >
-                ¿Olvidaste tu contraseña?
-              </Link>
+                             <Link
+                 href="/reset-password"
+                 className="text-sm text-black hover:text-gray-700"
+               >
+                 ¿Olvidaste tu contraseña?
+               </Link>
             </div>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  setLoginError(null);
-                }}
-                placeholder="••••••••"
-                className={`pl-10 ${
-                  loginError ? "border-red-500 focus:border-red-500" : ""
-                }`}
-                required
-              />
+                             <Input
+                 id="password"
+                 type={showPassword ? "text" : "password"}
+                 value={password}
+                 onChange={(e) => {
+                   setPassword(e.target.value);
+                   setLoginError(null);
+                 }}
+                 placeholder="••••••••"
+                 className={`pl-10 bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200 focus:border-blue-400 focus:ring-blue-400 ${
+                   loginError ? "border-red-500 focus:border-red-500" : ""
+                 }`}
+                 required
+               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
@@ -180,19 +174,19 @@ export function LoginForm() {
               </div>
             )}
           </div>
-          <Button
-            type="submit"
-            className={`w-full !bg-blue-600 !text-white border-2 border-blue-600 font-bold py-3 rounded-lg text-lg shadow-md transition-colors
-                ${
-                  isLoading || !email || !password
-                    ? "opacity-60 cursor-not-allowed"
-                    : "hover:!bg-blue-700 hover:!border-blue-700"
-                }
-              `}
-            disabled={isLoading || !email || !password}
-          >
-            {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
-          </Button>
+                     <Button
+             type="submit"
+             className={`w-full !bg-black !text-white border-2 border-black font-bold py-3 rounded-lg text-lg shadow-md transition-colors
+                 ${
+                   isLoading || !email || !password
+                     ? "opacity-60 cursor-not-allowed"
+                     : "hover:!bg-gray-800 hover:!border-gray-800"
+                 }
+               `}
+             disabled={isLoading || !email || !password}
+           >
+             {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
+           </Button>
         </form>
         {/* Divider */}
         <div className="flex items-center my-6">
@@ -201,18 +195,8 @@ export function LoginForm() {
           <div className="flex-1 border-t border-gray-300"></div>
         </div>
 
-        {/* Google Auth Button */}
-        <GoogleAuthButton />
-
-        <p className="text-center text-sm text-gray-500 mt-6">
-          ¿No tienes una cuenta?{" "}
-          <Link
-            href="/auth/register"
-            className="text-blue-600 hover:text-blue-800 font-medium"
-          >
-            Regístrate
-          </Link>
-        </p>
+                 {/* Google Auth Button */}
+         <GoogleAuthButton />
       </div>
     </div>
   );

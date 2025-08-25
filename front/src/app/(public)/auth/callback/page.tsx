@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { BarChart2 } from "lucide-react";
+
 import { useToast } from "@/components/ui/use-toast";
 
 function AuthCallbackContent() {
@@ -165,13 +165,15 @@ function AuthCallbackContent() {
   }, [processCallback]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8 text-center">
-        <div className="flex justify-center mb-6">
-          <BarChart2 className="h-12 w-12 text-blue-600" />
+    <div className="min-h-screen bg-black flex items-center justify-center p-6">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 text-center">
+        <div className="flex items-center justify-center mb-6">
+          <img 
+            src="/logo_black.svg" 
+            alt="Catch Logo" 
+            className="h-16 w-auto object-contain"
+          />
         </div>
-
-        <h1 className="text-2xl font-bold mb-4">Influencer Tracker</h1>
 
         {status === "loading" && (
           <div>
@@ -233,13 +235,16 @@ export default function AuthCallbackPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8 text-center">
-            <div className="flex justify-center mb-6">
-              <BarChart2 className="h-12 w-12 text-blue-600" />
+        <div className="min-h-screen bg-black flex items-center justify-center p-6">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 text-center">
+            <div className="flex items-center justify-center mb-6">
+              <img 
+                src="/logo_black.svg" 
+                alt="Catch Logo" 
+                className="h-16 w-auto object-contain"
+              />
             </div>
-            <h1 className="text-2xl font-bold mb-4">Influencer Tracker</h1>
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-black mb-4"></div>
             <p className="text-gray-600">Cargando...</p>
           </div>
         </div>
