@@ -1925,12 +1925,12 @@ const formatCategoryName = (category: string): string => {
                             return (
                               <Badge 
                                 key={countryCode} 
-                                variant={selectedCountryForEdit === countryCode ? "default" : "secondary"}
+                                variant="secondary"
                                 className={cn(
-                                  "flex items-center gap-1.5 px-2 py-1 cursor-pointer transition-colors",
+                                  "flex items-center gap-1.5 px-3 py-1.5 cursor-pointer transition-all duration-200 border-2",
                                   selectedCountryForEdit === countryCode 
-                                    ? "bg-blue-600 text-white hover:bg-blue-700" 
-                                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                    ? "bg-blue-50 text-blue-900 border-blue-500 hover:bg-blue-100 shadow-md" 
+                                    : "bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200"
                                 )}
                                 onClick={() => setSelectedCountryForEdit(
                                   selectedCountryForEdit === countryCode ? null : countryCode
@@ -1939,15 +1939,33 @@ const formatCategoryName = (category: string): string => {
                                 <img
                                   src={`/banderas/${country.name}.png`}
                                   alt={country.name}
-                                  className="h-3 w-4 object-cover"
+                                  className={cn(
+                                    "h-3 w-4 object-cover rounded-sm",
+                                    selectedCountryForEdit === countryCode ? "ring-1 ring-blue-400" : ""
+                                  )}
                                   onError={(e) => {
                                     (e.target as HTMLImageElement).style.display = 'none';
                                   }}
                                 />
-                                <span className="text-xs font-medium">{country.name}</span>
-                                <span className="text-xs">&gt;{percentage}%</span>
+                                <span className={cn(
+                                  "text-xs font-medium",
+                                  selectedCountryForEdit === countryCode ? "text-blue-900" : "text-gray-700"
+                                )}>
+                                  {country.name}
+                                </span>
+                                <span className={cn(
+                                  "text-xs font-semibold",
+                                  selectedCountryForEdit === countryCode ? "text-blue-700" : "text-gray-600"
+                                )}>
+                                  &gt;{percentage}%
+                                </span>
                                 <X 
-                                  className="h-3 w-3 cursor-pointer hover:text-red-400" 
+                                  className={cn(
+                                    "h-3 w-3 cursor-pointer transition-colors",
+                                    selectedCountryForEdit === countryCode 
+                                      ? "text-blue-600 hover:text-red-500" 
+                                      : "text-gray-500 hover:text-red-500"
+                                  )}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     const newCountries = { ...audienceGeo.countries };
