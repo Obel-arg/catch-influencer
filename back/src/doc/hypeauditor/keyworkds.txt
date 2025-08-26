@@ -1,0 +1,109 @@
+Post Searching by Keywords
+HypeAuditor For Discovery
+
+Endpoint
+Get posts that contain specific keywords:
+
+JSON
+
+GET https://hypeauditor.com/api/method/auditor.searchKeywordsPosts/?socialNetwork={socialNetwork}&contentIds={contentIds}
+
+
+Note:
+
+{socialNetwork} parameter is the string name of the social network: instagram, youtube, tiktok or twitter, and {contentIds} is the string set of IDs separated by commas .
+
+Content IDs can be retrieved in path result.search_results.features.search_content from Discovery search response by previously using search_content parameter.
+
+
+Response Object
+Attributes	Type	
+posts	object	Hash map where keys is posts id and value is posts object
+Posts Object
+Attributes	Type	
+basic	object	Main data about posts
+metrics	object	Metrics data about posts
+Posts basic Object
+Attributes	Type	
+id	string	Post identifier, can be used to map with metrics
+code	string	Instagram post URL
+caption	string	Post caption
+preview_url	string	Link to image stored in our cdn
+time_posted	timestamp	Publication date of the post
+type	string	Type of content, e.g. ‘post’, ‘reel’, ‘igtv’
+is_deleted	bolean	Post is deleted
+Posts metrics Object
+Every metric is object with value e.g. { "value": 1062173 }
+
+Attributes	Type	
+likes_count	int	Amount of likes
+comments_count	int	Amount of comments
+video_views_count	int	Amount of views
+er	int	Engaging rate
+er_mark	string	Engaging rate mark. E.g. average
+Requests
+Set YOUR_ID and YOUR_TOKEN from HypeAuditor.
+
+Curl Request
+PHP Request
+
+curl -X GET \
+	https://hypeauditor.com/api/auditor.searchKeywordsPosts\
+  -H 'content-type: application/x-www-form-urlencoded'\
+  -H 'x-auth-id: %YOUR_ID%' \
+  -H 'x-auth-token: %YOUR_TOKEN%' \
+  -d socialNetwork= instagram  \
+  -d contentIds= 2967308681525079321,2952174452835476751
+Response
+JSON
+
+{
+    "result": {
+        "posts": {
+            "2952174452835476751": {
+                "basic": {
+                    "id": "2952174452835476751",
+                    "code": "Cj4OwYIPeUP",
+                    "caption": "Can’t believe it’s already been a week since my birthday party! Thank you to every single person who came out to celebrate especially all the fine ass women who showed up in their sexy burlesque outfits 😋. And of course thank you @whip_shots , @vitaminwater and @shakeshack for making sure ppl were lit and fed lol. I still can’t believe I’m 30 with two kids 😳🤯",
+                    "preview_url": "https://cdn.hypeauditor.com/img/instagram/post/2952174452835476751.jpg?w=200&till=1673188885&sign=f50b2d4623216fcb3d2bef472807e5c0",
+                    "time_posted": 1666146744,
+                    "type": "reel",
+                    "is_deleted": null
+                },
+                "metrics": {
+                    "likes_count": 1062173,
+                    "comments_count": 10229,
+                    "video_views_count": 6198760,
+                    "er": 0.74,
+                    "er_mark": "average"
+                }
+            },
+            "2967308681525079321": {
+                "basic": {
+                    "id": "2967308681525079321",
+                    "code": "Ckt_4Y9PC0Z",
+                    "caption": "get yo watch party ready 👀🍾",
+                    "preview_url": "https://cdn.hypeauditor.com/img/instagram/post/2967308681525079321.jpg?w=200&till=1673188885&sign=683b8364855dfcc1e2d0abfeb57b071d",
+                    "time_posted": 1667950781,
+                    "type": "post",
+                    "is_deleted": false
+                },
+                "metrics": {
+                    "likes_count": 3346769,
+                    "comments_count": 12779,
+                    "video_views_count": 0,
+                    "er": 2.42,
+                    "er_mark": "good"
+                }
+            }
+        },
+        "queries_left": 390
+    }
+}
+Updated about 2 years ago
+
+Create a Search in Discovery
+Get Post Searching by Keywords
+
+
+co

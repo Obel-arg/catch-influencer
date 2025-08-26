@@ -1,0 +1,185 @@
+YouTube Example
+HypeAuditor For Discovery - YouTube
+
+📘
+Note:
+
+In Discovery Youtube, we exclude the reports with parameter comments_avg less than 10 in the last 90 days. In other words, if the channel has 0 new comments for the previous 90 days, it won’t be included in the Response Object.
+
+JSON Example:
+
+{
+  "social_network": "youtube",
+  "thematics": {
+    "include": [
+      25,
+      15
+    ]
+  },
+  "shorts_video_views_avg": {
+    "from": 1000
+  },
+  "search": [
+    "nasa"
+  ],
+  "account_geo": {
+    "country": [
+      "gb",
+      "us"
+    ]
+  },
+  "account_age": {
+    "from": 13,
+    "to": 65
+  },
+  "account_languages": [
+    "en",
+    "es"
+  ],
+  "blogger_prices": {
+    "post_price": {
+      "from": 10,
+      "to": 10000
+    }
+  },
+  "account_has_contacts": true,
+  "account_has_launched_advertising": false,
+  "alikes_avg": {
+    "from": 10000
+  },
+  "views_avg": {
+    "from": 15000
+  },
+  "comments_avg": {
+    "from": 1000
+  },
+  "audience_geo": {
+    "countries": [
+      {
+        "id": "gb",
+        "prc": 20
+      },
+      {
+        "id": "us",
+        "prc": 20
+      }
+    ]
+  },
+  "audience_age": {
+    "groups": ["13_17","18_24"],
+    "prc": 50
+  },
+  "audience_gender": {
+    "gender": "female",
+    "prc": 20
+  },
+  "subscribers_count": {
+    "from": 120000
+  },
+  "cqs": {
+    "from": 20,
+    "to": 45
+  },
+  "last_media_time": {
+    "from": 1723631206
+  },
+  "media_count": {
+    "from": 1
+  },
+  "comments_rate": {
+    "marks": [
+      "good"
+    ]
+  },
+  "reactions_rate": {
+    "marks": [
+      "good"
+    ]
+  },
+  "growth": {
+    "period": "7d",
+    "from": 10,
+    "to": 30
+  },
+  "sort": {
+    "field": "subscribers_count",
+    "order": "desc"
+  },
+  "similar": "nasa",
+  "page": 1
+}
+
+Requests
+Set YOUR_ID and YOUR_TOKEN from HypeAuditor.
+
+PHP Request
+Application/JSON with JSON body request
+
+$postFields = [
+    'social_network'       => 'youtube',
+    'account_has_contacts' => true,
+];
+$opts = [
+    CURLOPT_URL            => 'https://hypeauditor.com/api/method/auditor.searchSandbox',
+    CURLOPT_TIMEOUT        => 10,
+    CURLOPT_POSTFIELDS     => $postFields,
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_HTTPHEADER     => [
+        'X-Auth-Id: CLIENT_ID_HERE',
+        'X-Auth-Token: API_TOKEN_HERE',
+    ],
+];
+$ch = curl_init();
+curl_setopt_array($ch, $opts);
+$response = curl_exec($ch);
+var_dump($response);
+Response Object
+
+Response can contain search_results array. Please, check Change Log for further information.
+
+{
+    "result": {
+        "search_results": [
+            {
+                "basic": {
+                    "id": "UC4QobU6STFB0P71PMvOGN5A",
+                    "username": "jawed",
+                    "title": "jawed",
+                    "avatar_url": "https://yt3.googleusercontent.com/zi50weT4GiyJxDfb3BpcmjL3BtOmRWE3gwrmeL43j-mGfj0UF4wjbsyE6i-K_I9Bs7dK0SnCQlY=s900-c-k-c0x00ffffff-no-rj",
+                    "category_name": null
+                },
+                "metrics": {
+                    "subscribers_count": {
+                        "value": 5174804
+                    },
+                    "shorts_video_views_avg": {
+                        "value": 0
+                    }
+                },
+                "features": {
+                    "cqs": {
+                        "data": {
+                            "mark": "very_good"
+                        }
+                    },
+                    "social_networks": [
+                        {
+                            "type": "youtube",
+                            "title": "jawed",
+                            "social_id": "UC4QobU6STFB0P71PMvOGN5A",
+                            "username": "jawed",
+                            "avatar_url": "https://yt3.googleusercontent.com/zi50weT4GiyJxDfb3BpcmjL3BtOmRWE3gwrmeL43j-mGfj0UF4wjbsyE6i-K_I9Bs7dK0SnCQlY=s900-c-k-c0x00ffffff-no-rj",
+                            "subscribers_count": 5174804,
+                            "er": 6.43,
+                            "state": "READY"
+                        }
+                    ],
+                    "search_content": [],
+                    "blogger_thematics": []
+                }
+            },
+        "current_page": 1,
+        "total_pages": 649776,
+        "queries_left": 99957
+    }
+}

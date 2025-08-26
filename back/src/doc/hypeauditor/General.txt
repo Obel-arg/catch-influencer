@@ -1,0 +1,123 @@
+General
+HypeAuditor For Discovery
+
+Endpoint for Discovery Search
+Production:
+JSON
+
+POST https://hypeauditor.com/api/method/auditor.search/
+For testing. Validation enabled. The method will return a sample of data for every request without applying filters and spending credits.
+JSON
+
+POST https://hypeauditor.com/api/method/auditor.searchSandbox/
+❗️
+Changelog:
+
+Filters reels_video_views_avg & shorts_video_views_avg have been added for Instagram and YouTube respectively since April, 22th 2024.
+Twitch Games endpoint has added to HypeAuditor API for searching game IDs since January, 30th 2024.
+Filter aqs has been added for TikTok since November, 21th 2023.
+Filter similar has been added for TikTok since May, 10th 2023.
+The following Request Parameters have been included since December, 7th 2022 instead of parameter keywords.
+Field	Type	Description	Social networks	Availability
+search	array of strings	Keywords to search anywhere	IG, YT, TT, Twitch,Twitter	Basic, Pro
+search_content	array of strings	Keywords to search in content.
+
+Note: Response field can be used in Post Searching by Keywords	IG, YT, TT, Twitch,Twitter	Basic, Pro
+search_description	array of strings	Keywords to search in description	IG, YT, TT, Twitch,Twitter	Basic, Pro
+📘
+Note
+
+The Search Result is divided into pages, with 20 search items per page. Each page incurs a cost of 1 Discovery Call. Note that returned result is limited to 10,000 rows, so the max page value is 500.
+To check the number of remaining requests, please refer to queries_left field in the fetched response.
+To check for updates, please, refer to section Change Log
+Request formats
+Two request types are supported:
+
+Content-Type: application/json with json body request
+Content-Type: multipart/form-data or no content-type header
+Request Parameters
+Field	Type	Description	Social networks	Availability
+social_network	string	Required field. instagram, youtube, tiktok, twitter or twitch	IG, YT, TT, Twitter, Twitch	According subscription
+category	object	contains include and exclude arrays of category ids from Taxonomy	IG, TT	Basic
+thematics	object	contains include and exclude arrays of thematics ids from Taxonomy	YT	Basic
+account_geo	object	country, city
+
+- For country: array of two-letter codes
+
+- For city: array of id's from https://www.geonames.org (only available for IG).	IG, YT, TT, Twitch,
+Twitter
+
+For YT ,TT, Twitter only country available	Pro
+account_gender	string	male or female	IG, TT	Pro
+account_age	object	from and to parameters. Pass age values, e.g. 27	IG	Pro
+account_languages	array of string	Two-letter language code (from languages table)	IG, YT, TT, Twitch, Twitter	Pro
+account_type	string	brand or human	IG	Pro
+account_has_contacts	boolean	true or false	IG, YT, TT, Twitch, Twitter	Pro
+account_has_launched_advertising	boolean	true or false	IG, YT, TT	Pro
+account_mentions	object	contains include and exclude arrays of usernames. Collects mentions for the last 180 days. This object is only applicable for Instagram and TikTok search requests.	IG	Pro
+audience_geo	object	contains countries and cities arrays.
+Each array item contains id and prc fields.
+For country id is two-letter code from ISO 3166.
+For city id is int value from geonames. prc from 0 to 100.
+
+cities array is only available for IG.
+
+Hint: arrays cities and countries can be used together or separately, defining the corresponding fields (id and prc).	IG, YT, TT	Basic
+audience_age	object	contains groups array of age keys and prc	IG, YT, TT	Pro
+audience_gender	object	contains gender (male or female) and prc	IG, YT, TT, Twitch	Pro
+subscribers_count	object	from and to. For IG and TT it is followers count and for YTits subscribers count	IG, YT, TT, Twitch, Twitter	Basic for IG
+
+Pro for YT, TT, Twitch, Twitter
+er	object	from and to floats (from 0 to 100). Engagement rate	IG, TT, Twitter	Basic
+aqs	object	from and to ints. Audience Quality Score	IG, TT	Pro
+cqs	object	from and to ints. Channel Quality Score	YT	Pro
+last_media_time	object	from - unix timestamp when last post/video posted.	IG, YT, TT, Twitter	Pro for IG, Basic for YT, TT, Twitter
+media_count	object	from and to Total count of videos	YT	Basic
+likes_count	object	from and to Total count of likes	TT	Basic
+alikes_avg	object	from and to - Average reactions per video in 90d period. 30d average likes for TT	YT, TT	Basic
+views_avg	object	from and to - Video Views average by 90d period	YT, TT	Basic
+comments_avg	object	from and to Average comments count in 90d period	YT, TT	Basic
+shares_avg	object	from and to Average shares count in 30d period	TT	Basic
+reactions_rate	object	marks keys. Performance mark of likes and dislikes to views ratio. See below.	YT	Basic
+comments_rate	object	marks keys. Performance mark of Comments to views ratio. See below.	IG, YT	Basic for YT, Pro for IG
+growth	object	period: 7d or 30d or 90d or 180d or 365d, from and to ints (from 0 to 100)	IG,YT, TT, Twitch, Twitter	Pro
+likes_growth_prc	object	period: 7d or 30d or 90d or 180d, from and to ints (from 0 to 100)	TT	Pro
+similar	string	username for IG, channel ID for YT or account ID for TT	IG, YT, TT	Pro
+verified	int	0 - only non-verified, 1 - only verified accounts	IG, TT, YT, Twitter	Pro
+blogger_prices.post_price	object	from and to prices of blogger posts	IG, YT, TT	Basic
+income	object	Audience income. Object should contain id of the income group (one of 5k,10k,25k,50k,75k,100k,150k,200k) and prc keys.	IG	Pro
+ethnicity	array of objects	Audience ethnicity. Each object should contain race and prc keys. Available races: african, arabian, asian, caucasian, hispanic and indian. prc is percent int 0-100	IG	Pro
+interests	array of objects	Audience interests. Each object should contain id and prc keys. id - interest id from Taxonomy Section - ig.interests. prc is percent int 0-100	IG	Basic
+username_exclude	array of strings	Usernames to exclude from search results. 1000 usernames max	IG, TT, YT, Twitch, Twitter	Basic
+twitch_active_days_per_week	object	from and to. Active days per week	Twitch	Basic
+twitch_games	object	period: 7dor30dor90dor180d,
+games: list of IDs (int) obtained from Twitch Games.
+- The default search period is 30d.
+- Search is performed through AND operator.
+- The maximum number of game IDs that can be sent is 3.	Twitch	Basic
+twitch_hours_streamed	object	from and to. Hours streamed	Twitch	Basic
+twitch_live_viewers_avg	object	from and to. Average live viewers	Twitch	Basic
+twitter_likes	object	from and to. Likes	Twitter	Basic
+twitter_replies	object	from and to. Replies	Twitter	Basic
+twitter_retweet	object	from and to. Retweets	Twitter	Basic
+twitter_tweet	object	from and to. Tweets	Twitter	Basic
+reels_video_views_avg	object	from (int). Average reels views	IG	Basic
+shorts_video_views_avg	object	from (int). Average shorts views	YT	Basic
+sort	object	field and order fields. Field may be subscribers_count, er, username, default engagement_avg.	IG, YT, TT	Basic
+page	int	Page. Default value is 1. 20 items per page. To go to the next page, change this parameter to 2, 3, 10, etc.	IG, YT, TT	Basic
+Age keys
+13_17
+18_24
+25_34
+35_44
+45_54
+55_64
+65
+Mark Keys
+poor
+fair
+average
+good
+very_good - only for aqs feature
+excellent
+

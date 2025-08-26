@@ -16,6 +16,7 @@ import { InfluencerProfilePanel } from "@/components/explorer/influencer-profile
 import { useInfluencers } from "@/hooks/influencer/useInfluencers";
 import { creatorService } from '@/lib/services/creator';
 import { influencerService } from '@/lib/services/influencer';
+import { HypeAuditorDiscoveryFilters } from '@/lib/services/hypeauditor-discovery.service';
 import ExplorerFilters from "./ExplorerFilters";
 import { cn } from "@/lib/utils";
 import { campaignService } from '@/lib/services/campaign';
@@ -31,7 +32,7 @@ import { getYouTubeThumbnail } from '@/utils/youtube';
 import { SkeletonInfluencerTable } from "./SkeletonInfluencerRow";
 import { LazyInfluencerAvatar } from "./LazyInfluencerAvatar";
 import { explorerCacheService, SearchFilters } from '@/lib/services/explorer-cache.service';
-import { influenceIQService } from '@/lib/services/influenceIQ.service';
+
 
 
 
@@ -67,6 +68,9 @@ export default function Explorer() {
   
   // Toast notifications
   const { toast } = useToast();
+
+  // 🚀 NUEVO: Hook de influencers para HypeAuditor
+  const { searchHypeAuditorInfluencers, loading: loadingHypeAuditor } = useInfluencers();
   
   // 🎯 Estado para manejar información de cache
   const [cacheInfo, setCacheInfo] = useState<{
@@ -82,18 +86,39 @@ export default function Explorer() {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [platform, setPlatform] = useState<string>("all");
   const [topics, setTopics] = useState<string[]>([]);
-  const [niches, setNiches] = useState<string[]>([]);
+
   const [location, setLocation] = useState<string>("all"); // ✅ Iniciar con "todos los países"
   const [minFollowers, setMinFollowers] = useState<number>(0);
   const [maxFollowers, setMaxFollowers] = useState<number>(100000000);
   const [minEngagement, setMinEngagement] = useState<number>(0);
   const [maxEngagement, setMaxEngagement] = useState<number>(100); // ✅ Iniciar con valor máximo correcto
-  const [selectedGrowthRate, setSelectedGrowthRate] = useState<{ min: number; max: number } | null>(null);
+
   const [showFilters, setShowFilters] = useState(true);
   const [sortBy, setSortBy] = useState<string>("followers");
   const [savedInfluencers, setSavedInfluencers] = useState<string[]>([]);
 
-  const [hashtags, setHashtags] = useState<string>("");
+
+
+  // 🎯 NUEVOS ESTADOS PARA FILTROS DE HYPEAUDITOR DISCOVERY
+  const [audienceGender, setAudienceGender] = useState<{ gender: 'male' | 'female' | 'any'; percentage: number }>({
+    gender: 'any',
+    percentage: 50
+  });
+  const [audienceAge, setAudienceAge] = useState<{ minAge: number; maxAge: number; percentage: number }>({
+    minAge: 18,
+    maxAge: 54,
+    percentage: 10
+  });
+  const [audienceGeo, setAudienceGeo] = useState<{ countries: string[]; cities: string[] }>({
+    countries: [],
+    cities: []
+  });
+  const [accountType, setAccountType] = useState<'brand' | 'human' | 'any'>('any');
+  const [verified, setVerified] = useState<boolean | null>(null);
+  const [hasContacts, setHasContacts] = useState<boolean | null>(null);
+  const [hasLaunchedAdvertising, setHasLaunchedAdvertising] = useState<boolean | null>(null);
+  const [aqsRange, setAqsRange] = useState<{ min: number; max: number }>({ min: 0, max: 100 });
+  const [cqsRange, setCqsRange] = useState<{ min: number; max: number }>({ min: 0, max: 100 });
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   const [selectedInfluencer, setSelectedInfluencer] = useState<any>(null);
@@ -143,13 +168,13 @@ export default function Explorer() {
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [hasEverSearched, setHasEverSearched] = useState(false);
 
+  // 🚀 NUEVO: Estado para cambiar entre proveedores
+  const [provider, setProvider] = useState<'creatordb' | 'hypeauditor'>('hypeauditor');
+
   // ✨ NUEVO: Estado para manejar avatares procesados
   const [processedAvatars, setProcessedAvatars] = useState<{ [key: string]: string }>({});
 
-  // 🎯 NUEVO: Estado para InfluenceIQ
-  const [influenceIQLoading, setInfluenceIQLoading] = useState(false);
-  const [influenceIQResults, setInfluenceIQResults] = useState<any[]>([]);
-  const [influenceIQError, setInfluenceIQError] = useState<string | null>(null);
+
 
   // 🧹 FUNCIÓN PARA LIMPIAR CACHE DE AVATARES (útil cuando cambia la lógica)
   const clearAvatarCache = useCallback(() => {
@@ -256,6 +281,100 @@ export default function Explorer() {
 
   // 🗑️ ELIMINADOS: pagesCached y cacheExpiresAt - cache ahora es automático en el backend
 
+  // 🚀 NUEVA FUNCIÓN PARA BÚSQUEDA CON HYPEAUDITOR
+  const handleHypeAuditorSearch = async () => {
+    try {
+      console.log('🚀 [EXPLORER] Iniciando búsqueda con HypeAuditor Discovery');
+      
+      // Construir filtros para HypeAuditor
+      const filters: HypeAuditorDiscoveryFilters = {
+        platform: platform === "all" ? "instagram" : platform, // Por defecto Instagram
+        page: 1
+      };
+
+      // Agregar filtros básicos
+      if (searchQuery.trim()) {
+        filters.searchQuery = searchQuery.trim();
+      }
+      if (minFollowers > 0) {
+        filters.minFollowers = minFollowers;
+      }
+      if (maxFollowers < 100000000) {
+        filters.maxFollowers = maxFollowers;
+      }
+      if (minEngagement > 0) {
+        filters.minEngagement = minEngagement;
+      }
+      if (maxEngagement < 100) {
+        filters.maxEngagement = maxEngagement;
+      }
+
+      // 🎯 NUEVOS FILTROS DE HYPEAUDITOR DISCOVERY
+      if (location !== "all") {
+        filters.location = location;
+      }
+      if (selectedCategories.length > 0) {
+        filters.selectedCategories = selectedCategories;
+      }
+      if (accountType !== 'any') {
+        filters.accountType = accountType;
+      }
+      if (verified !== null) {
+        filters.verified = verified;
+      }
+      if (hasContacts !== null) {
+        filters.hasContacts = hasContacts;
+      }
+      if (hasLaunchedAdvertising !== null) {
+        filters.hasLaunchedAdvertising = hasLaunchedAdvertising;
+      }
+      if (aqsRange.min > 0 || aqsRange.max < 100) {
+        filters.aqs = aqsRange;
+      }
+      if (cqsRange.min > 0 || cqsRange.max < 100) {
+        filters.cqs = cqsRange;
+      }
+
+      // 🎯 FILTROS DE AUDIENCIA
+      if (audienceGender.gender !== 'any') {
+        filters.audienceGender = audienceGender;
+      }
+      if (audienceAge.minAge !== 18 || audienceAge.maxAge !== 54 || audienceAge.percentage !== 10) {
+        filters.audienceAge = audienceAge;
+      }
+      if (audienceGeo.countries.length > 0 || audienceGeo.cities.length > 0) {
+        filters.audienceGeo = audienceGeo;
+      }
+
+      console.log('🔧 [EXPLORER] Filtros HypeAuditor completos:', filters);
+
+      // Realizar búsqueda con HypeAuditor
+      const result = await searchHypeAuditorInfluencers(filters);
+      
+      if (result && result.success) {
+        setInfluencers(result.items || []);
+        setTotalCount(result.totalCount || 0);
+        console.log('✅ [EXPLORER] Búsqueda HypeAuditor completada:', {
+          totalResults: result.items?.length || 0,
+          searchTime: result.metadata?.searchTime
+        });
+      } else {
+        setInfluencers([]);
+        setTotalCount(0);
+        console.log('❌ [EXPLORER] No se encontraron resultados en HypeAuditor');
+      }
+    } catch (error: any) {
+      console.error('❌ [EXPLORER] Error en búsqueda HypeAuditor:', error);
+      setInfluencers([]);
+      setTotalCount(0);
+      toast({
+        title: "Error",
+        description: "Error al buscar con HypeAuditor Discovery",
+        variant: "destructive"
+      });
+    }
+  };
+
   // 🎯 FUNCIÓN INTELIGENTE DE BÚSQUEDA
   const handleSearch = async () => {
     const searchStartTime = Date.now();
@@ -269,100 +388,95 @@ export default function Explorer() {
     setPage(1);
 
     try {
-      // 🎯 DECIDIR ENTRE BÚSQUEDA INTELIGENTE O POR FILTROS
-      if (searchQuery.trim()) {
+      // 🚀 NUEVO: Usar HypeAuditor si está seleccionado
+      if (provider === 'hypeauditor') {
+        await handleHypeAuditorSearch();
+      } else {
+        // 🎯 DECIDIR ENTRE BÚSQUEDA INTELIGENTE O POR FILTROS (CreatorDB)
+        if (searchQuery.trim()) {
+          // 🔍 BÚSQUEDA INTELIGENTE cuando hay texto - SOLO QUERY Y PLATFORM
+          const searchData = {
+            query: searchQuery.trim(),
+            platform: platform === "all" ? undefined : platform,
+          };
+          
+          const smartSearchStartTime = Date.now();
 
-        
-        // 🔍 BÚSQUEDA INTELIGENTE cuando hay texto - SOLO QUERY Y PLATFORM
-        const searchData = {
-          query: searchQuery.trim(),
-          platform: platform === "all" ? undefined : platform,
-        };
-        
-        const smartSearchStartTime = Date.now();
+          const result = await creatorService.smartSearch(searchData);
+          const smartSearchEndTime = Date.now();
 
-        const result = await creatorService.smartSearch(searchData);
-        const smartSearchEndTime = Date.now();
-
-         
-         if (result.success) {
-           // 🔧 FALLBACK: Si no hay items pero sí hay searchSummary con resultados
-           if ((!result.items || result.items.length === 0) && result.searchSummary) {
-             const totalFound = Object.values(result.searchSummary).reduce((sum: number, count: any) => sum + (count || 0), 0);
-             
-             if (totalFound > 0) {
-
+           
+           if (result.success) {
+             // 🔧 FALLBACK: Si no hay items pero sí hay searchSummary con resultados
+             if ((!result.items || result.items.length === 0) && result.searchSummary) {
+               const totalFound = Object.values(result.searchSummary).reduce((sum: number, count: any) => sum + (count || 0), 0);
                
-               // Construir array de platform IDs basado en searchSummary
-               const platformIds = [];
-               if (result.searchSummary.instagram > 0) {
-                 // Para el fallback, simularemos algunos IDs comunes que podrían coincidir
-                 platformIds.push({ platform: 'instagram', ids: [searchQuery.trim().toLowerCase()] });
-               }
-               if (result.searchSummary.tiktok > 0) {
-                 platformIds.push({ platform: 'tiktok', ids: [searchQuery.trim().toLowerCase()] });
-               }
-               if (result.searchSummary.youtube > 0) {
-                 platformIds.push({ platform: 'youtube', ids: [searchQuery.trim().toLowerCase()] });
-               }
-               
-               // Intentar fallback
-               try {
-                 const fallbackResult = await creatorService.getInfluencersByIds(platformIds);
-                 if (fallbackResult.success && fallbackResult.items && fallbackResult.items.length > 0) {
-
-                   setInfluencers(fallbackResult.items);
-                   setTotalCount(fallbackResult.count || 0);
-                 } else {
-
+               if (totalFound > 0) {
+                 // Construir array de platform IDs basado en searchSummary
+                 const platformIds = [];
+                 if (result.searchSummary.instagram > 0) {
+                   // Para el fallback, simularemos algunos IDs comunes que podrían coincidir
+                   platformIds.push({ platform: 'instagram', ids: [searchQuery.trim().toLowerCase()] });
+                 }
+                 if (result.searchSummary.tiktok > 0) {
+                   platformIds.push({ platform: 'tiktok', ids: [searchQuery.trim().toLowerCase()] });
+                 }
+                 if (result.searchSummary.youtube > 0) {
+                   platformIds.push({ platform: 'youtube', ids: [searchQuery.trim().toLowerCase()] });
+                 }
+                 
+                 // Intentar fallback
+                 try {
+                   const fallbackResult = await creatorService.getInfluencersByIds(platformIds);
+                   if (fallbackResult.success && fallbackResult.items && fallbackResult.items.length > 0) {
+                     setInfluencers(fallbackResult.items);
+                     setTotalCount(fallbackResult.count || 0);
+                   } else {
+                     setInfluencers([]);
+                     setTotalCount(0);
+                   }
+                 } catch (fallbackError) {
                    setInfluencers([]);
                    setTotalCount(0);
                  }
-               } catch (fallbackError) {
-
+               } else {
                  setInfluencers([]);
                  setTotalCount(0);
                }
              } else {
-               setInfluencers([]);
-               setTotalCount(0);
+               // Funcionamiento normal
+               setInfluencers(result.items || []);
+               setTotalCount(result.count || 0);
              }
            } else {
-             // Funcionamiento normal
-             setInfluencers(result.items || []);
-             setTotalCount(result.count || 0);
+             setInfluencers([]);
+             setTotalCount(0);
            }
-         } else {
-           setInfluencers([]);
-           setTotalCount(0);
-         }
-      } else {
-        // 📋 BÚSQUEDA POR FILTROS cuando no hay texto
-        const filters: any = {};
-        if (platform !== "all") filters.platform = platform;
-        if (topics.length > 0) filters.topicIds = topics;
-        if (niches.length > 0) filters.nicheIds = niches;
-        if (location !== "all") filters.country = location;
-        if (minFollowers > 0) filters.minFollowers = minFollowers;
-        if (maxFollowers < 100000000) filters.maxFollowers = maxFollowers;
-        if (minEngagement > 0) filters.minEngagement = minEngagement;
-        if (maxEngagement < 100) filters.maxEngagement = maxEngagement;
-        if (selectedGrowthRate) {
-          filters.minGRateFollowers = selectedGrowthRate.min;
-          filters.maxGRateFollowers = selectedGrowthRate.max;
+        } else {
+          // 📋 BÚSQUEDA POR FILTROS cuando no hay texto
+          const filters: any = {};
+          if (platform !== "all") filters.platform = platform;
+          if (topics.length > 0) filters.topicIds = topics;
+
+          if (location !== "all") filters.country = location;
+          if (minFollowers > 0) filters.minFollowers = minFollowers;
+          if (maxFollowers < 100000000) filters.maxFollowers = maxFollowers;
+          if (minEngagement > 0) filters.minEngagement = minEngagement;
+          if (maxEngagement < 100) filters.maxEngagement = maxEngagement;
+
+
+          if (selectedCategories.length > 0) filters.categories = selectedCategories;
+
+          const result = await creatorService.explorerSearch({
+            ...filters,
+            page: 1,
+            size: 6
+          });
+
+          // Actualizar datos
+          setInfluencers(result.items || []);
+          setTotalCount(result.count || 0);
         }
-        if (hashtags.trim()) filters.hashtags = hashtags.trim();
-        if (selectedCategories.length > 0) filters.categories = selectedCategories;
-
-        const result = await creatorService.explorerSearch({
-          ...filters,
-          page: 1,
-          size: 6
-        });
-
-        // Actualizar datos
-        setInfluencers(result.items || []);
-        setTotalCount(result.count || 0);
       }
 
     } catch (error: any) {
@@ -395,13 +509,12 @@ export default function Explorer() {
           platform: platform === "all" ? undefined : platform,
           country: location !== "all" ? location : undefined,
           topicIds: topics.length > 0 ? topics : undefined,
-          nicheIds: niches.length > 0 ? niches : undefined,
+
           minFollowers: minFollowers > 0 ? minFollowers : undefined,
           maxFollowers: maxFollowers < 100000000 ? maxFollowers : undefined,
           minEngagement: minEngagement > 0 ? minEngagement : undefined,
           maxEngagement: maxEngagement < 100 ? maxEngagement : undefined,
-          minGRateFollowers: selectedGrowthRate ? selectedGrowthRate.min : undefined,
-          maxGRateFollowers: selectedGrowthRate ? selectedGrowthRate.max : undefined,
+
           categories: selectedCategories.length > 0 ? selectedCategories : undefined,
           page: newPage,
           size: 6
@@ -418,17 +531,14 @@ export default function Explorer() {
         const filters: any = {};
         if (platform !== "all") filters.platform = platform;
         if (topics.length > 0) filters.topicIds = topics;
-        if (niches.length > 0) filters.nicheIds = niches;
+
         if (location !== "all") filters.country = location;
         if (minFollowers > 0) filters.minFollowers = minFollowers;
         if (maxFollowers < 100000000) filters.maxFollowers = maxFollowers;
         if (minEngagement > 0) filters.minEngagement = minEngagement;
         if (maxEngagement < 100) filters.maxEngagement = maxEngagement;
-        if (selectedGrowthRate) {
-          filters.minGRateFollowers = selectedGrowthRate.min;
-          filters.maxGRateFollowers = selectedGrowthRate.max;
-        }
-        if (hashtags.trim()) filters.hashtags = hashtags.trim();
+
+
         if (selectedCategories.length > 0) filters.categories = selectedCategories;
 
         const result = await creatorService.explorerSearch({
@@ -466,46 +576,6 @@ export default function Explorer() {
   // 🗑️ ELIMINADO: useEffect de paginación automática - ahora es manual con handlePageChange
 
   const adaptedInfluencers = useMemo(() => {
-    // 🎯 NUEVO: Si hay resultados de InfluenceIQ, adaptarlos
-    if (influenceIQResults.length > 0) {
-      return influenceIQResults.map((result, index) => {
-        const profile = result.account.user_profile;
-        
-        return {
-          id: profile.user_id,
-          creatorId: profile.user_id,
-          name: profile.fullname || profile.username,
-          image: profile.picture,
-          avatar: profile.picture,
-          verified: profile.is_verified,
-          categories: [],
-          location: '-',
-          language: '-',
-          socialPlatforms: [{
-            platform: 'Instagram',
-            username: profile.username,
-            followers: profile.followers,
-            engagement: profile.engagement_rate
-          }],
-          mainSocialPlatform: 'Instagram',
-          followersCount: profile.followers,
-          averageEngagementRate: profile.engagement_rate,
-          platformInfo: {
-            instagram: {
-              basicInstagram: {
-                instagramId: profile.username,
-                followers: profile.followers,
-                engageRate: profile.engagement_rate,
-                avatar: profile.picture
-              }
-            }
-          },
-          // 🎯 Metadatos para identificar que viene de InfluenceIQ
-          _source: 'influenceIQ',
-          _originalData: result
-        };
-      });
-    }
 
     if (influencers.length === 0) {
       return [];
@@ -1517,62 +1587,7 @@ export default function Explorer() {
     return hasYouTubeExtended || hasInstagramExtended || hasTikTokExtended;
   };
 
-  // 🎯 NUEVA FUNCIÓN: Hacer una sola petición a InfluenceIQ (para demostración)
-  const handleInfluenceIQSearch = async () => {
-    setInfluenceIQLoading(true);
-    setInfluenceIQError(null);
-    setInfluenceIQResults([]);
 
-    try {
-      console.log('🔍 [INFLUENCEIQ] Iniciando búsqueda de demostración...');
-      
-      // Filtros simples para la demostración
-      const filters = {
-        followers: {
-          left_number: 100000,
-          right_number: 1000000
-        },
-        engagement_rate: {
-          value: 0.06
-        },
-        with_contact: [
-          { type: 'email' },
-          { type: 'phone' }
-        ],
-        keywords: ['tech', 'innovation'],
-        geo: [32] // Argentina
-      };
-
-      const result = await influenceIQService.searchInfluencers(filters, 'instagram', 1, 6);
-      
-      if (result.success && result.accounts) {
-        console.log('✅ [INFLUENCEIQ] Búsqueda exitosa:', result.accounts.length, 'resultados');
-        setInfluenceIQResults(result.accounts);
-        
-        // Mostrar toast de éxito
-        toast({
-          title: 'InfluenceIQ - Búsqueda exitosa',
-          description: `Encontrados ${result.accounts.length} influencers con ${result.total} total disponibles`,
-          variant: 'default',
-          status: 'success'
-        });
-      } else {
-        throw new Error('No se obtuvieron resultados válidos');
-      }
-    } catch (error: any) {
-      console.error('❌ [INFLUENCEIQ] Error en búsqueda:', error);
-      setInfluenceIQError(error.message || 'Error en la búsqueda');
-      
-      toast({
-        title: 'InfluenceIQ - Error',
-        description: error.message || 'Error en la búsqueda',
-        variant: 'destructive',
-        status: 'error'
-      });
-    } finally {
-      setInfluenceIQLoading(false);
-    }
-  };
 
   // 🎯 NUEVA FUNCIÓN: Determinar qué datos ya tenemos vs qué necesitamos obtener
   const determineDataNeeds = (influencer: any, platformIds: any) => {
@@ -1657,8 +1672,7 @@ export default function Explorer() {
           setPlatform={setPlatform}
           topics={topics}
           setTopics={setTopics}
-          niches={niches}
-          setNiches={setNiches}
+
           location={location}
           setLocation={setLocation}
           minFollowers={minFollowers}
@@ -1669,31 +1683,38 @@ export default function Explorer() {
           setMinEngagement={setMinEngagement}
           maxEngagement={maxEngagement}
           setMaxEngagement={setMaxEngagement}
-          selectedGrowthRate={selectedGrowthRate}
-          setSelectedGrowthRate={setSelectedGrowthRate}
+
           
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
-          hashtags={hashtags}
-          setHashtags={setHashtags}
+
           selectedCategories={selectedCategories}
           setSelectedCategories={setSelectedCategories}
           categories={categories}
           locations={locations}
           handleSearch={handleSearch}
+          
+          // Filtros de audiencia para HypeAuditor
+          audienceGender={audienceGender}
+          setAudienceGender={setAudienceGender}
           handleClearFilters={() => {
             setPlatform("all");
             setLocation("all");
             setMinFollowers(0);
             setMaxFollowers(100000000);
             setSearchQuery("");
-            setHashtags("");
+
             setSelectedCategories([]);
             setTopics([]);
-            setNiches([]);
+
             setMinEngagement(0);
             setMaxEngagement(100);
-            setSelectedGrowthRate(null);
+
+            // Limpiar filtros de audiencia de HypeAuditor
+            setAudienceGender({ gender: 'any', percentage: 50 });
+            setAudienceAge({ minAge: 18, maxAge: 54, percentage: 10 });
+            setAudienceGeo({ countries: [], cities: [] });
+
         
             setLoadingInfluencers(false); // ✅ Asegurar que no haya loading al limpiar
             setInfluencers([]); // ✅ Limpiar resultados
@@ -1732,32 +1753,12 @@ export default function Explorer() {
                      </div>
                    )}
 
-                   {/* 🎯 NUEVO: INDICADOR DE INFLUENCEIQ */}
-                   {influenceIQResults.length > 0 && (
-                     <div className="flex items-center gap-1.5 px-2 py-1 bg-purple-50 border border-purple-200 rounded-md">
-                       <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
-                       <span className="text-xs font-medium text-purple-700">InfluenceIQ</span>
-                       <span className="text-xs text-purple-600">({influenceIQResults.length} resultados)</span>
-                     </div>
-                   )}
+
                  
                 </div>
               </div>
                              <div className="flex items-center gap-3">
-                 {/* 🎯 NUEVO: Botón de InfluenceIQ */}
-                 <button
-                   onClick={handleInfluenceIQSearch}
-                   disabled={influenceIQLoading}
-                   className={
-                     "font-medium py-2 px-4 rounded-md shadow-sm transition-all duration-200 flex items-center gap-2 text-sm" +
-                     (influenceIQLoading
-                       ? " bg-gray-300 text-gray-500 cursor-not-allowed"
-                       : " bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800 hover:shadow-md")
-                   }
-                 >
-                   <Zap className="w-3.5 h-3.5" />
-                   {influenceIQLoading ? 'Buscando...' : 'InfluenceIQ Demo'}
-                 </button>
+
 
                  {!selectMode ? (
                    <button

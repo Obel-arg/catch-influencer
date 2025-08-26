@@ -54,6 +54,8 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
+import HypeAuditorFilters from "./HypeAuditorFilters";
 
 // Interfaz para los filtros activos
 interface ActiveFilter {
@@ -76,8 +78,7 @@ interface ExplorerFiltersProps {
   setPlatform: Dispatch<SetStateAction<string>>;
   topics: string[];
   setTopics: Dispatch<SetStateAction<string[]>>;
-  niches: string[];
-  setNiches: Dispatch<SetStateAction<string[]>>;
+
   location: string;
   setLocation: Dispatch<SetStateAction<string>>;
   minFollowers: number;
@@ -88,15 +89,11 @@ interface ExplorerFiltersProps {
   setMinEngagement: Dispatch<SetStateAction<number>>;
   maxEngagement: number;
   setMaxEngagement: Dispatch<SetStateAction<number>>;
-  selectedGrowthRate: { min: number; max: number } | null;
-  setSelectedGrowthRate: Dispatch<
-    SetStateAction<{ min: number; max: number } | null>
-  >;
+
 
   searchQuery: string;
   setSearchQuery: Dispatch<SetStateAction<string>>;
-  hashtags: string;
-  setHashtags: Dispatch<SetStateAction<string>>;
+
   selectedCategories: string[];
   setSelectedCategories: Dispatch<SetStateAction<string[]>>;
   categories: string[];
@@ -105,6 +102,10 @@ interface ExplorerFiltersProps {
   handleClearFilters: () => void;
   showFilters: boolean;
   setShowFilters: Dispatch<SetStateAction<boolean>>;
+  
+  // Filtros de audiencia para HypeAuditor
+  audienceGender: { gender: 'male' | 'female' | 'any'; percentage: number };
+  setAudienceGender: Dispatch<SetStateAction<{ gender: 'male' | 'female' | 'any'; percentage: number }>>;
 }
 
 const followerRanges = [
@@ -122,14 +123,7 @@ const engagementRanges = [
   { label: "Muy alto (>10%)", min: 10, max: 100 },
 ];
 
-const growthRateRanges = [
-  { label: "Decrecimiento (<0%)", min: 0, max: 0 },
-  { label: "Estable (0-1%)", min: 0, max: 0.01 },
-  { label: "Crecimiento bajo (1-3%)", min: 0.01, max: 0.03 },
-  { label: "Crecimiento medio (3-7%)", min: 0.03, max: 0.07 },
-  { label: "Crecimiento alto (7-15%)", min: 0.07, max: 0.15 },
-  { label: "Crecimiento explosivo (>15%)", min: 0.15, max: 1 },
-];
+
 
 const countryList = [
   { code: "UAE", name: "Arab Emirates" },
@@ -306,331 +300,25 @@ const categoryList = [
 ].sort((a, b) => a.name.localeCompare(b.name));
 */
 
-// ✅ NICHOS DE INSTAGRAM: Top nichos temáticos basados en CreatorDB (ordenados por popularidad)
-const nichesList = [
-  // 🔥 MEGA TIER (más de 300K canales)
-  {
-    code: "love",
-    name: "Love",
-    icon: "❤️",
-    category: "General",
-    channels: "515K",
-  },
-  {
-    code: "viral",
-    name: "Viral",
-    icon: "🚀",
-    category: "General",
-    channels: "408K",
-  },
-  {
-    code: "fyp",
-    name: "FYP",
-    icon: "📱",
-    category: "General",
-    channels: "372K",
-  },
-  {
-    code: "instagram",
-    name: "Instagram",
-    icon: "📸",
-    category: "General",
-    channels: "362K",
-  },
-  {
-    code: "explore",
-    name: "Explore",
-    icon: "🔍",
-    category: "General",
-    channels: "307K",
-  },
 
-  // ⚡ ALTO TIER (200K - 300K canales)
-  {
-    code: "travel",
-    name: "Travel",
-    icon: "✈️",
-    category: "Viajes",
-    channels: "288K",
-  },
-  {
-    code: "trending",
-    name: "Trending",
-    icon: "📈",
-    category: "General",
-    channels: "281K",
-  },
-  {
-    code: "music",
-    name: "Music",
-    icon: "🎵",
-    category: "Entretenimiento",
-    channels: "274K",
-  },
-  {
-    code: "fashion",
-    name: "Fashion",
-    icon: "👗",
-    category: "Moda",
-    channels: "273K",
-  },
-  {
-    code: "family",
-    name: "Family",
-    icon: "👨‍👩‍👧‍👦",
-    category: "Familia",
-    channels: "270K",
-  },
-  { code: "art", name: "Art", icon: "🎨", category: "Arte", channels: "256K" },
-  {
-    code: "nature",
-    name: "Nature",
-    icon: "🌿",
-    category: "Naturaleza",
-    channels: "240K",
-  },
-  {
-    code: "photography",
-    name: "Photography",
-    icon: "📷",
-    category: "Arte",
-    channels: "233K",
-  },
 
-  // 📈 MEDIO TIER (100K - 200K canales)
-  {
-    code: "motivation",
-    name: "Motivation",
-    icon: "💪",
-    category: "Inspiración",
-    channels: "187K",
-  },
-  {
-    code: "beauty",
-    name: "Beauty",
-    icon: "💄",
-    category: "Belleza",
-    channels: "144K",
-  },
-  {
-    code: "life",
-    name: "Life",
-    icon: "🌟",
-    category: "Lifestyle",
-    channels: "141K",
-  },
-  {
-    code: "funny",
-    name: "Funny",
-    icon: "😄",
-    category: "Entretenimiento",
-    channels: "123K",
-  },
-  {
-    code: "food",
-    name: "Food",
-    icon: "🍕",
-    category: "Gastronomía",
-    channels: "116K",
-  },
-  {
-    code: "style",
-    name: "Style",
-    icon: "✨",
-    category: "Moda",
-    channels: "114K",
-  },
-  {
-    code: "fitness",
-    name: "Fitness",
-    icon: "💪",
-    category: "Deporte",
-    channels: "113K",
-  },
-  {
-    code: "sunset",
-    name: "Sunset",
-    icon: "🌅",
-    category: "Naturaleza",
-    channels: "111K",
-  },
-  {
-    code: "vacation",
-    name: "Vacation",
-    icon: "🏖️",
-    category: "Viajes",
-    channels: "110K",
-  },
-  {
-    code: "makeup",
-    name: "Makeup",
-    icon: "💄",
-    category: "Belleza",
-    channels: "108K",
-  },
-  {
-    code: "comedy",
-    name: "Comedy",
-    icon: "😂",
-    category: "Entretenimiento",
-    channels: "101K",
-  },
-  {
-    code: "dance",
-    name: "Dance",
-    icon: "💃",
-    category: "Entretenimiento",
-    channels: "100K",
-  },
 
-  // 💫 MODERADO TIER (menos de 100K canales)
-  {
-    code: "beach",
-    name: "Beach",
-    icon: "🏖️",
-    category: "Naturaleza",
-    channels: "98K",
-  },
-  {
-    code: "winter",
-    name: "Winter",
-    icon: "❄️",
-    category: "Estacional",
-    channels: "93K",
-  },
-  {
-    code: "wedding",
-    name: "Wedding",
-    icon: "💍",
-    category: "Eventos",
-    channels: "91K",
-  },
-  {
-    code: "lifestyle",
-    name: "Lifestyle",
-    icon: "✨",
-    category: "Lifestyle",
-    channels: "89K",
-  },
-  {
-    code: "birthday",
-    name: "Birthday",
-    icon: "🎂",
-    category: "Eventos",
-    channels: "87K",
-  },
-  {
-    code: "inspiration",
-    name: "Inspiration",
-    icon: "✨",
-    category: "Inspiración",
-    channels: "86K",
-  },
-  {
-    code: "dog",
-    name: "Dog",
-    icon: "🐕",
-    category: "Mascotas",
-    channels: "79K",
-  },
-  {
-    code: "cute",
-    name: "Cute",
-    icon: "🥰",
-    category: "General",
-    channels: "72K",
-  },
-  {
-    code: "football",
-    name: "Football",
-    icon: "⚽",
-    category: "Deporte",
-    channels: "70K",
-  },
-  {
-    code: "sport",
-    name: "Sport",
-    icon: "🏃",
-    category: "Deporte",
-    channels: "67K",
-  },
+// 🎯 NUEVAS INTERFACES PARA FILTROS DE HYPEAUDITOR DISCOVERY
+interface AudienceGenderFilter {
+  gender: 'male' | 'female' | 'any';
+  percentage: number;
+}
 
-  // 🎯 NICHOS ESPECÍFICOS
-  {
-    code: "design",
-    name: "Design",
-    icon: "🎨",
-    category: "Arte",
-    channels: "67K",
-  },
-  {
-    code: "home",
-    name: "Home",
-    icon: "🏠",
-    category: "Hogar",
-    channels: "35K",
-  },
-  {
-    code: "baby",
-    name: "Baby",
-    icon: "👶",
-    category: "Familia",
-    channels: "40K",
-  },
-  {
-    code: "flowers",
-    name: "Flowers",
-    icon: "🌸",
-    category: "Naturaleza",
-    channels: "30K",
-  },
-  {
-    code: "party",
-    name: "Party",
-    icon: "🎉",
-    category: "Eventos",
-    channels: "41K",
-  },
-  {
-    code: "success",
-    name: "Success",
-    icon: "🏆",
-    category: "Inspiración",
-    channels: "38K",
-  },
-  {
-    code: "education",
-    name: "Education",
-    icon: "📚",
-    category: "Educación",
-    channels: "32K",
-  },
-  {
-    code: "cat",
-    name: "Cat",
-    icon: "🐱",
-    category: "Mascotas",
-    channels: "81K",
-  },
-  {
-    code: "game",
-    name: "Game",
-    icon: "🎮",
-    category: "Gaming",
-    channels: "12K",
-  },
-  {
-    code: "basketball",
-    name: "Basketball",
-    icon: "🏀",
-    category: "Deporte",
-    channels: "12K",
-  },
-].sort(
-  (a, b) =>
-    parseInt(b.channels.replace("K", "")) -
-    parseInt(a.channels.replace("K", ""))
-);
+interface AudienceAgeFilter {
+  minAge: number;
+  maxAge: number;
+  percentage: number;
+}
+
+interface AudienceGeoFilter {
+  countries: string[];
+  cities: string[];
+}
 
 export default function ExplorerFilters(props: ExplorerFiltersProps) {
   const {
@@ -638,8 +326,7 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
     setPlatform,
     topics,
     setTopics,
-    niches,
-    setNiches,
+
     location,
     setLocation,
     minFollowers,
@@ -650,12 +337,10 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
     setMinEngagement,
     maxEngagement,
     setMaxEngagement,
-    selectedGrowthRate,
-    setSelectedGrowthRate,
+
     searchQuery,
     setSearchQuery,
-    hashtags,
-    setHashtags,
+
     selectedCategories,
     setSelectedCategories,
     categories,
@@ -664,12 +349,34 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
     handleClearFilters,
     showFilters,
     setShowFilters,
+    
+    // Filtros de audiencia para HypeAuditor
+    audienceGender,
+    setAudienceGender,
   } = props;
 
   const [countrySearch, setCountrySearch] = useState("");
   const [topicsSearch, setTopicsSearch] = useState(""); // ✨ NUEVO: Estado para búsqueda de tópicos
-  const [nichesSearch, setNichesSearch] = useState(""); // ✨ NUEVO: Estado para búsqueda de nichos
+
   const [activeTab, setActiveTab] = useState("basicos");
+
+  // 🎯 NUEVOS ESTADOS PARA FILTROS DE HYPEAUDITOR DISCOVERY
+  // audienceGender se pasa como prop desde Explorer.tsx
+  const [audienceAge, setAudienceAge] = useState<AudienceAgeFilter>({
+    minAge: 18,
+    maxAge: 54,
+    percentage: 10
+  });
+  const [audienceGeo, setAudienceGeo] = useState<AudienceGeoFilter>({
+    countries: [],
+    cities: []
+  });
+  const [accountType, setAccountType] = useState<'brand' | 'human' | 'any'>('any');
+  const [verified, setVerified] = useState<boolean | null>(null);
+  const [hasContacts, setHasContacts] = useState<boolean | null>(null);
+  const [hasLaunchedAdvertising, setHasLaunchedAdvertising] = useState<boolean | null>(null);
+  const [aqsRange, setAqsRange] = useState<{ min: number; max: number }>({ min: 0, max: 100 });
+  const [cqsRange, setCqsRange] = useState<{ min: number; max: number }>({ min: 0, max: 100 });
 
   // 🎯 NUEVO: Funciones para verificar compatibilidad de filtros por plataforma
   const isFilterDisabled = (filterType: string): boolean => {
@@ -677,8 +384,8 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
       const disabledFilters = {
         location: true, // Facebook y Threads no tienen country
         engagement: platform === "Threads", // Threads no tiene engagement rate
-        niches: true, // Facebook y Threads no tienen nichos
-        hashtags: platform === "Facebook", // Facebook no tiene hashtags
+
+
         categories: platform === "Threads", // Threads no tiene categorías
       };
       return disabledFilters[filterType as keyof typeof disabledFilters] || false;
@@ -693,7 +400,7 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
 
     if (platform === "YouTube") {
       const disabledFilters = {
-        hashtags: true, // YouTube no soporta filtros de hashtags
+
       };
       return disabledFilters[filterType as keyof typeof disabledFilters] || false;
     }
@@ -706,8 +413,8 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
     const messages = {
       location: `${platformName} actualmente no soporta filtrado por país`,
       engagement: `${platformName} actualmente no soporta filtrado por engagement rate`,
-      niches: `${platformName} actualmente no soporta filtrado por nichos`,
-      hashtags: "", // No mostrar mensaje explícito para hashtags en Facebook
+
+
       categories: `${platformName} actualmente no soporta filtrado por categorías`,
     };
     return messages[filterType as keyof typeof messages] || "";
@@ -722,7 +429,7 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
 
   const getYouTubeDisabledMessage = (filterType: string): string => {
     const messages = {
-      hashtags: "YouTube actualmente no soporta filtrado por hashtags",
+
     };
     return messages[filterType as keyof typeof messages] || "";
   };
@@ -738,13 +445,7 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
   //   category.description.toLowerCase().includes(topicsSearch.toLowerCase())
   // );
 
-  // ✨ NUEVA FUNCIÓN: Filtrar nichos por búsqueda
-  const filteredNiches = nichesList.filter(
-    (niche) =>
-      niche.name.toLowerCase().includes(nichesSearch.toLowerCase()) ||
-      niche.code.toLowerCase().includes(nichesSearch.toLowerCase()) ||
-      niche.category.toLowerCase().includes(nichesSearch.toLowerCase())
-  );
+
 
   const getSelectedCountryName = () => {
     if (location === "all") return "Todos los países";
@@ -770,25 +471,7 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
     }
   };
 
-  // ✨ NUEVA FUNCIÓN: Obtener texto de nichos seleccionados
-  const getSelectedNichesText = () => {
-    if (niches.length === 0) return "Todos los nichos";
-    if (niches.length === 1) {
-      const niche = nichesList.find((n) => n.code === niches[0]);
-      return niche ? niche.name : niches[0];
-    }
-    return `${niches.length} nichos seleccionados`;
-  };
 
-  // ✨ NUEVA FUNCIÓN: Obtener texto del growth rate seleccionado
-  const getSelectedGrowthRateText = () => {
-    if (!selectedGrowthRate) return "Todos los rangos de crecimiento";
-    const growthRange = growthRateRanges.find(
-      (r) =>
-        r.min === selectedGrowthRate.min && r.max === selectedGrowthRate.max
-    );
-    return growthRange ? growthRange.label : "Rango personalizado";
-  };
 
   // ✨ NUEVA FUNCIÓN: Limpiar búsqueda cuando se selecciona un filtro
   const clearSearchOnFilterChange = () => {
@@ -808,8 +491,8 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
         const disabledFilters = {
           location: true, // Facebook y Threads no tienen country
           engagement: platform === "Threads", // Threads no tiene engagement rate
-          niches: true, // Facebook y Threads no tienen nichos
-          hashtags: platform === "Facebook", // Facebook no tiene hashtags
+  
+  
           categories: platform === "Threads", // Threads no tiene categorías
         };
         return disabledFilters[filterType as keyof typeof disabledFilters] || false;
@@ -836,15 +519,9 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
       setMaxEngagement(100);
     }
 
-    // Limpiar nichos si no es compatible
-    if (isFilterDisabledForPlatform("niches", tempPlatform) && niches.length > 0) {
-      setNiches([]);
-    }
+ 
 
-    // Limpiar hashtags si no es compatible
-    if (isFilterDisabledForPlatform("hashtags", tempPlatform) && hashtags.trim()) {
-      setHashtags("");
-    }
+
 
     // Limpiar categorías si no es compatible
     if (isFilterDisabledForPlatform("categories", tempPlatform) && selectedCategories.length > 0) {
@@ -861,14 +538,7 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
   //   }
   // };
 
-  // ✨ NUEVA FUNCIÓN: Toggle nicho seleccionado
-  const toggleNiche = (nicheCode: string) => {
-    if (niches.includes(nicheCode)) {
-      setNiches(niches.filter((n) => n !== nicheCode));
-    } else {
-      setNiches([...niches, nicheCode]);
-    }
-  };
+ 
 
   // 🎯 NUEVA FUNCIÓN: Obtener categorías según la plataforma seleccionada
   const getAvailableCategories = (): string[] => {
@@ -1151,46 +821,11 @@ const formatCategoryName = (category: string): string => {
       }
     }
 
-    // Filtro de growth rate
-    if (selectedGrowthRate) {
-      const growthRange = growthRateRanges.find(
-        (r) =>
-          r.min === selectedGrowthRate.min && r.max === selectedGrowthRate.max
-      );
-      if (growthRange) {
-        filters.push({
-          id: "growthRate",
-          label: growthRange.label,
-          icon: null,
-          type: "growthRate",
-        });
-      }
-    }
 
-    // Filtro de nichos
-    if (niches.length > 0) {
-      niches.forEach((nicheCode) => {
-        const niche = nichesList.find((n) => n.code === nicheCode);
-        if (niche) {
-          filters.push({
-            id: `niche-${nicheCode}`,
-            label: niche.name,
-            icon: niche.icon,
-            type: "niche",
-          });
-        }
-      });
-    }
 
-    // Filtro de hashtags
-    if (hashtags.trim()) {
-      filters.push({
-        id: "hashtags",
-        label: hashtags,
-        icon: "#",
-        type: "hashtags",
-      });
-    }
+    
+
+
 
     // Filtro de categorías
     if (selectedCategories.length > 0) {
@@ -1202,6 +837,16 @@ const formatCategoryName = (category: string): string => {
           iconColor: getCategoryIconColor(category),
           type: "category",
         });
+      });
+    }
+
+    // Filtro de audience gender
+    if (audienceGender.gender !== 'any') {
+      filters.push({
+        id: "audienceGender",
+        label: `${audienceGender.gender === 'male' ? 'Male' : 'Female'} >${audienceGender.percentage}%`,
+        icon: audienceGender.gender === 'male' ? '👨' : '👩',
+        type: "audienceGender",
       });
     }
 
@@ -1225,19 +870,15 @@ const formatCategoryName = (category: string): string => {
         setMinEngagement(0);
         setMaxEngagement(100);
         break;
-      case "growthRate":
-        setSelectedGrowthRate(null);
-        break;
-      case "niche":
-        const nicheCode = filterId.replace("niche-", "");
-        setNiches(niches.filter((n) => n !== nicheCode));
-        break;
-      case "hashtags":
-        setHashtags("");
-        break;
+
+
+
       case "category":
         const category = filterId.replace("category-", "");
         setSelectedCategories(selectedCategories.filter((c) => c !== category));
+        break;
+      case "audienceGender":
+        setAudienceGender({ gender: 'any', percentage: 50 });
         break;
     }
   };
@@ -1913,226 +1554,76 @@ const formatCategoryName = (category: string): string => {
               </div>
              */}
 
-            {/* ✨ NICHOS - Dropdown con selección múltiple */}
-            <div className="space-y-2">
+            {/* ✨ AUDIENCE GENDER - Filtro de género de audiencia */}
+            <div className="space-y-3">
               <label className="text-sm font-medium text-gray-700">
-                Nichos (Keywords)
+                Audience gender
               </label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    disabled={isFilterDisabled("niches")}
-                    className={cn(
-                      "w-full justify-between bg-white border-gray-200",
-                      isFilterDisabled("niches") 
-                        ? "opacity-50 cursor-not-allowed bg-gray-100" 
-                        : "hover:bg-gray-50"
-                    )}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Hash className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-600 truncate">
-                        {isFilterDisabled("niches")
-                          ? "No disponible"
-                          : getSelectedNichesText()
-                        }
+              
+              <div className="space-y-3">
+                {/* Radio buttons para seleccionar género */}
+                <div className="flex flex-col space-y-2">
+                  {[
+                    { value: 'any', label: 'Any' },
+                    { value: 'male', label: 'Male' },
+                    { value: 'female', label: 'Female' }
+                  ].map((option) => (
+                    <div key={option.value} className="flex items-center space-x-2">
+                      <div 
+                        className={cn(
+                          "w-5 h-5 rounded-full border-2 cursor-pointer transition-all duration-200 flex items-center justify-center",
+                          audienceGender.gender === option.value
+                            ? "border-blue-600 bg-blue-600"
+                            : "border-gray-300 hover:border-blue-400"
+                        )}
+                        onClick={() => setAudienceGender({ ...audienceGender, gender: option.value as 'male' | 'female' | 'any' })}
+                      >
+                        {audienceGender.gender === option.value && (
+                          <div className="w-2 h-2 rounded-full bg-white"></div>
+                        )}
+                      </div>
+                      <label 
+                        className="text-sm text-gray-700 cursor-pointer"
+                        onClick={() => setAudienceGender({ ...audienceGender, gender: option.value as 'male' | 'female' | 'any' })}
+                      >
+                        {option.label}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Slider para porcentaje - solo se muestra si no es 'any' */}
+                {audienceGender.gender !== 'any' && (
+                  <div className="mt-4 p-5 bg-gray-50 rounded-2xl border border-gray-200">
+                    <div className="text-center mb-4">
+                      <span className="text-sm font-medium text-gray-700">
+                        More than {audienceGender.percentage}% of audience
                       </span>
                     </div>
-                    <ChevronDown className="h-4 w-4 text-gray-500" />
-                  </Button>
-                </DropdownMenuTrigger>
-                {isFilterDisabled("niches") ? (
-                  <DropdownMenuContent
-                    align="start"
-                    className="w-[350px] bg-white p-3"
-                  >
-                    <div className="text-sm text-gray-600 text-center">
-                      {platform === "TikTok" ? getTikTokDisabledMessage("niches") : getDisabledMessage("niches")}
-                    </div>
-                  </DropdownMenuContent>
-                ) : (
-                <DropdownMenuContent
-                  align="start"
-                  className="w-[350px] bg-white"
-                >
-                  <div className="p-2">
-                    <div className="relative mb-2">
-                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
-                      <Input
-                        placeholder="Buscar nicho..."
-                        value={nichesSearch}
-                        onChange={(e) => setNichesSearch(e.target.value)}
-                        className="w-full pl-8 bg-white border-gray-200 h-9"
+                    
+                    <div className="relative px-3">
+                      <Slider
+                        value={[audienceGender.percentage]}
+                        onValueChange={(value) => setAudienceGender({ ...audienceGender, percentage: value[0] })}
+                        max={100}
+                        min={0}
+                        step={5}
+                        className="w-full [&>span:first-child]:bg-gray-300 [&>span:first-child]:h-2 [&>span:first-child]:rounded-full [&>span:last-child]:bg-blue-600 [&>span:last-child]:h-2 [&>span:last-child]:rounded-full [&_[role=slider]]:bg-white [&_[role=slider]]:border-4 [&_[role=slider]]:border-blue-600 [&_[role=slider]]:h-6 [&_[role=slider]]:w-6 [&_[role=slider]]:shadow-lg [&_[role=slider]]:transition-all [&_[role=slider]]:duration-200 [&_[role=slider]:hover]:scale-110 [&_[role=slider]:focus]:scale-110 [&_[role=slider]:focus]:ring-4 [&_[role=slider]:focus]:ring-blue-200"
                       />
                     </div>
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start h-9 px-2 mb-1 rounded-md hover:bg-gray-50 text-left"
-                      onClick={() => {
-                        setNiches([]);
-                        clearSearchOnFilterChange();
-                      }}
-                    >
-                      <Hash className="h-4 w-4 mr-2 text-gray-500" />
-                      Limpiar nichos
-                    </Button>
-                    <DropdownMenuSeparator />
-                    <div className="max-h-[200px] overflow-y-auto">
-                      {filteredNiches.map((niche) => (
-                        <Button
-                          key={niche.code}
-                          variant="ghost"
-                          className={cn(
-                            "w-full justify-start h-9 px-2 mb-1 rounded-md text-left",
-                            niches.includes(niche.code)
-                              ? "bg-blue-50 text-blue-700"
-                              : "hover:bg-gray-50"
-                          )}
-                          onClick={() => {
-                            toggleNiche(niche.code);
-                            clearSearchOnFilterChange();
-                          }}
-                        >
-                          <div className="flex items-center gap-2 w-full">
-                            <span>{niche.icon}</span>
-                            <span className="flex-1 text-left">
-                              {niche.name}
-                            </span>
-                            <Badge variant="outline" className="text-xs">
-                              {niche.category}
-                            </Badge>
-                            {niches.includes(niche.code) && (
-                              <Check className="h-4 w-4 text-blue-600" />
-                            )}
-                          </div>
-                        </Button>
-                      ))}
-                      {filteredNiches.length === 0 && (
-                        <div className="text-sm text-gray-500 text-center py-2">
-                          No se encontraron nichos
-                        </div>
-                      )}
+                    
+                    <div className="flex justify-between text-xs text-gray-500 mt-3 px-1">
+                      <span className="font-medium">0%</span>
+                      <span className="font-medium">50%</span>
+                      <span className="font-medium">100%</span>
                     </div>
-                  </div>
-                </DropdownMenuContent>
-                )}
-              </DropdownMenu>
-            </div>
-
-            {/* ✨ HASHTAGS - Input para escribir hashtags */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Hashtags
-              </label>
-              <div className="relative">
-                <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder={isFilterDisabled("hashtags") ? "No disponible" : "Ej: #fitness, #travel, #food..."}
-                  value={hashtags}
-                  onChange={(e) => setHashtags(e.target.value)}
-                  disabled={isFilterDisabled("hashtags")}
-                  className={cn(
-                    "pl-10 h-12 text-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500",
-                    isFilterDisabled("hashtags") 
-                      ? "opacity-50 cursor-not-allowed bg-gray-100" 
-                      : ""
-                  )}
-                  onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-                />
-                {isFilterDisabled("hashtags") && (
-                  <div className="mt-1 text-xs text-gray-500">
-                    {platform === "TikTok" ? getTikTokDisabledMessage("hashtags") : 
-                     platform === "YouTube" ? getYouTubeDisabledMessage("hashtags") :
-                     getDisabledMessage("hashtags")}
                   </div>
                 )}
               </div>
             </div>
 
-            {/* ✨ GROWTH RATE - Dropdown con rangos de crecimiento */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Growth Rate de Followers (30 días)
-              </label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-between bg-white border-gray-200 hover:bg-gray-50"
-                  >
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-600">
-                        {getSelectedGrowthRateText()}
-                      </span>
-                    </div>
-                    <ChevronDown className="h-4 w-4 text-gray-500" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="start"
-                  className="w-[300px] bg-white p-2"
-                >
-                  <div className="space-y-2">
-                    <div className="space-y-1">
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start h-9 px-2 rounded-md text-left hover:bg-gray-50"
-                        onClick={() => {
-                          setSelectedGrowthRate(null);
-                          clearSearchOnFilterChange();
-                        }}
-                      >
-                        <div className="flex items-center gap-2">
-                          <Check
-                            className={cn(
-                              "h-4 w-4",
-                              !selectedGrowthRate ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          <span className="text-sm">
-                            Todos los rangos de crecimiento
-                          </span>
-                        </div>
-                      </Button>
-                      {growthRateRanges.map((range) => (
-                        <Button
-                          key={range.label}
-                          variant="ghost"
-                          className={cn(
-                            "w-full justify-start h-9 px-2 rounded-md text-left",
-                            selectedGrowthRate &&
-                              selectedGrowthRate.min === range.min &&
-                              selectedGrowthRate.max === range.max
-                              ? "bg-blue-50 text-blue-700"
-                              : "hover:bg-gray-50"
-                          )}
-                          onClick={() => {
-                            setSelectedGrowthRate(range);
-                            clearSearchOnFilterChange();
-                          }}
-                        >
-                          <div className="flex items-center gap-2">
-                            <Check
-                              className={cn(
-                                "h-4 w-4",
-                                selectedGrowthRate &&
-                                  selectedGrowthRate.min === range.min &&
-                                  selectedGrowthRate.max === range.max
-                                  ? "opacity-100"
-                                  : "opacity-0"
-                              )}
-                            />
-                            <span className="text-sm">{range.label}</span>
-                          </div>
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+
+
 
             {/* ✨ CATEGORÍAS - Dropdown con categorías de CreatorDB */}
             <div className="space-y-2">

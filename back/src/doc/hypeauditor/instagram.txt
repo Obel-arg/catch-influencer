@@ -1,0 +1,202 @@
+Instagram Example
+HypeAuditor For Discovery - Instagram
+
+JSON Example:
+JSON
+
+{
+  "social_network": "instagram",
+  "category": {
+    "include": [
+      1018,
+      1032
+    ]
+  },
+  "reels_video_views_avg": {
+    "from": 1000
+  },
+  "search": [
+    "nasa"
+  ],
+  "account_geo": {
+    "country": [
+      "gb",
+      "us"
+    ],
+    "city": [
+      2643743
+    ]
+  },
+  "account_gender": "male",
+  "account_age": {
+    "from": 13,
+    "to": 65
+  },
+  "account_languages": [
+    "en",
+    "es"
+  ],
+  "account_type": "human",
+  "account_has_contacts": true,
+  "account_has_launched_advertising": true,
+   "account_mentions": {
+         "include": ["nasa"],
+         "exclude": ["nike"]
+    },
+  "audience_geo": {
+    "countries": [
+      {
+        "id": "gb",
+        "prc": 20
+      },
+      {
+        "id": "us",
+        "prc": 20
+      }
+    ],
+    "cities": [
+      {
+        "id": 2643743,
+        "prc": 20
+      }
+    ]
+  },
+  "blogger_prices": {
+    "post_price": {
+      "from": 10,
+      "to": 10000
+    }
+  },
+  "audience_age": {
+    "groups": ["13_17","18_24"],
+    "prc": 50
+  },
+  "interests": [
+    {
+      "id": 11,
+      "prc": 90
+    },
+    {
+      "id": 12,
+      "prc": 80
+    }
+  ],
+  "audience_gender": {
+    "gender": "female",
+    "prc": 20
+  },
+  "subscribers_count": {
+    "from": 120000
+  },
+  "er": {
+    "from": 1,
+    "to": 20
+  },
+  "ethnicity": [
+    {
+      "race": "arabian",
+      "prc": 90
+    }
+  ],
+  "income": {
+    "id": "5k",
+    "prc": 10
+  },
+  "aqs": {
+    "from": 20,
+    "to": 45
+  },
+  "last_media_time": {
+    "from": 1723631206
+  },
+  "media_count": {
+    "from": 1
+  },
+  "comments_rate": {
+    "marks": [
+      "good"
+    ]
+  },
+  "growth": {
+    "period": "7d",
+    "from": 10,
+    "to": 30
+  },
+  "sort": {
+    "field": "subscribers_count",
+    "order": "desc"
+  },
+  "similar": "nasa",
+  "page": 1
+}
+
+Requests
+Set YOUR_ID and YOUR_TOKEN from HypeAuditor.
+
+PHP Request
+Application/JSON with JSON body request
+
+$postFields = [
+    'social_network'       => 'instagram',
+    'account_has_contacts' => true,
+];
+$opts = [
+    CURLOPT_URL            => 'https://hypeauditor.com/api/method/auditor.searchSandbox',
+    CURLOPT_TIMEOUT        => 10,
+    CURLOPT_POSTFIELDS     => $postFields,
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_HTTPHEADER     => [
+        'X-Auth-Id: CLIENT_ID_HERE',
+        'X-Auth-Token: API_TOKEN_HERE',
+    ],
+];
+$ch = curl_init();
+curl_setopt_array($ch, $opts);
+$response = curl_exec($ch);
+var_dump($response);
+
+Response Object
+Response can contain search_results array. Please, check Change Log for further information.
+
+{
+    "result": {
+        "search_results": [
+            {
+                "basic": {
+                    "username": "songkang_b",
+                    "title": "송강",
+                    "avatar_url": "https://cdn.hypeauditor.com/img/instagram/user/1595239835.jpg?w=150&till=1737540000&sign=96062edcc1ef51974a368d2f946126d3"
+                },
+                "metrics": {
+                    "er": {
+                        "value": 20.994019
+                    },
+                    "subscribers_count": {
+                        "value": 22124473
+                    },
+                    "real_subscribers_count": {
+                        "value": 18626593
+                    },
+                    "reels_video_views_avg": {
+                        "value": 0
+                    }
+                },
+                "features": {
+                    "social_networks": [
+                        {
+                            "type": "instagram",
+                            "title": "송강",
+                            "social_id": "1595239835",
+                            "username": "songkang_b",
+                            "avatar_url": "https://cdn.hypeauditor.com/img/instagram/user/1595239835.jpg?w=150&till=1732590000&sign=d74c44cc99f9a9629d730b82fbadff2a",
+                            "subscribers_count": 22124473,
+                            "er": 20.994019,
+                            "state": "READY"
+            }
+        ],
+        "current_page": 1,
+        "total_pages": 80572,
+        "queries_left": 99959
+    }
+}
+

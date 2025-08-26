@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import { influencerService } from "@/lib/services/influencer";
 import { creatorService } from "@/lib/services/creator";
+import { hypeAuditorDiscoveryService, HypeAuditorDiscoveryFilters } from "@/lib/services/hypeauditor-discovery.service";
 import { useToast } from "@/hooks/common/useToast";
 import { Influencer } from "@/types/influencer";
 import { PaginationParams } from "@/types/common";
@@ -34,6 +35,7 @@ interface InfluencersContextType {
   getInfluencerMetrics: (id: string) => Promise<any>;
   getInfluencerCampaigns: (id: string) => Promise<any[]>;
   searchCreatorDBInfluencers: (filters: Record<string, any>) => Promise<any>;
+  searchHypeAuditorInfluencers: (filters: HypeAuditorDiscoveryFilters) => Promise<any>;
   resetInfluencers: () => void;
 }
 
@@ -353,6 +355,46 @@ export const InfluencersProvider: React.FC<InfluencersProviderProps> = ({
     [showToast]
   );
 
+  const searchHypeAuditorInfluencers = useCallback(
+    async (filters: HypeAuditorDiscoveryFilters) => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        console.log('🚀 [CONTEXT] Iniciando búsqueda con HypeAuditor Discovery:', filters);
+
+        // Realizar búsqueda con HypeAuditor
+        const hypeAuditorResponse = await hypeAuditorDiscoveryService.searchDiscovery(filters);
+        
+        // Transformar la respuesta al formato del Explorer
+        const transformedData = hypeAuditorDiscoveryService.transformToExplorerFormat(hypeAuditorResponse);
+        
+        // Actualizar el estado con los resultados transformados
+        setInfluencers(transformedData.items);
+        
+        console.log('✅ [CONTEXT] Búsqueda HypeAuditor completada:', {
+          totalResults: transformedData.items.length,
+          searchTime: transformedData.metadata.searchTime,
+          provider: transformedData.provider
+        });
+
+        return transformedData;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Error al buscar influencers con HypeAuditor";
+        setError(errorMessage);
+        showToast({
+          title: "Error",
+          description: errorMessage,
+        });
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [showToast]
+  );
+
   const resetInfluencers = useCallback(() => {
     setInfluencers([]);
     setIsInitialized(false);
@@ -373,6 +415,7 @@ export const InfluencersProvider: React.FC<InfluencersProviderProps> = ({
     getInfluencerMetrics,
     getInfluencerCampaigns,
     searchCreatorDBInfluencers,
+    searchHypeAuditorInfluencers,
     resetInfluencers,
   };
 

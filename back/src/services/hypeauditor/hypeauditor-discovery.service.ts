@@ -1,0 +1,757 @@
+import * as https from 'https';
+import { promisify } from 'util';
+
+// Interfaces específicas para Discovery
+export interface DiscoverySearchRequest {
+	social_network: 'instagram' | 'youtube' | 'tiktok' | 'twitter' | 'twitch';
+	page?: number;
+	search?: string[];
+	search_content?: string[];
+	search_description?: string[];
+	category?: { include: number[] };
+	account_geo?: { country: string[] };
+	account_gender?: 'male' | 'female';
+	account_age?: { min: number; max: number };
+	account_languages?: string[];
+	account_type?: 'brand' | 'human';
+	account_has_contacts?: boolean;
+	account_has_launched_advertising?: boolean;
+	account_mentions?: { include?: string[]; exclude?: string[] };
+	subscribers_count?: { from: number; to: number };
+	er?: { from: number; to: number };
+	aqs?: { min: number; max: number };
+	cqs?: { min: number; max: number };
+	last_media_time?: { from: number };
+	media_count?: { min: number; max: number };
+	likes_count?: { min: number; max: number };
+	alikes_avg?: { min: number; max: number };
+	views_avg?: { min: number; max: number };
+	comments_avg?: { min: number; max: number };
+	shares_avg?: { min: number; max: number };
+	growth?: { period: string; from: number; to: number };
+	likes_growth_prc?: { period: string; from: number; to: number };
+	verified?: number;
+	blogger_prices?: { post_price: { min: number; max: number } };
+	income?: { id: string; prc: number };
+	ethnicity?: Array<{ race: string; prc: number }>;
+	interests?: Array<{ id: number; prc: number }>;
+	username_exclude?: string[];
+	similar?: string;
+	reels_video_views_avg?: { min: number; max: number };
+	shorts_video_views_avg?: { min: number; max: number };
+	twitch_active_days_per_week?: { min: number; max: number };
+	twitch_hours_streamed?: { min: number; max: number };
+	twitch_live_viewers_avg?: { min: number; max: number };
+	twitch_games?: { period: string; games: number[] };
+	twitter_likes?: { min: number; max: number };
+	twitter_replies?: { min: number; max: number };
+	twitter_retweet?: { min: number; max: number };
+	twitter_tweet?: { min: number; max: number };
+	sort?: { field: string; order: 'asc' | 'desc' };
+	audience_age?: { groups: string[]; prc: number };
+	audience_gender?: { gender: 'male' | 'female'; prc: number };
+	audience_geo?: {
+		countries?: Array<{ id: string; prc: number }>;
+		cities?: Array<{ id: number; prc: number }>;
+	};
+}
+
+export interface DiscoverySearchResult {
+	basic: {
+		username: string;
+		title: string;
+		avatar_url: string;
+		id?: string;
+	};
+	metrics: {
+		er?: { value: number };
+		subscribers_count: { value: number };
+		real_subscribers_count?: { value: number };
+		likes_count?: { value: number };
+		views_avg?: { value: number };
+		comments_avg?: { value: number };
+		shares_avg?: { value: number };
+		reels_video_views_avg?: { value: number };
+		shorts_video_views_avg?: { value: number };
+	};
+	features: {
+		social_networks: Array<{
+			type: string;
+			title: string;
+			social_id: string;
+			username: string;
+			avatar_url: string;
+			subscribers_count: number;
+			er: number;
+			state: string;
+		}>;
+		aqs?: {
+			data: {
+				mark: string;
+			};
+		};
+		cqs?: {
+			data: {
+				mark: string;
+			};
+		};
+		search_content?: any[];
+	};
+}
+
+export interface DiscoveryResponse {
+	result: {
+		search_results: DiscoverySearchResult[];
+		current_page: number;
+		total_pages: number;
+		queries_left: number;
+	};
+}
+
+export interface ExplorerFilters {
+	// Búsqueda básica
+	searchQuery?: string;
+	platform?: string;
+	
+	// Filtros de audiencia
+	minFollowers?: number;
+	maxFollowers?: number;
+	minEngagement?: number;
+	maxEngagement?: number;
+	
+	// Ubicación
+	location?: string;
+	
+	// Categorías
+	selectedCategories?: string[];
+	
+	// Crecimiento
+	selectedGrowthRate?: { min: number; max: number; period?: string };
+	
+	// Métricas avanzadas
+	aqs?: { min: number; max: number };
+	cqs?: { min: number; max: number };
+	
+	// Ordenamiento
+	sortBy?: string;
+	sortOrder?: 'asc' | 'desc';
+	
+	// Paginación
+	page?: number;
+	size?: number;
+	
+	// Filtros adicionales
+	accountType?: 'brand' | 'human';
+	verified?: boolean;
+	hasContacts?: boolean;
+	hasLaunchedAdvertising?: boolean;
+	
+	// Búsqueda por contenido
+	searchContent?: string[];
+	searchDescription?: string[];
+	
+	// Filtros de audiencia
+	audienceAge?: { groups: string[]; prc: number };
+	audienceGender?: { gender: 'male' | 'female'; prc: number };
+	audienceGeo?: {
+		countries?: Array<{ id: string; prc: number }>;
+		cities?: Array<{ id: number; prc: number }>;
+	};
+	
+	// Precios
+	bloggerPrices?: { min: number; max: number };
+	
+	// Última actividad
+	lastMediaTime?: { from: number };
+	
+	// Conteos
+	mediaCount?: { min: number; max: number };
+	likesCount?: { min: number; max: number };
+	
+	// Promedios
+	likesAvg?: { min: number; max: number };
+	viewsAvg?: { min: number; max: number };
+	commentsAvg?: { min: number; max: number };
+	sharesAvg?: { min: number; max: number };
+	
+	// Crecimiento de likes
+	likesGrowthPrc?: { min: number; max: number; period?: string };
+	
+	// Filtros específicos por plataforma
+	reelsVideoViewsAvg?: { min: number; max: number };
+	shortsVideoViewsAvg?: { min: number; max: number };
+	
+	// Filtros de Twitch
+	twitchActiveDaysPerWeek?: { min: number; max: number };
+	twitchHoursStreamed?: { min: number; max: number };
+	twitchLiveViewersAvg?: { min: number; max: number };
+	twitchGames?: { period: string; games: number[] };
+	
+	// Filtros de Twitter
+	twitterLikes?: { min: number; max: number };
+	twitterReplies?: { min: number; max: number };
+	twitterRetweet?: { min: number; max: number };
+	twitterTweet?: { min: number; max: number };
+	
+	// Filtros de Instagram
+	accountAge?: { min: number; max: number };
+	accountGender?: 'male' | 'female';
+	accountLanguages?: string[];
+	accountMentions?: {
+		include?: string[];
+		exclude?: string[];
+	};
+	
+	// Filtros de ingresos y etnicidad (solo Instagram)
+	income?: { id: string; prc: number };
+	ethnicity?: Array<{ race: string; prc: number }>;
+	interests?: Array<{ id: number; prc: number }>;
+	
+	// Exclusión de usuarios
+	usernameExclude?: string[];
+	
+	// Búsqueda similar
+	similar?: string;
+}
+
+export interface ExplorerResult {
+	creatorId: string;
+	name: string;
+	avatar: string;
+	isVerified: boolean;
+	contentNiches?: string[];
+	country?: string;
+	socialPlatforms: Array<{
+		platform: string;
+		username: string;
+		followers: number;
+		engagement: number;
+	}>;
+	platformInfo?: Record<string, any>;
+	language?: string;
+	metrics?: {
+		engagementRate: number;
+		realFollowers?: number;
+		likesCount?: number;
+		viewsAvg?: number;
+		commentsAvg?: number;
+		sharesAvg?: number;
+		aqs?: string;
+		cqs?: string;
+	};
+}
+
+export interface ExplorerSearchResponse {
+	success: boolean;
+	items: ExplorerResult[];
+	totalCount: number;
+	currentPage: number;
+	totalPages: number;
+	queriesLeft: number;
+	provider: string;
+	metadata?: {
+		searchTime: number;
+		filtersApplied: string[];
+		cacheHit?: boolean;
+		mode?: string;
+		query?: string;
+		platform?: string;
+	};
+}
+
+export class HypeAuditorDiscoveryService {
+	private static instance: HypeAuditorDiscoveryService;
+	private readonly baseUrl = 'https://hypeauditor.com';
+	
+	// Credenciales hardcodeadas (las mismas que funcionan en el script)
+	private readonly CLIENT_ID = '360838';
+	private readonly API_TOKEN = '$2y$04$Ai3PO.ApJUZd2tSpIEvrwuJowWPOVY5DwCE4RNnTVTD6ayQHKtZh6';
+
+	private constructor() {}
+
+	// Función helper para hacer peticiones HTTPS
+	private async makeHttpsRequest(endpoint: string, data?: any): Promise<any> {
+		return new Promise((resolve, reject) => {
+			const postData = data ? JSON.stringify(data) : '';
+			
+			const options = {
+				hostname: 'hypeauditor.com',
+				port: 443,
+				path: endpoint,
+				method: data ? 'POST' : 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+					'X-Auth-Id': this.CLIENT_ID,
+					'X-Auth-Token': this.API_TOKEN,
+					...(data && { 'Content-Length': Buffer.byteLength(postData) })
+				}
+			};
+
+			const req = https.request(options, (res) => {
+				let responseData = '';
+				res.on('data', (chunk) => {
+					responseData += chunk;
+				});
+
+				res.on('end', () => {
+					try {
+						const response = JSON.parse(responseData);
+						resolve(response);
+					} catch (error: any) {
+						reject(new Error(`Error parsing response: ${error.message}`));
+					}
+				});
+			});
+
+			req.on('error', (error) => {
+				reject(new Error(`Request failed: ${error.message}`));
+			});
+
+			if (data) {
+				req.write(postData);
+			}
+			req.end();
+		});
+	}
+
+	public static getInstance(): HypeAuditorDiscoveryService {
+		if (!HypeAuditorDiscoveryService.instance) {
+			HypeAuditorDiscoveryService.instance = new HypeAuditorDiscoveryService();
+		}
+		return HypeAuditorDiscoveryService.instance;
+	}
+
+	/**
+	 * Realiza una búsqueda de discovery usando HypeAuditor
+	 */
+	async searchDiscovery(request: DiscoverySearchRequest): Promise<DiscoveryResponse> {
+		try {
+			console.log(`🔍 [HYPEAUDITOR DISCOVERY] Iniciando búsqueda para ${request.social_network}`);
+			
+			const response = await this.makeHttpsRequest('/api/method/auditor.search', request);
+			
+			console.log(`✅ [HYPEAUDITOR DISCOVERY] Búsqueda completada. Resultados: ${response.result.search_results.length}`);
+			return response;
+		} catch (error: any) {
+			console.error(`❌ [HYPEAUDITOR DISCOVERY] Error en búsqueda:`, error.message);
+			throw new Error(error.message);
+		}
+	}
+
+	/**
+	 * Realiza una búsqueda de discovery en modo sandbox (para testing)
+	 */
+	async searchDiscoverySandbox(request: DiscoverySearchRequest): Promise<DiscoveryResponse> {
+		try {
+			console.log(`🔍 [HYPEAUDITOR DISCOVERY SANDBOX] Iniciando búsqueda sandbox para ${request.social_network}`);
+			
+			const response = await this.makeHttpsRequest('/api/method/auditor.searchSandbox', request);
+			
+			console.log(`✅ [HYPEAUDITOR DISCOVERY SANDBOX] Búsqueda completada. Resultados: ${response.result.search_results.length}`);
+			return response;
+		} catch (error: any) {
+			console.error(`❌ [HYPEAUDITOR DISCOVERY SANDBOX] Error en búsqueda:`, error.message);
+			throw new Error(error.message);
+		}
+	}
+
+	/**
+	 * Transforma los filtros del Explorer al formato de HypeAuditor
+	 */
+	transformExplorerFiltersToHypeAuditor(filters: ExplorerFilters): DiscoverySearchRequest {
+		const hypeAuditorRequest: DiscoverySearchRequest = {
+			social_network: this.mapPlatformToHypeAuditor(filters.platform || 'all'),
+			page: filters.page || 1
+		};
+
+		// Búsqueda por texto
+		if (filters.searchQuery) {
+			hypeAuditorRequest.search = [filters.searchQuery];
+		}
+
+		// Búsqueda por contenido
+		if (filters.searchContent && filters.searchContent.length > 0) {
+			hypeAuditorRequest.search_content = filters.searchContent;
+		}
+
+		// Búsqueda por descripción
+		if (filters.searchDescription && filters.searchDescription.length > 0) {
+			hypeAuditorRequest.search_description = filters.searchDescription;
+		}
+
+		// Categorías
+		if (filters.selectedCategories && filters.selectedCategories.length > 0) {
+			const categoryIds = filters.selectedCategories.map(cat => parseInt(cat)).filter(id => !isNaN(id));
+			if (categoryIds.length > 0) {
+				hypeAuditorRequest.category = { include: categoryIds };
+			}
+		}
+
+		// Ubicación de la cuenta
+		if (filters.location && filters.location !== 'all') {
+			hypeAuditorRequest.account_geo = {
+				country: [filters.location]
+			};
+		}
+
+		// Género de la cuenta (solo Instagram y TikTok)
+		if (filters.accountGender) {
+			hypeAuditorRequest.account_gender = filters.accountGender;
+		}
+
+		// Edad de la cuenta (solo Instagram)
+		if (filters.accountAge) {
+			hypeAuditorRequest.account_age = filters.accountAge;
+		}
+
+		// Idiomas de la cuenta
+		if (filters.accountLanguages && filters.accountLanguages.length > 0) {
+			hypeAuditorRequest.account_languages = filters.accountLanguages;
+		}
+
+		// Tipo de cuenta (solo Instagram)
+		if (filters.accountType) {
+			hypeAuditorRequest.account_type = filters.accountType;
+		}
+
+		// Tiene contactos
+		if (filters.hasContacts !== undefined) {
+			hypeAuditorRequest.account_has_contacts = filters.hasContacts;
+		}
+
+		// Ha lanzado publicidad
+		if (filters.hasLaunchedAdvertising !== undefined) {
+			hypeAuditorRequest.account_has_launched_advertising = filters.hasLaunchedAdvertising;
+		}
+
+		// Menciones de cuenta (solo Instagram y TikTok)
+		if (filters.accountMentions) {
+			hypeAuditorRequest.account_mentions = filters.accountMentions;
+		}
+
+		// Seguidores
+		if (filters.minFollowers || filters.maxFollowers) {
+			hypeAuditorRequest.subscribers_count = {
+				from: filters.minFollowers || 0,
+				to: filters.maxFollowers || 100000000
+			};
+		}
+
+		// Engagement rate
+		if (filters.minEngagement || filters.maxEngagement) {
+			hypeAuditorRequest.er = {
+				from: filters.minEngagement || 0,
+				to: filters.maxEngagement || 100
+			};
+		}
+
+		// AQS (Audience Quality Score)
+		if (filters.aqs) {
+			hypeAuditorRequest.aqs = filters.aqs;
+		}
+
+		// CQS (Channel Quality Score) - solo YouTube
+		if (filters.cqs && hypeAuditorRequest.social_network === 'youtube') {
+			hypeAuditorRequest.cqs = filters.cqs;
+		}
+
+		// Última actividad
+		if (filters.lastMediaTime) {
+			hypeAuditorRequest.last_media_time = filters.lastMediaTime;
+		}
+
+		// Conteo de medios
+		if (filters.mediaCount) {
+			hypeAuditorRequest.media_count = filters.mediaCount;
+		}
+
+		// Conteo de likes
+		if (filters.likesCount) {
+			hypeAuditorRequest.likes_count = filters.likesCount;
+		}
+
+		// Promedios
+		if (filters.likesAvg) {
+			hypeAuditorRequest.alikes_avg = filters.likesAvg;
+		}
+
+		if (filters.viewsAvg) {
+			hypeAuditorRequest.views_avg = filters.viewsAvg;
+		}
+
+		if (filters.commentsAvg) {
+			hypeAuditorRequest.comments_avg = filters.commentsAvg;
+		}
+
+		if (filters.sharesAvg) {
+			hypeAuditorRequest.shares_avg = filters.sharesAvg;
+		}
+
+		// Crecimiento
+		if (filters.selectedGrowthRate) {
+			hypeAuditorRequest.growth = {
+				period: filters.selectedGrowthRate.period || '30d',
+				from: filters.selectedGrowthRate.min,
+				to: filters.selectedGrowthRate.max
+			};
+		}
+
+		// Crecimiento de likes (solo TikTok)
+		if (filters.likesGrowthPrc && hypeAuditorRequest.social_network === 'tiktok') {
+			hypeAuditorRequest.likes_growth_prc = {
+				period: filters.likesGrowthPrc.period || '30d',
+				from: filters.likesGrowthPrc.min,
+				to: filters.likesGrowthPrc.max
+			};
+		}
+
+		// Verificación
+		if (filters.verified !== undefined) {
+			hypeAuditorRequest.verified = filters.verified ? 1 : 0;
+		}
+
+		// Precios de blogger
+		if (filters.bloggerPrices) {
+			hypeAuditorRequest['blogger_prices'] = {
+				post_price: filters.bloggerPrices
+			};
+		}
+
+		// Ingresos (solo Instagram)
+		if (filters.income && hypeAuditorRequest.social_network === 'instagram') {
+			hypeAuditorRequest.income = filters.income;
+		}
+
+		// Etnicidad (solo Instagram)
+		if (filters.ethnicity && hypeAuditorRequest.social_network === 'instagram') {
+			hypeAuditorRequest.ethnicity = filters.ethnicity;
+		}
+
+		// Intereses (solo Instagram)
+		if (filters.interests && hypeAuditorRequest.social_network === 'instagram') {
+			hypeAuditorRequest.interests = filters.interests;
+		}
+
+		// Exclusión de usuarios
+		if (filters.usernameExclude && filters.usernameExclude.length > 0) {
+			hypeAuditorRequest.username_exclude = filters.usernameExclude;
+		}
+
+		// Búsqueda similar
+		if (filters.similar) {
+			hypeAuditorRequest.similar = filters.similar;
+		}
+
+		// Filtros específicos de Instagram
+		if (filters.reelsVideoViewsAvg && hypeAuditorRequest.social_network === 'instagram') {
+			hypeAuditorRequest.reels_video_views_avg = filters.reelsVideoViewsAvg;
+		}
+
+		// Filtros específicos de YouTube
+		if (filters.shortsVideoViewsAvg && hypeAuditorRequest.social_network === 'youtube') {
+			hypeAuditorRequest.shorts_video_views_avg = filters.shortsVideoViewsAvg;
+		}
+
+		// Filtros específicos de Twitch
+		if (filters.twitchActiveDaysPerWeek && hypeAuditorRequest.social_network === 'twitch') {
+			hypeAuditorRequest.twitch_active_days_per_week = filters.twitchActiveDaysPerWeek;
+		}
+
+		if (filters.twitchHoursStreamed && hypeAuditorRequest.social_network === 'twitch') {
+			hypeAuditorRequest.twitch_hours_streamed = filters.twitchHoursStreamed;
+		}
+
+		if (filters.twitchLiveViewersAvg && hypeAuditorRequest.social_network === 'twitch') {
+			hypeAuditorRequest.twitch_live_viewers_avg = filters.twitchLiveViewersAvg;
+		}
+
+		if (filters.twitchGames && hypeAuditorRequest.social_network === 'twitch') {
+			hypeAuditorRequest.twitch_games = filters.twitchGames;
+		}
+
+		// Filtros específicos de Twitter
+		if (filters.twitterLikes && hypeAuditorRequest.social_network === 'twitter') {
+			hypeAuditorRequest.twitter_likes = filters.twitterLikes;
+		}
+
+		if (filters.twitterReplies && hypeAuditorRequest.social_network === 'twitter') {
+			hypeAuditorRequest.twitter_replies = filters.twitterReplies;
+		}
+
+		if (filters.twitterRetweet && hypeAuditorRequest.social_network === 'twitter') {
+			hypeAuditorRequest.twitter_retweet = filters.twitterRetweet;
+		}
+
+		if (filters.twitterTweet && hypeAuditorRequest.social_network === 'twitter') {
+			hypeAuditorRequest.twitter_tweet = filters.twitterTweet;
+		}
+
+		// Ordenamiento
+		if (filters.sortBy) {
+			hypeAuditorRequest.sort = {
+				field: this.mapSortField(filters.sortBy),
+				order: filters.sortOrder || 'desc'
+			};
+		}
+
+		// Filtros de audiencia
+		if (filters.audienceAge) {
+			hypeAuditorRequest.audience_age = filters.audienceAge;
+		}
+
+		if (filters.audienceGender) {
+			hypeAuditorRequest.audience_gender = filters.audienceGender;
+		}
+
+		if (filters.audienceGeo) {
+			hypeAuditorRequest.audience_geo = filters.audienceGeo;
+		}
+
+		return hypeAuditorRequest;
+	}
+
+	/**
+	 * Transforma la respuesta de HypeAuditor al formato del Explorer
+	 */
+	transformHypeAuditorResponseToExplorer(response: DiscoveryResponse): ExplorerSearchResponse {
+		const items: ExplorerResult[] = response.result.search_results.map(item => {
+			// Verificar si social_networks existe y tiene elementos
+			const socialNetworks = item.features?.social_networks || [];
+			const socialNetwork = socialNetworks.length > 0 ? socialNetworks[0] : null;
+			
+			// Si no hay social_networks, crear un objeto por defecto
+			const defaultSocialNetwork = {
+				type: 'unknown',
+				username: item.basic.username,
+				subscribers_count: item.metrics.subscribers_count?.value || 0,
+				er: item.metrics.er?.value || 0,
+				social_id: item.basic.id || '',
+				state: 'unknown'
+			};
+			
+			const network = socialNetwork || defaultSocialNetwork;
+			
+			return {
+				creatorId: item.basic.username,
+				name: item.basic.title || item.basic.username,
+				avatar: item.basic.avatar_url,
+				isVerified: false, // HypeAuditor no proporciona este dato directamente
+				contentNiches: [], // Se puede obtener de categorías si está disponible
+				country: undefined, // Se puede obtener de audience_geo si está disponible
+				socialPlatforms: [{
+					platform: network.type,
+					username: network.username,
+					followers: network.subscribers_count,
+					engagement: network.er
+				}],
+				platformInfo: {
+					socialId: network.social_id,
+					state: network.state
+				},
+				language: undefined, // Se puede obtener de account_languages si está disponible
+				metrics: {
+					engagementRate: network.er,
+					realFollowers: item.metrics.real_subscribers_count?.value,
+					likesCount: item.metrics.likes_count?.value,
+					viewsAvg: item.metrics.views_avg?.value,
+					commentsAvg: item.metrics.comments_avg?.value,
+					sharesAvg: item.metrics.shares_avg?.value,
+					aqs: item.features.aqs?.data?.mark,
+					cqs: item.features.cqs?.data?.mark
+				}
+			};
+		});
+
+		return {
+			success: true,
+			items,
+			totalCount: response.result.total_pages * 20, // 20 items por página
+			currentPage: response.result.current_page,
+			totalPages: response.result.total_pages,
+			queriesLeft: response.result.queries_left,
+			provider: 'HypeAuditor',
+			metadata: {
+				searchTime: Date.now(),
+				filtersApplied: [],
+				cacheHit: false
+			}
+		};
+	}
+
+	/**
+	 * Mapea la plataforma del Explorer a la plataforma de HypeAuditor
+	 */
+	private mapPlatformToHypeAuditor(platform: string): 'instagram' | 'youtube' | 'tiktok' | 'twitter' | 'twitch' {
+		switch (platform.toLowerCase()) {
+			case 'instagram':
+			case 'ig':
+				return 'instagram';
+			case 'youtube':
+			case 'yt':
+				return 'youtube';
+			case 'tiktok':
+			case 'tt':
+				return 'tiktok';
+			case 'twitter':
+			case 'x':
+				return 'twitter';
+			case 'twitch':
+				return 'twitch';
+			default:
+				return 'instagram'; // Por defecto Instagram
+		}
+	}
+
+	/**
+	 * Mapea el campo de ordenamiento del Explorer al campo de HypeAuditor
+	 */
+	private mapSortField(sortBy: string): string {
+		switch (sortBy) {
+			case 'followers':
+				return 'subscribers_count';
+			case 'engagement':
+				return 'er';
+			case 'username':
+				return 'username';
+			default:
+				return 'subscribers_count';
+		}
+	}
+
+		/**
+	 * Obtiene la taxonomía de categorías de HypeAuditor
+	 */
+	async getTaxonomy(): Promise<any> {
+		try {
+			console.log(`🔍 [HYPEAUDITOR DISCOVERY] Obteniendo taxonomía...`);
+			
+			const response = await this.makeHttpsRequest('/api/method/auditor.taxonomy');
+			
+			console.log(`✅ [HYPEAUDITOR DISCOVERY] Taxonomía obtenida`);
+			return response;
+		} catch (error: any) {
+			console.error(`❌ [HYPEAUDITOR DISCOVERY] Error obteniendo taxonomía:`, error.message);
+			throw new Error(error.message);
+		}
+	}
+
+	/**
+	 * Busca posts por keywords
+	 */
+	async searchKeywordsPosts(socialNetwork: string, contentIds: string[]): Promise<any> {
+		try {
+			console.log(`🔍 [HYPEAUDITOR DISCOVERY] Buscando posts por keywords para ${socialNetwork}`);
+			
+			const contentIdsString = contentIds.join(',');
+			const endpoint = `/api/method/auditor.searchKeywordsPosts/?socialNetwork=${socialNetwork}&contentIds=${contentIdsString}`;
+			
+			const response = await this.makeHttpsRequest(endpoint);
+			
+			console.log(`✅ [HYPEAUDITOR DISCOVERY] Posts por keywords obtenidos`);
+			return response;
+		} catch (error: any) {
+			console.error(`❌ [HYPEAUDITOR DISCOVERY] Error buscando posts por keywords:`, error.message);
+			throw new Error(error.message);
+		}
+	}
+}
