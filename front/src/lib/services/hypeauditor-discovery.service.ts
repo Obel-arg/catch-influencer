@@ -25,7 +25,7 @@ export interface HypeAuditorDiscoveryFilters {
   // Filtros de audiencia
   audienceGender?: { gender: 'male' | 'female' | 'any'; percentage: number };
   audienceAge?: { minAge: number; maxAge: number; percentage: number };
-  audienceGeo?: { countries: string[]; cities: string[]; percentage: number };
+  audienceGeo?: { countries: { [key: string]: number }; cities: { [key: string]: number } };
 }
 
 export interface HypeAuditorDiscoveryResult {

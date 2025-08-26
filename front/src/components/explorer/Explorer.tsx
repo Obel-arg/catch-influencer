@@ -109,10 +109,9 @@ export default function Explorer() {
     maxAge: 54,
     percentage: 10
   });
-  const [audienceGeo, setAudienceGeo] = useState<{ countries: string[]; cities: string[]; percentage: number }>({
-    countries: [],
-    cities: [],
-    percentage: 30
+  const [audienceGeo, setAudienceGeo] = useState<{ countries: { [key: string]: number }; cities: { [key: string]: number } }>({
+    countries: {},
+    cities: {}
   });
   const [accountType, setAccountType] = useState<'brand' | 'human' | 'any'>('any');
   const [verified, setVerified] = useState<boolean | null>(null);
@@ -343,7 +342,7 @@ export default function Explorer() {
       if (audienceAge.minAge !== 18 || audienceAge.maxAge !== 54 || audienceAge.percentage !== 10) {
         filters.audienceAge = audienceAge;
       }
-      if (audienceGeo.countries.length > 0 || audienceGeo.cities.length > 0) {
+      if (Object.keys(audienceGeo.countries).length > 0 || Object.keys(audienceGeo.cities).length > 0) {
         filters.audienceGeo = audienceGeo;
       }
 
@@ -1718,7 +1717,7 @@ export default function Explorer() {
             // Limpiar filtros de audiencia de HypeAuditor
             setAudienceGender({ gender: 'any', percentage: 50 });
             setAudienceAge({ minAge: 18, maxAge: 54, percentage: 10 });
-            setAudienceGeo({ countries: [], cities: [], percentage: 30 });
+            setAudienceGeo({ countries: {}, cities: {} });
 
         
             setLoadingInfluencers(false); // ✅ Asegurar que no haya loading al limpiar

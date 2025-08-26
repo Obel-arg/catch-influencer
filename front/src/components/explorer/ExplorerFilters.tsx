@@ -65,6 +65,7 @@ interface ActiveFilter {
   icon: string | null;
   iconColor?: string;
   type: string;
+  data?: string;
 }
 
 // Función para formatear números
@@ -109,8 +110,8 @@ interface ExplorerFiltersProps {
   setAudienceGender: Dispatch<SetStateAction<{ gender: 'male' | 'female' | 'any'; percentage: number }>>;
   audienceAge: { minAge: number; maxAge: number; percentage: number };
   setAudienceAge: Dispatch<SetStateAction<{ minAge: number; maxAge: number; percentage: number }>>;
-  audienceGeo: { countries: string[]; cities: string[]; percentage: number };
-  setAudienceGeo: Dispatch<SetStateAction<{ countries: string[]; cities: string[]; percentage: number }>>;
+  audienceGeo: { countries: { [key: string]: number }; cities: { [key: string]: number } };
+  setAudienceGeo: Dispatch<SetStateAction<{ countries: { [key: string]: number }; cities: { [key: string]: number } }>>;
 }
 
 const followerRanges = [
@@ -362,6 +363,7 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
 
   const [countrySearch, setCountrySearch] = useState("");
   const [topicsSearch, setTopicsSearch] = useState(""); // ✨ NUEVO: Estado para búsqueda de tópicos
+  const [selectedCountryForEdit, setSelectedCountryForEdit] = useState<string | null>(null); // País seleccionado para editar porcentaje
 
   const [activeTab, setActiveTab] = useState("basicos");
 
@@ -473,19 +475,23 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
 
   // ✨ NUEVA FUNCIÓN: Obtener texto del audience geo seleccionado
   const getSelectedAudienceGeoText = () => {
-    const totalSelected = audienceGeo.countries.length + audienceGeo.cities.length;
+    const countriesCount = Object.keys(audienceGeo.countries).length;
+    const citiesCount = Object.keys(audienceGeo.cities).length;
+    const totalSelected = countriesCount + citiesCount;
+    
     if (totalSelected === 0) return "Any location";
     if (totalSelected === 1) {
-      let locationName = "";
-      if (audienceGeo.countries.length > 0) {
-        const country = countryList.find(c => c.code === audienceGeo.countries[0]);
-        locationName = country ? country.name : audienceGeo.countries[0];
+      if (countriesCount > 0) {
+        const countryCode = Object.keys(audienceGeo.countries)[0];
+        const country = countryList.find(c => c.code === countryCode);
+        const locationName = country ? country.name : countryCode;
+        return `${locationName} >${audienceGeo.countries[countryCode]}%`;
       } else {
-        locationName = audienceGeo.cities[0];
+        const cityName = Object.keys(audienceGeo.cities)[0];
+        return `${cityName} >${audienceGeo.cities[cityName]}%`;
       }
-      return `${locationName} >${audienceGeo.percentage}%`;
     }
-    return `${totalSelected} locations >${audienceGeo.percentage}%`;
+    return `${totalSelected} locations selected`;
   };
 
   // ✨ NUEVA FUNCIÓN: Toggle categoría seleccionada
@@ -870,7 +876,7 @@ const formatCategoryName = (category: string): string => {
 
     // Filtro de audience gender
     if (audienceGender.gender !== 'any') {
-      filters.push({
+          filters.push({
         id: "audienceGender",
         label: `${audienceGender.gender === 'male' ? 'Male' : 'Female'} >${audienceGender.percentage}%`,
         icon: audienceGender.gender === 'male' ? '👨' : '👩',
@@ -888,35 +894,35 @@ const formatCategoryName = (category: string): string => {
       });
     }
 
-    // Filtro de audience geo
-    if (audienceGeo.countries.length > 0 || audienceGeo.cities.length > 0) {
-      const totalSelected = audienceGeo.countries.length + audienceGeo.cities.length;
-      let label = "";
-      if (totalSelected === 1) {
-        if (audienceGeo.countries.length > 0) {
-          const country = countryList.find(c => c.code === audienceGeo.countries[0]);
-          label = country ? `${country.name} >${audienceGeo.percentage}%` : `${audienceGeo.countries[0]} >${audienceGeo.percentage}%`;
-        } else {
-          label = `${audienceGeo.cities[0]} >${audienceGeo.percentage}%`;
-        }
-      } else {
-        label = `${totalSelected} locations >${audienceGeo.percentage}%`;
-      }
-      
+    // Filtros de audience geo - un chip por cada país/ciudad
+    Object.entries(audienceGeo.countries).forEach(([countryCode, percentage]) => {
+      const country = countryList.find(c => c.code === countryCode);
+      const countryName = country ? country.name : countryCode;
       filters.push({
-        id: "audienceGeo",
-        label: label,
+        id: `audienceGeo-country-${countryCode}`,
+        label: `${countryName} >${percentage}%`,
         icon: '🌍',
-        type: "audienceGeo",
+        type: "audienceGeoCountry",
+        data: countryCode,
       });
-    }
+    });
+    
+    Object.entries(audienceGeo.cities).forEach(([cityName, percentage]) => {
+        filters.push({
+        id: `audienceGeo-city-${cityName}`,
+        label: `${cityName} >${percentage}%`,
+        icon: '🏙️',
+        type: "audienceGeoCity", 
+        data: cityName,
+        });
+      });
 
     return filters;
   };
 
   // ✨ NUEVA FUNCIÓN: Eliminar filtro específico
-  const removeFilter = (filterId: string, filterType: string) => {
-    switch (filterType) {
+  const removeFilter = (filter: ActiveFilter) => {
+    switch (filter.type) {
       case "platform":
         setPlatform("all");
         break;
@@ -935,7 +941,7 @@ const formatCategoryName = (category: string): string => {
 
 
       case "category":
-        const category = filterId.replace("category-", "");
+        const category = filter.id.replace("category-", "");
         setSelectedCategories(selectedCategories.filter((c) => c !== category));
         break;
       case "audienceGender":
@@ -944,8 +950,19 @@ const formatCategoryName = (category: string): string => {
       case "audienceAge":
         setAudienceAge({ minAge: 18, maxAge: 54, percentage: 10 });
         break;
-      case "audienceGeo":
-        setAudienceGeo({ countries: [], cities: [], percentage: 30 });
+      case "audienceGeoCountry":
+        if (filter.data) {
+          const newCountries = { ...audienceGeo.countries };
+          delete newCountries[filter.data];
+          setAudienceGeo({ ...audienceGeo, countries: newCountries });
+        }
+        break;
+      case "audienceGeoCity":
+        if (filter.data) {
+          const newCities = { ...audienceGeo.cities };
+          delete newCities[filter.data];
+          setAudienceGeo({ ...audienceGeo, cities: newCities });
+        }
         break;
     }
   };
@@ -978,14 +995,14 @@ const formatCategoryName = (category: string): string => {
 
         {/* ✨ NUEVA SECCIÓN: Píldoras de filtros activos */}
         {getActiveFilters().length > 0 && (
-          <div className="px-6 py-2 bg-white border-b">
-            <div className="grid grid-cols-2 gap-2">
+          <div className="px-6 py-3 bg-white border-b">
+            <div className="flex flex-wrap gap-2">
               {getActiveFilters().map((filter) => (
                 <Badge
                   key={filter.id}
                   variant="secondary"
-                  className="flex items-center justify-center gap-2 px-3 py-1 bg-gray-200 hover:bg-gray-100 cursor-pointer shadow-md"
-                  onClick={() => removeFilter(filter.id, filter.type)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-gray-200 hover:bg-gray-100 cursor-pointer shadow-md whitespace-nowrap"
+                  onClick={() => removeFilter(filter)}
                 >
                   {filter.icon && typeof filter.icon === "string" && filter.icon.startsWith("/") ? (
                     <img
@@ -1025,7 +1042,7 @@ const formatCategoryName = (category: string): string => {
                   ) : filter.icon && typeof filter.icon === "string" ? (
                     <span className="text-xs">{filter.icon}</span>
                   ) : null}
-                  <span className="text-xs font-medium text-gray-700 truncate">
+                  <span className="text-xs font-medium text-gray-700">
                     {filter.label}
                   </span>
                   <X className="h-3 w-3 ml-1 hover:text-red-600 text-gray-500" />
@@ -1821,6 +1838,7 @@ const formatCategoryName = (category: string): string => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="start"
+                  side="bottom"
                   className="w-[320px] bg-white p-3"
                 >
                   <div className="space-y-4">
@@ -1853,14 +1871,21 @@ const formatCategoryName = (category: string): string => {
                           variant="ghost"
                           className={cn(
                               "w-full justify-start h-8 px-2 text-sm",
-                              audienceGeo.countries.includes(country.code)
+                              country.code in audienceGeo.countries
                               ? "bg-blue-50 text-blue-700"
                               : "hover:bg-gray-50"
                           )}
                           onClick={() => {
-                              const newCountries = audienceGeo.countries.includes(country.code)
-                                ? audienceGeo.countries.filter(c => c !== country.code)
-                                : [...audienceGeo.countries, country.code];
+                              const newCountries = { ...audienceGeo.countries };
+                              if (country.code in newCountries) {
+                                delete newCountries[country.code];
+                                if (selectedCountryForEdit === country.code) {
+                                  setSelectedCountryForEdit(null);
+                                }
+                              } else {
+                                newCountries[country.code] = 30; // Porcentaje por defecto
+                                setSelectedCountryForEdit(country.code); // Auto-seleccionar para editar
+                              }
                               setAudienceGeo({ ...audienceGeo, countries: newCountries });
                             }}
                           >
@@ -1874,7 +1899,7 @@ const formatCategoryName = (category: string): string => {
                                 }}
                               />
                               <span className="flex-1 text-left">{country.name}</span>
-                              {audienceGeo.countries.includes(country.code) && (
+                              {country.code in audienceGeo.countries && (
                                 <Check className="h-3 w-3 text-blue-600" />
                               )}
                           </div>
@@ -1883,57 +1908,99 @@ const formatCategoryName = (category: string): string => {
                     </div>
                     </div>
 
-                    {/* Mostrar países seleccionados */}
-                    {audienceGeo.countries.length > 0 && (
-                      <div className="space-y-2">
-                        <div className="text-xs font-medium text-gray-600">Selected Countries:</div>
+                    {/* Mostrar países seleccionados como chips clickeables */}
+                    {Object.keys(audienceGeo.countries).length > 0 && (
+                      <div className="space-y-3">
+                        <div className="text-xs font-medium text-gray-600">
+                          Selected Countries: 
+                          {!selectedCountryForEdit && (
+                            <span className="text-blue-600 ml-1">(click to edit %)</span>
+                          )}
+                        </div>
                         <div className="flex flex-wrap gap-2">
-                          {audienceGeo.countries.map((countryCode) => {
+                          {Object.entries(audienceGeo.countries).map(([countryCode, percentage]) => {
                             const country = countryList.find(c => c.code === countryCode);
-                            return country ? (
-                              <Badge key={countryCode} variant="secondary" className="text-xs">
-                                {country.name}
+                            if (!country) return null;
+                            
+                            return (
+                              <Badge 
+                                key={countryCode} 
+                                variant={selectedCountryForEdit === countryCode ? "default" : "secondary"}
+                                className={cn(
+                                  "flex items-center gap-1.5 px-2 py-1 cursor-pointer transition-colors",
+                                  selectedCountryForEdit === countryCode 
+                                    ? "bg-blue-600 text-white hover:bg-blue-700" 
+                                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                )}
+                                onClick={() => setSelectedCountryForEdit(
+                                  selectedCountryForEdit === countryCode ? null : countryCode
+                                )}
+                              >
+                                <img
+                                  src={`/banderas/${country.name}.png`}
+                                  alt={country.name}
+                                  className="h-3 w-4 object-cover"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
+                                <span className="text-xs font-medium">{country.name}</span>
+                                <span className="text-xs">&gt;{percentage}%</span>
                                 <X 
-                                  className="h-3 w-3 ml-1 cursor-pointer" 
-                                  onClick={() => {
-                                    const newCountries = audienceGeo.countries.filter(c => c !== countryCode);
+                                  className="h-3 w-3 cursor-pointer hover:text-red-400" 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const newCountries = { ...audienceGeo.countries };
+                                    delete newCountries[countryCode];
                                     setAudienceGeo({ ...audienceGeo, countries: newCountries });
+                                    if (selectedCountryForEdit === countryCode) {
+                                      setSelectedCountryForEdit(null);
+                                    }
                                   }}
                                 />
                               </Badge>
-                            ) : null;
+                            );
                           })}
                         </div>
                       </div>
                     )}
 
-                    {/* Slider para porcentaje - solo se muestra si hay ubicaciones seleccionadas */}
-                    {(audienceGeo.countries.length > 0 || audienceGeo.cities.length > 0) && (
-                      <div className="p-3 bg-gray-50 rounded-xl border border-gray-200">
+                    {/* Slider único para el país seleccionado */}
+                    {selectedCountryForEdit && audienceGeo.countries[selectedCountryForEdit] && (
+                      <div className="p-3 bg-blue-50 rounded-xl border border-blue-200">
                         <div className="text-center mb-3">
-                          <span className="text-xs font-medium text-gray-700">
-                            More than {audienceGeo.percentage}% of audience
+                          <span className="text-sm font-medium text-blue-700">
+                            {(() => {
+                              const country = countryList.find(c => c.code === selectedCountryForEdit);
+                              return `More than ${audienceGeo.countries[selectedCountryForEdit]}% of audience from ${country?.name || selectedCountryForEdit}`;
+                            })()}
                           </span>
                         </div>
                         
                         <div className="relative px-2 py-1">
                           <Slider
-                            value={[audienceGeo.percentage]}
-                            onValueChange={(value) => setAudienceGeo({ ...audienceGeo, percentage: value[0] })}
+                            value={[audienceGeo.countries[selectedCountryForEdit]]}
+                            onValueChange={(value) => {
+                              const newCountries = { ...audienceGeo.countries };
+                              newCountries[selectedCountryForEdit] = value[0];
+                              setAudienceGeo({ ...audienceGeo, countries: newCountries });
+                            }}
                             max={100}
                             min={0}
                             step={5}
-                            className="w-full [&>span:first-child]:bg-gray-300 [&>span:first-child]:h-1.5 [&>span:first-child]:rounded-full [&>span:last-child]:bg-blue-600 [&>span:last-child]:h-1.5 [&>span:last-child]:rounded-full [&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-blue-600 [&_[role=slider]]:h-4 [&_[role=slider]]:w-4 [&_[role=slider]]:shadow-md [&_[role=slider]]:transition-all [&_[role=slider]]:duration-200 [&_[role=slider]:hover]:scale-110 [&_[role=slider]:focus]:scale-110 [&_[role=slider]:focus]:ring-2 [&_[role=slider]:focus]:ring-blue-200 [&_[role=slider]]:translate-y-[-6px]"
+                            className="w-full [&>span:first-child]:bg-blue-200 [&>span:first-child]:h-1.5 [&>span:first-child]:rounded-full [&>span:last-child]:bg-blue-600 [&>span:last-child]:h-1.5 [&>span:last-child]:rounded-full [&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-blue-600 [&_[role=slider]]:h-4 [&_[role=slider]]:w-4 [&_[role=slider]]:shadow-md [&_[role=slider]]:transition-all [&_[role=slider]]:duration-200 [&_[role=slider]:hover]:scale-110 [&_[role=slider]:focus]:scale-110 [&_[role=slider]:focus]:ring-2 [&_[role=slider]:focus]:ring-blue-200 [&_[role=slider]]:translate-y-[-6px]"
                           />
                         </div>
                         
-                        <div className="flex justify-between text-xs text-gray-500 mt-2 px-0.5">
+                        <div className="flex justify-between text-xs text-blue-600 mt-2 px-0.5">
                           <span className="font-medium">0%</span>
                           <span className="font-medium">50%</span>
                           <span className="font-medium">100%</span>
                         </div>
                       </div>
                     )}
+
+
                   </div>
                 </DropdownMenuContent>
               </DropdownMenu>
