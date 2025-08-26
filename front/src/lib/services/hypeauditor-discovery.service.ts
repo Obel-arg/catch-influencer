@@ -158,12 +158,24 @@ class HypeAuditorDiscoveryService {
     return {
       success: hypeAuditorResponse.success,
       items: results.map(item => ({
+        // IDs básicos
+        id: item.basic.username,
         creatorId: item.basic.username,
         name: item.basic.title || item.basic.username,
         avatar: item.basic.avatar_url,
-        isVerified: false, // HypeAuditor no proporciona este dato directamente
-        contentNiches: [], // Se puede obtener de categorías si está disponible
-        country: undefined, // Se puede obtener de audience_geo si está disponible
+        isVerified: false,
+        contentNiches: [],
+        country: undefined,
+        location: undefined,
+        language: undefined,
+        
+        // ✅ CAMPOS QUE LEE DIRECTAMENTE LA TABLA
+        followersCount: item.metrics.subscribers_count?.value || 0, // ✅ 50,924,589
+        averageEngagementRate: (item.metrics.er?.value || 0) / 100, // ✅ 1.56% → 0.0156
+        mainSocialPlatform: 'instagram',
+        categories: [],
+        
+        // Estructura completa para compatibilidad
         socialPlatforms: [{
           platform: item.features.social_networks?.[0]?.type || 'instagram',
           username: item.basic.username,
@@ -176,7 +188,6 @@ class HypeAuditorDiscoveryService {
           aqs: item.features.aqs?.data?.mark,
           cqs: item.features.cqs?.data?.mark
         },
-        language: undefined, // Se puede obtener de account_languages si está disponible
         metrics: {
           engagementRate: item.metrics.er?.value || 0,
           realFollowers: item.metrics.real_subscribers_count?.value,

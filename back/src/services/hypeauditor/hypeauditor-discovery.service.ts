@@ -96,6 +96,36 @@ export interface DiscoverySearchResult {
 			};
 		};
 		search_content?: any[];
+		// Campos adicionales que puede devolver HypeAuditor
+		account_geo?: {
+			country?: string;
+			city?: string;
+		};
+		category?: Array<{
+			id: number;
+			title: string;
+		}>;
+		account_languages?: string[];
+		verified?: boolean;
+		account_type?: string;
+		audience_geo?: {
+			countries?: Array<{
+				id: string;
+				title: string;
+				prc: number;
+			}>;
+		};
+		audience_gender?: {
+			male?: number;
+			female?: number;
+		};
+		audience_age?: {
+			groups?: Array<{
+				code: string;
+				title: string;
+				prc: number;
+			}>;
+		};
 	};
 }
 
@@ -235,6 +265,22 @@ export interface ExplorerResult {
 		sharesAvg?: number;
 		aqs?: string;
 		cqs?: string;
+	};
+	audienceData?: {
+		genderDistribution?: {
+			male?: number;
+			female?: number;
+		};
+		topCountries?: Array<{
+			id: string;
+			title: string;
+			prc: number;
+		}>;
+		ageGroups?: Array<{
+			code: string;
+			title: string;
+			prc: number;
+		}>;
 	};
 }
 
@@ -642,52 +688,92 @@ export class HypeAuditorDiscoveryService {
 	 * Transforma la respuesta de HypeAuditor al formato del Explorer
 	 */
 	transformHypeAuditorResponseToExplorer(response: DiscoveryResponse): ExplorerSearchResponse {
-		const items: ExplorerResult[] = response.result.search_results.map(item => {
-			// Verificar si social_networks existe y tiene elementos
-			const socialNetworks = item.features?.social_networks || [];
-			const socialNetwork = socialNetworks.length > 0 ? socialNetworks[0] : null;
+		// Debug: Log para ver qué datos devuelve HypeAuditor
+		console.log('🔍 [HYPEAUDITOR SERVICE] Respuesta completa de HypeAuditor:');
+		console.log('- Total resultados:', response.result.search_results.length);
+		if (response.result.search_results.length > 0) {
+			console.log('- Ejemplo del primer resultado:', JSON.stringify(response.result.search_results[0], null, 2));
+		}
+
+		const items: ExplorerResult[] = response.result.search_results.map((item, index) => {
+			// Log individual para cada resultado - usando los campos reales
+			console.log(`🎯 [RESULTADO ${index + 1}] Datos disponibles:`, {
+				username: item.basic?.username,
+				title: item.basic?.title,
+				followers: item.metrics?.subscribers_count?.value,
+				realFollowers: item.metrics?.real_subscribers_count?.value,
+				engagement: item.metrics?.er?.value,
+				aqs: item.features?.aqs?.data?.mark,
+				topics: item.features?.blogger_topics?.data
+			});
+
+			// Extraer seguidores y engagement de los datos reales
+			const followers = item.metrics?.subscribers_count?.value || 0;
+			const realFollowers = item.metrics?.real_subscribers_count?.value || 0;
+			const engagementRate = item.metrics?.er?.value || 0;
 			
-			// Si no hay social_networks, crear un objeto por defecto
-			const defaultSocialNetwork = {
-				type: 'unknown',
-				username: item.basic.username,
-				subscribers_count: item.metrics.subscribers_count?.value || 0,
-				er: item.metrics.er?.value || 0,
-				social_id: item.basic.id || '',
-				state: 'unknown'
-			};
+			// Mapear topics a categorías (necesitaremos un mapeo de IDs a nombres)
+			const topicIds = item.features?.blogger_topics?.data || [];
+			const contentNiches = topicIds.map(id => `Topic ${id}`); // Temporal hasta tener el mapeo real
 			
-			const network = socialNetwork || defaultSocialNetwork;
-			
+			// Determinar plataforma basada en el context de la búsqueda 
+			const platform = 'instagram'; // Por ahora, ya que estamos buscando en Instagram
+
+			// Crear el objeto en el formato que espera la tabla del Explorer
 			return {
-				creatorId: item.basic.username,
-				name: item.basic.title || item.basic.username,
-				avatar: item.basic.avatar_url,
-				isVerified: false, // HypeAuditor no proporciona este dato directamente
-				contentNiches: [], // Se puede obtener de categorías si está disponible
-				country: undefined, // Se puede obtener de audience_geo si está disponible
+				// IDs y básicos
+				id: item.basic?.username || `user_${index}`,
+				creatorId: item.basic?.username || `user_${index}`,
+				name: item.basic?.title || item.basic?.username || 'Sin nombre',
+				avatar: item.basic?.avatar_url || '',
+				isVerified: false,
+				
+				// Campos que usa directamente la tabla
+				followersCount: followers, // ✅ Campo que lee la tabla
+				averageEngagementRate: engagementRate / 100, // ✅ Campo que lee la tabla (convertir a decimal)
+				location: undefined, // No disponible en sandbox
+				language: undefined, // No disponible en sandbox
+				categories: contentNiches,
+				
+				// Plataforma principal
+				mainSocialPlatform: platform,
+				
+				// Estructura completa para compatibilidad
+				contentNiches: contentNiches,
+				country: undefined,
 				socialPlatforms: [{
-					platform: network.type,
-					username: network.username,
-					followers: network.subscribers_count,
-					engagement: network.er
+					platform: platform,
+					username: item.basic?.username || '',
+					followers: followers,
+					engagement: engagementRate
 				}],
 				platformInfo: {
-					socialId: network.social_id,
-					state: network.state
+					socialId: item.basic?.username || '',
+					state: 'active',
+					aqs: item.features?.aqs?.data?.mark
 				},
-				language: undefined, // Se puede obtener de account_languages si está disponible
 				metrics: {
-					engagementRate: network.er,
-					realFollowers: item.metrics.real_subscribers_count?.value,
-					likesCount: item.metrics.likes_count?.value,
-					viewsAvg: item.metrics.views_avg?.value,
-					commentsAvg: item.metrics.comments_avg?.value,
-					sharesAvg: item.metrics.shares_avg?.value,
-					aqs: item.features.aqs?.data?.mark,
-					cqs: item.features.cqs?.data?.mark
-				}
+					engagementRate: engagementRate,
+					realFollowers: realFollowers,
+					likesCount: undefined,
+					viewsAvg: undefined,
+					commentsAvg: undefined,
+					sharesAvg: undefined,
+					aqs: item.features?.aqs?.data?.mark,
+					cqs: item.features?.cqs?.data?.mark
+				},
+				// Datos adicionales
+				audienceData: undefined
 			};
+		});
+
+		console.log('✅ [HYPEAUDITOR SERVICE] Transformación completada:', {
+			totalTransformed: items.length,
+			itemsWithFollowers: items.filter(i => i.followersCount > 0).length,
+			itemsWithEngagement: items.filter(i => i.averageEngagementRate > 0).length,
+			itemsWithNiches: items.filter(i => i.contentNiches && i.contentNiches.length > 0).length,
+			avgFollowers: Math.round(items.reduce((sum, i) => sum + (i.followersCount || 0), 0) / items.length),
+			avgEngagement: (items.reduce((sum, i) => sum + (i.averageEngagementRate || 0), 0) / items.length * 100).toFixed(2) + '%'
 		});
 
 		return {
