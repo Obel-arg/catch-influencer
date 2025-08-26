@@ -49,6 +49,7 @@ import {
   Play,
   Film,
   Plane,
+  Calendar,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
@@ -106,6 +107,8 @@ interface ExplorerFiltersProps {
   // Filtros de audiencia para HypeAuditor
   audienceGender: { gender: 'male' | 'female' | 'any'; percentage: number };
   setAudienceGender: Dispatch<SetStateAction<{ gender: 'male' | 'female' | 'any'; percentage: number }>>;
+  audienceAge: { minAge: number; maxAge: number; percentage: number };
+  setAudienceAge: Dispatch<SetStateAction<{ minAge: number; maxAge: number; percentage: number }>>;
 }
 
 const followerRanges = [
@@ -309,11 +312,7 @@ interface AudienceGenderFilter {
   percentage: number;
 }
 
-interface AudienceAgeFilter {
-  minAge: number;
-  maxAge: number;
-  percentage: number;
-}
+
 
 interface AudienceGeoFilter {
   countries: string[];
@@ -353,6 +352,8 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
     // Filtros de audiencia para HypeAuditor
     audienceGender,
     setAudienceGender,
+    audienceAge,
+    setAudienceAge,
   } = props;
 
   const [countrySearch, setCountrySearch] = useState("");
@@ -361,12 +362,7 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
   const [activeTab, setActiveTab] = useState("basicos");
 
   // 🎯 NUEVOS ESTADOS PARA FILTROS DE HYPEAUDITOR DISCOVERY
-  // audienceGender se pasa como prop desde Explorer.tsx
-  const [audienceAge, setAudienceAge] = useState<AudienceAgeFilter>({
-    minAge: 18,
-    maxAge: 54,
-    percentage: 10
-  });
+  // audienceGender y audienceAge se pasan como props desde Explorer.tsx
   const [audienceGeo, setAudienceGeo] = useState<AudienceGeoFilter>({
     countries: [],
     cities: []
@@ -465,6 +461,14 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
     if (audienceGender.gender === 'any') return "Any gender";
     const genderText = audienceGender.gender === 'male' ? 'Male' : 'Female';
     return `${genderText} >${audienceGender.percentage}%`;
+  };
+
+  // ✨ NUEVA FUNCIÓN: Obtener texto del audience age seleccionado
+  const getSelectedAudienceAgeText = () => {
+    if (audienceAge.minAge === 18 && audienceAge.maxAge === 54 && audienceAge.percentage === 10) {
+      return "Any age";
+    }
+    return `${audienceAge.minAge}-${audienceAge.maxAge} years >${audienceAge.percentage}%`;
   };
 
   // ✨ NUEVA FUNCIÓN: Toggle categoría seleccionada
@@ -857,6 +861,16 @@ const formatCategoryName = (category: string): string => {
       });
     }
 
+    // Filtro de audience age
+    if (audienceAge.minAge !== 18 || audienceAge.maxAge !== 54 || audienceAge.percentage !== 10) {
+      filters.push({
+        id: "audienceAge",
+        label: `${audienceAge.minAge}-${audienceAge.maxAge} years >${audienceAge.percentage}%`,
+        icon: '🎂',
+        type: "audienceAge",
+      });
+    }
+
     return filters;
   };
 
@@ -886,6 +900,9 @@ const formatCategoryName = (category: string): string => {
         break;
       case "audienceGender":
         setAudienceGender({ gender: 'any', percentage: 50 });
+        break;
+      case "audienceAge":
+        setAudienceAge({ minAge: 18, maxAge: 54, percentage: 10 });
         break;
     }
   };
@@ -1649,8 +1666,95 @@ const formatCategoryName = (category: string): string => {
               </DropdownMenu>
             </div>
 
-
-
+            {/* ✨ AUDIENCE AGE - Dropdown con filtro de edad de audiencia */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Audience age
+              </label>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between bg-white border-gray-200 hover:bg-gray-50"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-gray-500" />
+                      <span className="text-gray-600">
+                        {getSelectedAudienceAgeText()}
+                      </span>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-gray-500" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  className="w-[300px] bg-white p-3"
+                >
+                  <div className="space-y-4">
+                    {/* Inputs numéricos para rango de edad */}
+                    <div className="space-y-3">
+                      <div className="text-sm font-medium text-gray-700 text-center">
+                        Age Range
+                      </div>
+                      
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <label className="text-xs text-gray-500 mb-1 block">From</label>
+                          <Input
+                            type="number"
+                            min={13}
+                            max={80}
+                            value={audienceAge.minAge}
+                            onChange={(e) => setAudienceAge({ ...audienceAge, minAge: parseInt(e.target.value) || 13 })}
+                            className="text-center h-9"
+                          />
+                        </div>
+                        
+                        <div className="mt-5 text-gray-400">-</div>
+                        
+                        <div className="flex-1">
+                          <label className="text-xs text-gray-500 mb-1 block">To</label>
+                          <Input
+                            type="number"
+                            min={13}
+                            max={80}
+                            value={audienceAge.maxAge}
+                            onChange={(e) => setAudienceAge({ ...audienceAge, maxAge: parseInt(e.target.value) || 54 })}
+                            className="text-center h-9"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Slider para porcentaje */}
+                    <div className="p-3 bg-gray-50 rounded-xl border border-gray-200">
+                      <div className="text-center mb-3">
+                        <span className="text-xs font-medium text-gray-700">
+                          More than {audienceAge.percentage}% of audience
+                        </span>
+                      </div>
+                      
+                      <div className="relative px-2 py-1">
+                        <Slider
+                          value={[audienceAge.percentage]}
+                          onValueChange={(value) => setAudienceAge({ ...audienceAge, percentage: value[0] })}
+                          max={100}
+                          min={0}
+                          step={5}
+                          className="w-full [&>span:first-child]:bg-gray-300 [&>span:first-child]:h-1.5 [&>span:first-child]:rounded-full [&>span:last-child]:bg-blue-600 [&>span:last-child]:h-1.5 [&>span:last-child]:rounded-full [&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-blue-600 [&_[role=slider]]:h-4 [&_[role=slider]]:w-4 [&_[role=slider]]:shadow-md [&_[role=slider]]:transition-all [&_[role=slider]]:duration-200 [&_[role=slider]:hover]:scale-110 [&_[role=slider]:focus]:scale-110 [&_[role=slider]:focus]:ring-2 [&_[role=slider]:focus]:ring-blue-200 [&_[role=slider]]:translate-y-[-6px]"
+                        />
+                      </div>
+                      
+                      <div className="flex justify-between text-xs text-gray-500 mt-2 px-0.5">
+                        <span className="font-medium">0%</span>
+                        <span className="font-medium">50%</span>
+                        <span className="font-medium">100%</span>
+                      </div>
+                    </div>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
             {/* ✨ CATEGORÍAS - Dropdown con categorías de CreatorDB */}
             <div className="space-y-2">

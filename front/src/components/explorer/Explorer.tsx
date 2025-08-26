@@ -1697,6 +1697,8 @@ export default function Explorer() {
           // Filtros de audiencia para HypeAuditor
           audienceGender={audienceGender}
           setAudienceGender={setAudienceGender}
+          audienceAge={audienceAge}
+          setAudienceAge={setAudienceAge}
           handleClearFilters={() => {
             setPlatform("all");
             setLocation("all");
