@@ -107,14 +107,71 @@ export default function InfluencerAudience({ influencer }: InfluencerAudiencePro
 
     if (currentData.loading) {
       return (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-24 w-full" />
-            ))}
+        <div className="space-y-6 animate-in fade-in duration-500">
+          {/* Header con mensaje de carga */}
+          <div className="text-center py-12">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4 animate-pulse">
+              <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">
+              Cargando datos de audiencia...
+            </h3>
+            <p className="text-gray-500 text-sm">
+              Analizando métricas y demografía de {activePlatform}
+            </p>
           </div>
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-48 w-full" />
+
+          {/* Skeletons con animación */}
+          <div className="space-y-6 opacity-75">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="bg-white rounded-lg border p-4 animate-pulse">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                    <div className="h-4 bg-gray-200 rounded w-24"></div>
+                  </div>
+                  <div className="h-8 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-16"></div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white rounded-lg border p-6 animate-pulse">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-5 h-5 bg-gray-200 rounded"></div>
+                  <div className="h-5 bg-gray-200 rounded w-32"></div>
+                </div>
+                <div className="h-64 bg-gray-100 rounded"></div>
+              </div>
+              
+              <div className="bg-white rounded-lg border p-6 animate-pulse">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-5 h-5 bg-gray-200 rounded"></div>
+                  <div className="h-5 bg-gray-200 rounded w-36"></div>
+                </div>
+                <div className="h-64 bg-gray-100 rounded-full w-64 mx-auto"></div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-lg border p-6 animate-pulse">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-5 h-5 bg-gray-200 rounded"></div>
+                <div className="h-5 bg-gray-200 rounded w-40"></div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                      <div className="h-4 bg-gray-200 rounded w-20"></div>
+                    </div>
+                    <div className="h-6 bg-gray-200 rounded w-12"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       );
     }
@@ -160,7 +217,7 @@ export default function InfluencerAudience({ influencer }: InfluencerAudiencePro
 
   const renderInstagramAudience = (data: any) => {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 animate-in fade-in duration-700 slide-in-from-bottom-4">
         {/* Métricas principales */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
@@ -593,191 +650,39 @@ export default function InfluencerAudience({ influencer }: InfluencerAudiencePro
           )}
         </div>
 
-        {/* Intereses de la audiencia */}
-        {data?.audience_interests && data.audience_interests.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5" />
-                Intereses de la Audiencia
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {data.audience_interests.slice(0, 9).map((interest: any, index: number) => (
-                  <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                    <span className="text-sm font-medium">{interest[0]}</span>
-                    <Badge variant="outline" className="text-xs">
-                      {(interest[1] * 100).toFixed(0)}%
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-                 {/* Gráfico de Engagement Rate Histogram */}
-         {data?.er_histogram && data.er_histogram.length > 0 && (
+                 {/* Intereses de la audiencia */}
+         {data?.audience_interests && data.audience_interests.length > 0 && (
            <Card>
              <CardHeader>
                <CardTitle className="flex items-center gap-2">
-                 <BarChart3 className="h-5 w-5" />
-                 Distribución de Engagement Rate
+                 <Target className="h-5 w-5" />
+                 Intereses de la Audiencia
                </CardTitle>
-               <p className="text-sm text-gray-600">
-                 Comparación con otros influencers del mismo rango de seguidores
-               </p>
              </CardHeader>
              <CardContent>
-               <div className="space-y-3">
-                 {data.er_histogram.map((bucket: any, index: number) => (
-                   <div key={index} className="flex items-center gap-3">
-                                           <span className="text-sm font-medium w-20">
-                        {bucket.min ? bucket.min.toFixed(2) : '0.00'}-{bucket.max ? bucket.max.toFixed(2) : '0.00'}%
-                      </span>
-                     <div className="flex-1">
-                       <div className="flex items-center gap-2">
-                         <div 
-                           className="bg-blue-200 h-4 rounded"
-                                                       style={{ width: `${((bucket.count || 0) / Math.max(...data.er_histogram.map((b: any) => b.count || 0), 1)) * 100}%` }}
-                         />
-                                                   <span className="text-xs text-gray-500">{bucket.count ? bucket.count.toLocaleString() : '0'}</span>
-                       </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                 {data.audience_interests.slice(0, 9).map((interest: any, index: number) => {
+                   // Manejar tanto arrays como strings
+                   const interestName = Array.isArray(interest) ? interest[0] : interest;
+                   const interestPercentage = Array.isArray(interest) ? interest[1] : 0;
+                   
+                   return (
+                     <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                       <span className="text-sm font-medium">{interestName}</span>
+                       <Badge variant="outline" className="text-xs">
+                         {interestPercentage ? (interestPercentage * 100).toFixed(0) : 'N/A'}%
+                       </Badge>
                      </div>
-                   </div>
-                 ))}
+                   );
+                 })}
                </div>
              </CardContent>
            </Card>
          )}
 
-         {/* Métricas de Performance */}
-         {data?.er_performance && Object.keys(data.er_performance).length > 0 && (
-           <Card>
-             <CardHeader>
-               <CardTitle className="flex items-center gap-2">
-                 <TrendingUp className="h-5 w-5" />
-                 Performance del Engagement Rate
-               </CardTitle>
-             </CardHeader>
-             <CardContent>
-               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                 {Object.entries(data.er_performance).map(([period, data]: [string, any]) => (
-                   <div key={period} className="text-center p-3 bg-gray-50 rounded-lg">
-                     <div className="text-lg font-bold text-blue-600">
-                       {data.value ? (data.value * 100).toFixed(2) + '%' : 'N/A'}
-                     </div>
-                     <div className="text-xs text-gray-500 capitalize">
-                       {period === '7d' ? '7 días' : 
-                        period === '30d' ? '30 días' : 
-                        period === '90d' ? '90 días' : 
-                        period === '180d' ? '180 días' : 
-                        period === '365d' ? '365 días' : period}
-                     </div>
-                   </div>
-                 ))}
-               </div>
-             </CardContent>
-           </Card>
-         )}
+                 
 
-         {/* Redes sociales con más detalles */}
-         {data?.social_networks && data.social_networks.length > 0 && (
-           <Card>
-             <CardHeader>
-               <CardTitle className="flex items-center gap-2">
-                 <Globe className="h-5 w-5" />
-                 Presencia en Redes Sociales
-               </CardTitle>
-               <p className="text-sm text-gray-600">
-                 Datos de todas las plataformas del influencer
-               </p>
-             </CardHeader>
-             <CardContent>
-               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                 {data.social_networks.map((network: any, index: number) => (
-                   <div key={index} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                     <div className="flex items-center gap-3 mb-3">
-                       <span className="text-2xl">
-                         {network.platform === 'instagram' ? '📸' : 
-                          network.platform === 'youtube' ? '📺' : 
-                          network.platform === 'tiktok' ? '🎵' : '🌐'}
-                       </span>
-                       <div>
-                         <div className="font-semibold text-sm">{network.title}</div>
-                         <div className="text-xs text-gray-500">@{network.username}</div>
-                       </div>
-                     </div>
-                     
-                     <div className="space-y-2">
-                       <div className="flex justify-between items-center">
-                         <span className="text-xs text-gray-600">Seguidores</span>
-                         <span className="font-bold text-sm">
-                           {(network.subscribers_count / 1000000).toFixed(1)}M
-                         </span>
-                       </div>
-                       <div className="flex justify-between items-center">
-                         <span className="text-xs text-gray-600">Engagement</span>
-                         <span className="font-bold text-sm text-green-600">
-                           {network.er?.toFixed(2)}%
-                         </span>
-                       </div>
-                       <div className="w-full bg-gray-200 rounded-full h-2">
-                         <div 
-                           className="bg-green-500 h-2 rounded-full"
-                           style={{ width: `${Math.min((network.er || 0) * 10, 100)}%` }}
-                         />
-                       </div>
-                     </div>
-                   </div>
-                 ))}
-               </div>
-             </CardContent>
-           </Card>
-         )}
-
-         {/* Gráfico de Crecimiento */}
-         {data?.growth_trend && Object.keys(data.growth_trend).length > 0 && (
-           <Card>
-             <CardHeader>
-               <CardTitle className="flex items-center gap-2">
-                 <TrendingUp className="h-5 w-5" />
-                 Tendencias de Crecimiento
-               </CardTitle>
-             </CardHeader>
-             <CardContent>
-               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                 {Object.entries(data.growth_trend).map(([period, data]: [string, any]) => (
-                   <div key={period} className="text-center p-3 bg-gray-50 rounded-lg">
-                     <div className={`text-lg font-bold ${(data.value || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                       {data.value ? (data.value > 0 ? '+' : '') + data.value.toFixed(2) + '%' : 'N/A'}
-                     </div>
-                     <div className="text-xs text-gray-500 capitalize">
-                       {period === '7d' ? '7 días' : 
-                        period === '30d' ? '30 días' : 
-                        period === '90d' ? '90 días' : 
-                        period === '180d' ? '180 días' : 
-                        period === '365d' ? '365 días' : period}
-                     </div>
-                     {data.mark && (
-                       <div className={`text-xs mt-1 px-2 py-1 rounded ${
-                         data.mark === 'good' ? 'bg-green-100 text-green-800' :
-                         data.mark === 'poor' ? 'bg-red-100 text-red-800' :
-                         'bg-yellow-100 text-yellow-800'
-                       }`}>
-                         {data.mark === 'good' ? 'Bueno' : 
-                          data.mark === 'poor' ? 'Bajo' : 'Promedio'}
-                       </div>
-                     )}
-                   </div>
-                 ))}
-               </div>
-             </CardContent>
-           </Card>
-         )}
-
-         {/* Calidad de la Audiencia */}
+                   {/* Calidad de la Audiencia */}
          {data?.audience_quality && (
            <Card>
              <CardHeader>
@@ -887,60 +792,7 @@ export default function InfluencerAudience({ influencer }: InfluencerAudiencePro
            </CardContent>
          </Card>
 
-         {/* Comparación con Promedios */}
-         <Card>
-           <CardHeader>
-             <CardTitle className="flex items-center gap-2">
-               <BarChart3 className="h-5 w-5" />
-               Comparación con Promedios del Mercado
-             </CardTitle>
-           </CardHeader>
-           <CardContent>
-             <div className="space-y-4">
-               {/* Engagement Rate vs Promedio */}
-               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                 <div className="flex items-center gap-3">
-                   <TrendingUp className="h-5 w-5 text-green-600" />
-                   <div>
-                     <div className="font-medium">Engagement Rate</div>
-                     <div className="text-sm text-gray-600">vs promedio del mercado</div>
-                   </div>
-                 </div>
-                 <div className="text-right">
-                   <div className="text-lg font-bold text-green-600">
-                     {(data?.engagement_rate * 100 || 0).toFixed(2)}%
-                   </div>
-                   <div className="text-sm text-gray-500">
-                     Promedio: {(data?.er_avg * 100 || 0).toFixed(2)}%
-                   </div>
-                 </div>
-               </div>
-
-               {/* Comments Rate */}
-               {data?.comments_rate?.value && (
-                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                   <div className="flex items-center gap-3">
-                     <MessageCircle className="h-5 w-5 text-blue-600" />
-                     <div>
-                       <div className="font-medium">Comments Rate</div>
-                       <div className="text-sm text-gray-600">vs promedio del mercado</div>
-                     </div>
-                   </div>
-                   <div className="text-right">
-                     <div className="text-lg font-bold text-blue-600">
-                       {(data.comments_rate.value * 100).toFixed(3)}%
-                     </div>
-                     <div className="text-sm text-gray-500">
-                       Promedio: {(data.comments_rate.avg * 100).toFixed(3)}%
-                     </div>
-                   </div>
-                 </div>
-               )}
-             </div>
-           </CardContent>
-         </Card>
-
-        {/* Raw data for debugging */}
+                  {/* Raw data for debugging */}
         <details className="mt-4">
           <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700">
             Ver datos completos (debug)
@@ -1001,8 +853,10 @@ export default function InfluencerAudience({ influencer }: InfluencerAudiencePro
         ))}
       </div>
 
-      {/* Contenido de la plataforma seleccionada */}
-      {renderAudienceContent()}
+             {/* Contenido de la plataforma seleccionada */}
+       <div className="transition-all duration-300 ease-in-out">
+         {renderAudienceContent()}
+       </div>
     </div>
   );
 }

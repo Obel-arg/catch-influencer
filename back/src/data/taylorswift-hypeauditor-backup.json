@@ -37,11 +37,12 @@
     "max": 500000
   },
   "audience_interests": [
-    "Music",
-    "Entertainment",
-    "Fashion",
-    "Travel",
-    "Food"
+    ["Music", 0.25],
+    ["Entertainment", 0.20],
+    ["Fashion", 0.18],
+    ["Travel", 0.15],
+    ["Food", 0.12],
+    ["Beauty", 0.10]
   ],
   "audience_languages": [
     {"code": "en", "value": 45},
