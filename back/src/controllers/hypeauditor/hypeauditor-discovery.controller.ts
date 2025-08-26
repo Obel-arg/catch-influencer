@@ -99,33 +99,8 @@ export class HypeAuditorDiscoveryController {
 
 			const service = HypeAuditorDiscoveryController.getDiscoveryService();
 
-			// Crear request básico para HypeAuditor
-			const hypeAuditorRequest: DiscoverySearchRequest = {
-				social_network: filters.platform === 'instagram' ? 'instagram' : 
-							   filters.platform === 'youtube' ? 'youtube' : 
-							   filters.platform === 'tiktok' ? 'tiktok' : 
-							   filters.platform === 'twitter' ? 'twitter' : 'instagram',
-				page: filters.page || 1
-			};
-
-			// Agregar filtros básicos si están presentes
-			if (filters.searchQuery) {
-				hypeAuditorRequest.search = [filters.searchQuery];
-			}
-
-			if (filters.minFollowers || filters.maxFollowers) {
-				hypeAuditorRequest.subscribers_count = {
-					from: filters.minFollowers || 0,
-					to: filters.maxFollowers || 100000000
-				};
-			}
-
-			if (filters.minEngagement || filters.maxEngagement) {
-				hypeAuditorRequest.er = {
-					from: filters.minEngagement || 0,
-					to: filters.maxEngagement || 100
-				};
-			}
+			// Usar la transformación completa de filtros (incluyendo audiencia)
+			const hypeAuditorRequest = service.transformExplorerFiltersToHypeAuditor(filters);
 			
 			console.log(`🔧 [HYPEAUDITOR DISCOVERY CONTROLLER] Filtros transformados (sandbox):`, JSON.stringify(hypeAuditorRequest, null, 2));
 

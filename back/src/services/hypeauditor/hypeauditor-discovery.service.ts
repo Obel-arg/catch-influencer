@@ -150,13 +150,10 @@ export interface ExplorerFilters {
 	searchContent?: string[];
 	searchDescription?: string[];
 	
-	// Filtros de audiencia
-	audienceAge?: { groups: string[]; prc: number };
-	audienceGender?: { gender: 'male' | 'female'; prc: number };
-	audienceGeo?: {
-		countries?: Array<{ id: string; prc: number }>;
-		cities?: Array<{ id: number; prc: number }>;
-	};
+	// Filtros de audiencia (formato del frontend)
+	audienceAge?: { minAge: number; maxAge: number; percentage: number };
+	audienceGender?: { gender: 'male' | 'female' | 'any'; percentage: number };
+	audienceGeo?: { countries: { [key: string]: number }; cities: { [key: string]: number } };
 	
 	// Precios
 	bloggerPrices?: { min: number; max: number };
@@ -594,19 +591,50 @@ export class HypeAuditorDiscoveryService {
 			};
 		}
 
-		// Filtros de audiencia
+		// Filtros de audiencia - Mapear al formato HypeAuditor
 		if (filters.audienceAge) {
-			hypeAuditorRequest.audience_age = filters.audienceAge;
+			// Mapear rangos de edad a grupos de HypeAuditor
+			const ageGroups = this.mapAgeRangeToGroups(filters.audienceAge.minAge, filters.audienceAge.maxAge);
+			hypeAuditorRequest.audience_age = {
+				groups: ageGroups,
+				prc: filters.audienceAge.percentage
+			};
 		}
 
-		if (filters.audienceGender) {
-			hypeAuditorRequest.audience_gender = filters.audienceGender;
+		if (filters.audienceGender && filters.audienceGender.gender !== 'any') {
+			// Mapear gender con porcentaje correcto
+			hypeAuditorRequest.audience_gender = {
+				gender: filters.audienceGender.gender as 'male' | 'female',
+				prc: filters.audienceGender.percentage
+			};
 		}
 
 		if (filters.audienceGeo) {
-			hypeAuditorRequest.audience_geo = filters.audienceGeo;
+			// Mapear países y ciudades al formato array de HypeAuditor
+			const audienceGeo: any = {};
+			
+			if (Object.keys(filters.audienceGeo.countries).length > 0) {
+				audienceGeo.countries = Object.entries(filters.audienceGeo.countries).map(([countryCode, percentage]) => ({
+					id: countryCode,
+					prc: percentage
+				}));
+			}
+			
+			if (Object.keys(filters.audienceGeo.cities).length > 0) {
+				audienceGeo.cities = Object.entries(filters.audienceGeo.cities).map(([cityId, percentage]) => ({
+					id: parseInt(cityId),
+					prc: percentage
+				}));
+			}
+			
+			if (audienceGeo.countries || audienceGeo.cities) {
+				hypeAuditorRequest.audience_geo = audienceGeo;
+			}
 		}
 
+		// Debug: Logging para verificar la transformación
+		console.log('🔧 [HYPEAUDITOR SERVICE] Filtros transformados:', JSON.stringify(hypeAuditorRequest, null, 2));
+		
 		return hypeAuditorRequest;
 	}
 
@@ -716,6 +744,30 @@ export class HypeAuditorDiscoveryService {
 			default:
 				return 'subscribers_count';
 		}
+	}
+
+	/**
+	 * Mapea un rango de edad a los grupos de edad de HypeAuditor
+	 */
+	private mapAgeRangeToGroups(minAge: number, maxAge: number): string[] {
+		const availableGroups = [
+			'13-17', '18-24', '25-34', '35-44', '45-54', '55-64', '65+'
+		];
+		
+		const selectedGroups: string[] = [];
+		
+		for (const group of availableGroups) {
+			const [groupMin, groupMax] = group.includes('+') 
+				? [parseInt(group.replace('+', '')), 100] 
+				: group.split('-').map(Number);
+			
+			// Si hay intersección entre el rango solicitado y el grupo
+			if (minAge <= groupMax && maxAge >= groupMin) {
+				selectedGroups.push(group);
+			}
+		}
+		
+		return selectedGroups.length > 0 ? selectedGroups : ['18-24']; // Default group si no hay intersección
 	}
 
 		/**
