@@ -460,6 +460,13 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
     return `${selectedCategories.length} categorías seleccionadas`;
   };
 
+  // ✨ NUEVA FUNCIÓN: Obtener texto del audience gender seleccionado
+  const getSelectedAudienceGenderText = () => {
+    if (audienceGender.gender === 'any') return "Any gender";
+    const genderText = audienceGender.gender === 'male' ? 'Male' : 'Female';
+    return `${genderText} >${audienceGender.percentage}%`;
+  };
+
   // ✨ NUEVA FUNCIÓN: Toggle categoría seleccionada
   const toggleCategory = (categoryCode: string) => {
     if (selectedCategories.includes(categoryCode)) {
@@ -1554,72 +1561,92 @@ const formatCategoryName = (category: string): string => {
               </div>
              */}
 
-            {/* ✨ AUDIENCE GENDER - Filtro de género de audiencia */}
-            <div className="space-y-3">
+            {/* ✨ AUDIENCE GENDER - Dropdown con filtro de género de audiencia */}
+            <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">
                 Audience gender
               </label>
-              
-              <div className="space-y-3">
-                {/* Radio buttons para seleccionar género */}
-                <div className="flex flex-col space-y-2">
-                  {[
-                    { value: 'any', label: 'Any' },
-                    { value: 'male', label: 'Male' },
-                    { value: 'female', label: 'Female' }
-                  ].map((option) => (
-                    <div key={option.value} className="flex items-center space-x-2">
-                      <div 
-                        className={cn(
-                          "w-5 h-5 rounded-full border-2 cursor-pointer transition-all duration-200 flex items-center justify-center",
-                          audienceGender.gender === option.value
-                            ? "border-blue-600 bg-blue-600"
-                            : "border-gray-300 hover:border-blue-400"
-                        )}
-                        onClick={() => setAudienceGender({ ...audienceGender, gender: option.value as 'male' | 'female' | 'any' })}
-                      >
-                        {audienceGender.gender === option.value && (
-                          <div className="w-2 h-2 rounded-full bg-white"></div>
-                        )}
-                      </div>
-                      <label 
-                        className="text-sm text-gray-700 cursor-pointer"
-                        onClick={() => setAudienceGender({ ...audienceGender, gender: option.value as 'male' | 'female' | 'any' })}
-                      >
-                        {option.label}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-                
-                {/* Slider para porcentaje - solo se muestra si no es 'any' */}
-                {audienceGender.gender !== 'any' && (
-                  <div className="mt-4 p-5 bg-gray-50 rounded-2xl border border-gray-200">
-                    <div className="text-center mb-4">
-                      <span className="text-sm font-medium text-gray-700">
-                        More than {audienceGender.percentage}% of audience
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between bg-white border-gray-200 hover:bg-gray-50"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-gray-500" />
+                      <span className="text-gray-600">
+                        {getSelectedAudienceGenderText()}
                       </span>
                     </div>
-                    
-                    <div className="relative px-3">
-                      <Slider
-                        value={[audienceGender.percentage]}
-                        onValueChange={(value) => setAudienceGender({ ...audienceGender, percentage: value[0] })}
-                        max={100}
-                        min={0}
-                        step={5}
-                        className="w-full [&>span:first-child]:bg-gray-300 [&>span:first-child]:h-2 [&>span:first-child]:rounded-full [&>span:last-child]:bg-blue-600 [&>span:last-child]:h-2 [&>span:last-child]:rounded-full [&_[role=slider]]:bg-white [&_[role=slider]]:border-4 [&_[role=slider]]:border-blue-600 [&_[role=slider]]:h-6 [&_[role=slider]]:w-6 [&_[role=slider]]:shadow-lg [&_[role=slider]]:transition-all [&_[role=slider]]:duration-200 [&_[role=slider]:hover]:scale-110 [&_[role=slider]:focus]:scale-110 [&_[role=slider]:focus]:ring-4 [&_[role=slider]:focus]:ring-blue-200"
-                      />
+                    <ChevronDown className="h-4 w-4 text-gray-500" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  className="w-[280px] bg-white p-3"
+                >
+                  <div className="space-y-3">
+                    {/* Radio buttons para seleccionar género */}
+                    <div className="space-y-2">
+                      {[
+                        { value: 'any', label: 'Any', icon: '👥' },
+                        { value: 'male', label: 'Male', icon: '👨' },
+                        { value: 'female', label: 'Female', icon: '👩' }
+                      ].map((option) => (
+                        <Button
+                          key={option.value}
+                          variant="ghost"
+                          className={cn(
+                            "w-full justify-start h-9 px-2 rounded-md text-left text-sm",
+                            audienceGender.gender === option.value
+                              ? "bg-blue-50 text-blue-700 border-blue-200"
+                              : "hover:bg-gray-50"
+                          )}
+                          onClick={() => setAudienceGender({ ...audienceGender, gender: option.value as 'male' | 'female' | 'any' })}
+                        >
+                          <div className="flex items-center gap-2 w-full">
+                            <span className="text-sm">{option.icon}</span>
+                            <span className="flex-1 text-left font-medium">
+                              {option.label}
+                            </span>
+                            {audienceGender.gender === option.value && (
+                              <Check className="h-3 w-3 text-blue-600" />
+                            )}
+                          </div>
+                        </Button>
+                      ))}
                     </div>
                     
-                    <div className="flex justify-between text-xs text-gray-500 mt-3 px-1">
-                      <span className="font-medium">0%</span>
-                      <span className="font-medium">50%</span>
-                      <span className="font-medium">100%</span>
-                    </div>
+                    {/* Slider para porcentaje - solo se muestra si no es 'any' */}
+                    {audienceGender.gender !== 'any' && (
+                      <div className="mt-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                        <div className="text-center mb-3">
+                          <span className="text-xs font-medium text-gray-700">
+                            More than {audienceGender.percentage}% of audience
+                          </span>
+                        </div>
+                        
+                        <div className="relative px-2 py-1">
+                          <Slider
+                            value={[audienceGender.percentage]}
+                            onValueChange={(value) => setAudienceGender({ ...audienceGender, percentage: value[0] })}
+                            max={100}
+                            min={0}
+                            step={5}
+                            className="w-full [&>span:first-child]:bg-gray-300 [&>span:first-child]:h-1.5 [&>span:first-child]:rounded-full [&>span:last-child]:bg-blue-600 [&>span:last-child]:h-1.5 [&>span:last-child]:rounded-full [&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-blue-600 [&_[role=slider]]:h-4 [&_[role=slider]]:w-4 [&_[role=slider]]:shadow-md [&_[role=slider]]:transition-all [&_[role=slider]]:duration-200 [&_[role=slider]:hover]:scale-110 [&_[role=slider]:focus]:scale-110 [&_[role=slider]:focus]:ring-2 [&_[role=slider]:focus]:ring-blue-200 [&_[role=slider]]:translate-y-[-6px]"
+                          />
+                        </div>
+                        
+                        <div className="flex justify-between text-xs text-gray-500 mt-2 px-0.5">
+                          <span className="font-medium">0%</span>
+                          <span className="font-medium">50%</span>
+                          <span className="font-medium">100%</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
 
