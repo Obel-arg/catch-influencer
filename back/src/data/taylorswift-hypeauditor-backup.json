@@ -1,0 +1,122 @@
+{
+  "success": true,
+  "username": "taylorswift",
+  "followers": 280315081,
+  "engagement_rate": 0.0185,
+  "avg_reach": 43304409,
+  "audience_demographics": {
+    "age": {
+      "18-24": 40,
+      "25-34": 30,
+      "35-44": 20,
+      "45-54": 8,
+      "55+": 2
+    },
+    "gender": {
+      "female": 65,
+      "male": 35
+    }
+  },
+  "audience_location": {
+    "United States": 35,
+    "Brazil": 15,
+    "Mexico": 10,
+    "Argentina": 8,
+    "Other": 32
+  },
+  "authenticity_score": 92.3,
+  "quality_score": 88.7,
+  "yearly_growth": 2.5,
+  "post_frequency": 0.8,
+  "est_post_price": {
+    "min": 384000,
+    "max": 1150000
+  },
+  "est_stories_price": {
+    "min": 150000,
+    "max": 500000
+  },
+  "audience_interests": [
+    "Music",
+    "Entertainment",
+    "Fashion",
+    "Travel",
+    "Food"
+  ],
+  "audience_languages": [
+    {"code": "en", "value": 45},
+    {"code": "es", "value": 25},
+    {"code": "pt", "value": 15},
+    {"code": "fr", "value": 8},
+    {"code": "de", "value": 7}
+  ],
+  "audience_education": {
+    "High School": 25,
+    "College": 45,
+    "Graduate": 30
+  },
+  "audience_marital_status": {
+    "Single": 60,
+    "Married": 30,
+    "Other": 10
+  },
+  "audience_income": {
+    "Low": 20,
+    "Medium": 50,
+    "High": 30
+  },
+  "audience_age_21_plus_prc": 85,
+  "comments_rate": {
+    "value": 0.001,
+    "avg": 0.002
+  },
+  "er_performance": {
+    "current": 1.85,
+    "average": 1.2,
+    "trend": "stable"
+  },
+  "growth_performance": {
+    "monthly": 2.5,
+    "quarterly": 7.8,
+    "yearly": 15.2
+  },
+  "social_networks": [
+    {
+      "type": 1,
+      "title": "Instagram",
+      "username": "taylorswift",
+      "subscribers_count": 280315081,
+      "er": 1.85,
+      "platform": "instagram"
+    }
+  ],
+  "location": "United States",
+  "growth_title": "Positive Growth",
+  "growth_description": "Consistent follower growth over the past 12 months",
+  "er_title": "Good Engagement",
+  "er_avg": 1.85,
+  "er_histogram": [
+    {"min": 0, "max": 1, "count": 10},
+    {"min": 1, "max": 2, "count": 25},
+    {"min": 2, "max": 3, "count": 35},
+    {"min": 3, "max": 4, "count": 20},
+    {"min": 4, "max": 5, "count": 10}
+  ],
+  "growth_trend": {
+    "last_30_days": 2.1,
+    "last_90_days": 6.5,
+    "last_12_months": 15.2
+  },
+  "audience_quality": {
+    "geo_quality": {
+      "score": 85,
+      "description": "High quality audience from major markets"
+    },
+    "audience_age_21_plus": 85,
+    "media_per_week": {
+      "posts": 5.6,
+      "stories": 12.3
+    }
+  },
+  "provider": "HypeAuditor"
+}

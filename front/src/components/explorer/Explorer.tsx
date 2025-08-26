@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { BookmarkIcon, ExternalLink, Filter, Instagram, Music, Search, X } from "lucide-react";
+import { BookmarkIcon, ExternalLink, Filter, Instagram, Music, Search, X, Zap } from "lucide-react";
 import { Youtube } from "lucide-react";
 import { InfluencerProfilePanel } from "@/components/explorer/influencer-profile-panel";
 import { useInfluencers } from "@/hooks/influencer/useInfluencers";
@@ -31,6 +31,7 @@ import { getYouTubeThumbnail } from '@/utils/youtube';
 import { SkeletonInfluencerTable } from "./SkeletonInfluencerRow";
 import { LazyInfluencerAvatar } from "./LazyInfluencerAvatar";
 import { explorerCacheService, SearchFilters } from '@/lib/services/explorer-cache.service';
+import { influenceIQService } from '@/lib/services/influenceIQ.service';
 
 
 
@@ -144,6 +145,11 @@ export default function Explorer() {
 
   // ✨ NUEVO: Estado para manejar avatares procesados
   const [processedAvatars, setProcessedAvatars] = useState<{ [key: string]: string }>({});
+
+  // 🎯 NUEVO: Estado para InfluenceIQ
+  const [influenceIQLoading, setInfluenceIQLoading] = useState(false);
+  const [influenceIQResults, setInfluenceIQResults] = useState<any[]>([]);
+  const [influenceIQError, setInfluenceIQError] = useState<string | null>(null);
 
   // 🧹 FUNCIÓN PARA LIMPIAR CACHE DE AVATARES (útil cuando cambia la lógica)
   const clearAvatarCache = useCallback(() => {
@@ -460,6 +466,47 @@ export default function Explorer() {
   // 🗑️ ELIMINADO: useEffect de paginación automática - ahora es manual con handlePageChange
 
   const adaptedInfluencers = useMemo(() => {
+    // 🎯 NUEVO: Si hay resultados de InfluenceIQ, adaptarlos
+    if (influenceIQResults.length > 0) {
+      return influenceIQResults.map((result, index) => {
+        const profile = result.account.user_profile;
+        
+        return {
+          id: profile.user_id,
+          creatorId: profile.user_id,
+          name: profile.fullname || profile.username,
+          image: profile.picture,
+          avatar: profile.picture,
+          verified: profile.is_verified,
+          categories: [],
+          location: '-',
+          language: '-',
+          socialPlatforms: [{
+            platform: 'Instagram',
+            username: profile.username,
+            followers: profile.followers,
+            engagement: profile.engagement_rate
+          }],
+          mainSocialPlatform: 'Instagram',
+          followersCount: profile.followers,
+          averageEngagementRate: profile.engagement_rate,
+          platformInfo: {
+            instagram: {
+              basicInstagram: {
+                instagramId: profile.username,
+                followers: profile.followers,
+                engageRate: profile.engagement_rate,
+                avatar: profile.picture
+              }
+            }
+          },
+          // 🎯 Metadatos para identificar que viene de InfluenceIQ
+          _source: 'influenceIQ',
+          _originalData: result
+        };
+      });
+    }
+
     if (influencers.length === 0) {
       return [];
     }
@@ -1470,6 +1517,63 @@ export default function Explorer() {
     return hasYouTubeExtended || hasInstagramExtended || hasTikTokExtended;
   };
 
+  // 🎯 NUEVA FUNCIÓN: Hacer una sola petición a InfluenceIQ (para demostración)
+  const handleInfluenceIQSearch = async () => {
+    setInfluenceIQLoading(true);
+    setInfluenceIQError(null);
+    setInfluenceIQResults([]);
+
+    try {
+      console.log('🔍 [INFLUENCEIQ] Iniciando búsqueda de demostración...');
+      
+      // Filtros simples para la demostración
+      const filters = {
+        followers: {
+          left_number: 100000,
+          right_number: 1000000
+        },
+        engagement_rate: {
+          value: 0.06
+        },
+        with_contact: [
+          { type: 'email' },
+          { type: 'phone' }
+        ],
+        keywords: ['tech', 'innovation'],
+        geo: [32] // Argentina
+      };
+
+      const result = await influenceIQService.searchInfluencers(filters, 'instagram', 1, 6);
+      
+      if (result.success && result.accounts) {
+        console.log('✅ [INFLUENCEIQ] Búsqueda exitosa:', result.accounts.length, 'resultados');
+        setInfluenceIQResults(result.accounts);
+        
+        // Mostrar toast de éxito
+        toast({
+          title: 'InfluenceIQ - Búsqueda exitosa',
+          description: `Encontrados ${result.accounts.length} influencers con ${result.total} total disponibles`,
+          variant: 'default',
+          status: 'success'
+        });
+      } else {
+        throw new Error('No se obtuvieron resultados válidos');
+      }
+    } catch (error: any) {
+      console.error('❌ [INFLUENCEIQ] Error en búsqueda:', error);
+      setInfluenceIQError(error.message || 'Error en la búsqueda');
+      
+      toast({
+        title: 'InfluenceIQ - Error',
+        description: error.message || 'Error en la búsqueda',
+        variant: 'destructive',
+        status: 'error'
+      });
+    } finally {
+      setInfluenceIQLoading(false);
+    }
+  };
+
   // 🎯 NUEVA FUNCIÓN: Determinar qué datos ya tenemos vs qué necesitamos obtener
   const determineDataNeeds = (influencer: any, platformIds: any) => {
     const needs = {
@@ -1617,36 +1721,60 @@ export default function Explorer() {
                 <h2 className="text-lg font-semibold text-gray-900">Resultados de búsqueda</h2>
                 <div className="flex items-center gap-3">
                   
-                  {/* 🎯 INDICADOR DE CACHE */}
-                  {cacheInfo.isFromCache && (
-                    <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50 border border-green-200 rounded-md">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-xs font-medium text-green-700">Cache</span>
-                      {cacheInfo.tokensUsed && (
-                        <span className="text-xs text-green-600">({cacheInfo.tokensUsed} tokens)</span>
-                      )}
-                    </div>
-                  )}
+                                     {/* 🎯 INDICADOR DE CACHE */}
+                   {cacheInfo.isFromCache && (
+                     <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50 border border-green-200 rounded-md">
+                       <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                       <span className="text-xs font-medium text-green-700">Cache</span>
+                       {cacheInfo.tokensUsed && (
+                         <span className="text-xs text-green-600">({cacheInfo.tokensUsed} tokens)</span>
+                       )}
+                     </div>
+                   )}
+
+                   {/* 🎯 NUEVO: INDICADOR DE INFLUENCEIQ */}
+                   {influenceIQResults.length > 0 && (
+                     <div className="flex items-center gap-1.5 px-2 py-1 bg-purple-50 border border-purple-200 rounded-md">
+                       <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                       <span className="text-xs font-medium text-purple-700">InfluenceIQ</span>
+                       <span className="text-xs text-purple-600">({influenceIQResults.length} resultados)</span>
+                     </div>
+                   )}
                  
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                {!selectMode ? (
-                  <button
-                    onClick={handleToggleSelectMode}
-                    disabled={!hasEverSearched || (!loadingInfluencers && limitedInfluencers.length === 0)}
-                    className={
-                      "font-medium py-2 px-4 rounded-md shadow-sm transition-all duration-200 flex items-center gap-2 text-sm" +
-                      (!hasEverSearched || (!loadingInfluencers && limitedInfluencers.length === 0)
-                        ? " bg-gray-300 text-gray-500 cursor-not-allowed"
-                        : " bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 hover:shadow-md")
-                    }
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    Asignar a campaña
-                  </button>
+                             <div className="flex items-center gap-3">
+                 {/* 🎯 NUEVO: Botón de InfluenceIQ */}
+                 <button
+                   onClick={handleInfluenceIQSearch}
+                   disabled={influenceIQLoading}
+                   className={
+                     "font-medium py-2 px-4 rounded-md shadow-sm transition-all duration-200 flex items-center gap-2 text-sm" +
+                     (influenceIQLoading
+                       ? " bg-gray-300 text-gray-500 cursor-not-allowed"
+                       : " bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800 hover:shadow-md")
+                   }
+                 >
+                   <Zap className="w-3.5 h-3.5" />
+                   {influenceIQLoading ? 'Buscando...' : 'InfluenceIQ Demo'}
+                 </button>
+
+                 {!selectMode ? (
+                   <button
+                     onClick={handleToggleSelectMode}
+                     disabled={!hasEverSearched || (!loadingInfluencers && limitedInfluencers.length === 0)}
+                     className={
+                       "font-medium py-2 px-4 rounded-md shadow-sm transition-all duration-200 flex items-center gap-2 text-sm" +
+                       (!hasEverSearched || (!loadingInfluencers && limitedInfluencers.length === 0)
+                         ? " bg-gray-300 text-gray-500 cursor-not-allowed"
+                         : " bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 hover:shadow-md")
+                     }
+                   >
+                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                     </svg>
+                     Asignar a campaña
+                   </button>
                 ) : (
                   <div className="flex items-center gap-2">
                     <button

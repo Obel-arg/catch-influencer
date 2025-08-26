@@ -32,6 +32,8 @@ import tiktokMetricsRoutes from './tiktok/tiktok-metrics.routes';
 import twitterRoutes from './twitter/twitter.routes';
 import feedbackRoutes from './feedback/feedback.routes';
 import connectionTestRoutes from './debug/connection-test.routes';
+import hypeAuditorRoutes from './hypeauditor/hypeauditor.routes';
+import influenceIQRoutes from './influenceIQ/influenceIQ.routes';
 
 // Crear router principal
 const router = Router();
@@ -67,7 +69,8 @@ router.get('/', (req, res) => {
       brands: `${config.apiPrefix}/brands`,
       imageProxy: `${config.apiPrefix}/proxy/image`,
       youtubeMetrics: `${config.apiPrefix}/youtube-metrics`,
-      tiktokMetrics: `${config.apiPrefix}/tiktok-metrics`
+      tiktokMetrics: `${config.apiPrefix}/tiktok-metrics`,
+      hypeAuditor: `${config.apiPrefix}/hypeauditor`
     }
   });
 });
@@ -106,5 +109,7 @@ router.use('/tiktok-metrics', tiktokMetricsRoutes);
 router.use('/twitter', twitterRoutes);
 router.use('/feedback', feedbackRoutes);
 router.use('/debug', connectionTestRoutes);
+router.use('/hypeauditor', hypeAuditorRoutes);
+router.use('/influenceIQ', influenceIQRoutes);
 
 export default router; 
