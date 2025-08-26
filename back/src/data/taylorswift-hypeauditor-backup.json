@@ -2,32 +2,38 @@
   "success": true,
   "username": "taylorswift",
   "followers": 280315081,
-  "engagement_rate": 0.0185,
-  "avg_reach": 43304409,
+  "engagement_rate": 0.01996242,
+  "avg_reach": 21700000,
   "audience_demographics": {
     "age": {
-      "18-24": 40,
-      "25-34": 30,
-      "35-44": 20,
-      "45-54": 8,
-      "55+": 2
+      "13-17": 6.84,
+      "18-24": 28.05,
+      "25-34": 41.41,
+      "35-44": 13.87,
+      "45-54": 5.47,
+      "55+": 4.36
     },
     "gender": {
-      "female": 65,
-      "male": 35
+      "female": 55.38,
+      "male": 44.59
     }
   },
   "audience_location": {
-    "United States": 35,
-    "Brazil": 15,
-    "Mexico": 10,
-    "Argentina": 8,
-    "Other": 32
+    "United States (USA)": 36.28,
+    "Brazil": 7.87,
+    "Italy": 4.08,
+    "United Kingdom (UK)": 3.88,
+    "Canada": 3.69,
+    "India": 3.24,
+    "Mexico": 3.06,
+    "France": 2.5,
+    "Philippines": 2.36,
+    "Germany": 2.04
   },
   "authenticity_score": 92.3,
   "quality_score": 88.7,
-  "yearly_growth": 2.5,
-  "post_frequency": 0.8,
+  "yearly_growth": -1.23,
+  "post_frequency": 0.36,
   "est_post_price": {
     "min": 384000,
     "max": 1150000
@@ -37,86 +43,132 @@
     "max": 500000
   },
   "audience_interests": [
-    ["Music", 0.25],
-    ["Entertainment", 0.20],
-    ["Fashion", 0.18],
-    ["Travel", 0.15],
-    ["Food", 0.12],
-    ["Beauty", 0.10]
+    ["Entertainment", 0.92],
+    ["Theater", 0.81],
+    ["Music", 0.75],
+    ["Dance", 0.75],
+    ["Stand-up Comedy", 0.57],
+    ["Film & Television", 0.57],
+    ["Social Issues", 0.27],
+    ["Fashion", 0.24],
+    ["Politics", 0.22],
+    ["Beauty", 0.2],
+    ["Unboxings", 0.18]
   ],
   "audience_languages": [
-    {"code": "en", "value": 45},
-    {"code": "es", "value": 25},
-    {"code": "pt", "value": 15},
-    {"code": "fr", "value": 8},
-    {"code": "de", "value": 7}
+    {"code": "en", "value": 60.4},
+    {"code": "pt", "value": 17.1},
+    {"code": "es", "value": 7.1},
+    {"code": "fa", "value": 4},
+    {"code": "ru", "value": 2.6}
   ],
   "audience_education": {
-    "High School": 25,
-    "College": 45,
-    "Graduate": 30
+    "no_education": 1.77,
+    "incomplete_primary": 1.44,
+    "primary": 6.27,
+    "lower_secondary": 14.63,
+    "upper_secondary": 47.8,
+    "post_secondary": 28.09
   },
   "audience_marital_status": {
-    "Single": 60,
-    "Married": 30,
-    "Other": 10
+    "single": 56.8,
+    "married": 38.34,
+    "widowed": 1.17,
+    "divorced": 3.66
   },
   "audience_income": {
-    "Low": 20,
-    "Medium": 50,
-    "High": 30
+    "0k-5k": 21.69,
+    "5k-10k": 17.21,
+    "10k-25k": 21.74,
+    "25k-50k": 15.46,
+    "50k-75k": 9.49,
+    "75k-100k": 5.91,
+    "100k-150k": 5.62,
+    "150k-200k": 1.91,
+    "200k+": 0.97
   },
-  "audience_age_21_plus_prc": 85,
+  "audience_age_21_plus_prc": 84.84,
   "comments_rate": {
-    "value": 0.001,
-    "avg": 0.002
+    "value": 0,
+    "avg": 0.006186,
+    "title": "Average"
   },
   "er_performance": {
-    "current": 1.85,
-    "average": 1.2,
-    "trend": "stable"
+    "7d": {"value": 2.02629, "value_prev": 2.054411, "min": 1.991484, "max": 2.054418},
+    "30d": {"value": 2.053496, "value_prev": 2.034305, "min": 1.991484, "max": 2.0547},
+    "90d": {"value": 2.033028, "value_prev": 2.008396, "min": 1.991484, "max": 2.0547},
+    "180d": {"value": 2.023567, "value_prev": 2.008158, "min": 1.991484, "max": 2.0547},
+    "365d": {"value": 2.014222, "value_prev": 2.363736, "min": 1.799431, "max": 2.0547},
+    "all": {"value": 1.825483, "min": 0.54, "max": 2.827105}
   },
   "growth_performance": {
-    "monthly": 2.5,
-    "quarterly": 7.8,
-    "yearly": 15.2
+    "7d": {"value": -0.07, "mark": "poor", "mark_title": "poor", "similar": 0.32724},
+    "30d": {"value": -0.12, "mark": "poor", "mark_title": "poor", "similar": 0.653159},
+    "90d": {"value": -0.32, "mark": "poor", "mark_title": "poor", "similar": 1.83192},
+    "180d": {"value": -0.71, "mark": "poor", "mark_title": "poor", "similar": 3.906965},
+    "365d": {"value": -1.23, "mark": "poor", "mark_title": "poor", "similar": 8.771662}
   },
   "social_networks": [
     {
       "type": 1,
-      "title": "Instagram",
+      "title": "Taylor Swift",
       "username": "taylorswift",
       "subscribers_count": 280315081,
-      "er": 1.85,
+      "er": 1.996242,
       "platform": "instagram"
+    },
+    {
+      "type": 2,
+      "title": "Taylor Swift",
+      "username": "taylorswift",
+      "subscribers_count": 61350720,
+      "er": 6.055,
+      "platform": "youtube"
+    },
+    {
+      "type": 3,
+      "title": "Taylor Swift",
+      "username": "taylorswift",
+      "subscribers_count": 32400000,
+      "er": 10.5,
+      "platform": "tiktok"
     }
   ],
-  "location": "United States",
-  "growth_title": "Positive Growth",
-  "growth_description": "Consistent follower growth over the past 12 months",
-  "er_title": "Good Engagement",
-  "er_avg": 1.85,
+  "location": "United States (USA)",
+  "growth_title": "Low",
+  "growth_description": "Negative trend detected on followers graph more than 12 months ago, audience might be inauthentic.",
+  "er_title": "Good, compared to other 1M+ followers accounts",
+  "er_avg": 0.449526,
   "er_histogram": [
-    {"min": 0, "max": 1, "count": 10},
-    {"min": 1, "max": 2, "count": 25},
-    {"min": 2, "max": 3, "count": 35},
-    {"min": 3, "max": 4, "count": 20},
-    {"min": 4, "max": 5, "count": 10}
+    {"min": 0, "max": 1.15, "count": 41759},
+    {"min": 1.15, "max": 2.3, "count": 7544},
+    {"min": 2.3, "max": 3.45, "count": 3541},
+    {"min": 3.45, "max": 4.6, "count": 1910},
+    {"min": 4.6, "max": 5.75, "count": 1177},
+    {"min": 5.75, "max": 6.9, "count": 848},
+    {"min": 6.9, "max": 8.05, "count": 602},
+    {"min": 8.05, "max": 9.2, "count": 421},
+    {"min": 9.2, "max": 10.35, "count": 319},
+    {"min": 10.35, "max": 11.49, "count": 239},
+    {"min": 11.49, "max": 12.64, "count": 190},
+    {"min": 12.64, "max": 13.79, "count": 150}
   ],
   "growth_trend": {
-    "last_30_days": 2.1,
-    "last_90_days": 6.5,
-    "last_12_months": 15.2
+    "7d": {"value": -0.07, "mark": "poor", "mark_title": "poor", "similar": 0.32724},
+    "30d": {"value": -0.12, "mark": "poor", "mark_title": "poor", "similar": 0.653159},
+    "90d": {"value": -0.32, "mark": "poor", "mark_title": "poor", "similar": 1.83192},
+    "180d": {"value": -0.71, "mark": "poor", "mark_title": "poor", "similar": 3.906965},
+    "365d": {"value": -1.23, "mark": "poor", "mark_title": "poor", "similar": 8.771662}
   },
   "audience_quality": {
     "geo_quality": {
-      "score": 85,
-      "description": "High quality audience from major markets"
+      "code": "",
+      "title": ""
     },
-    "audience_age_21_plus": 85,
+    "audience_age_21_plus": 84.84,
     "media_per_week": {
-      "posts": 5.6,
-      "stories": 12.3
+      "value": 0,
+      "mark": "poor"
     }
   },
   "provider": "HypeAuditor"

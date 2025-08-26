@@ -133,7 +133,7 @@ export class HypeAuditorService {
 									growth_performance: report.subscribers_growth_prc?.performance || {},
 									social_networks: this.formatSocialNetworks(report.social_networks),
 									location: report.location || '',
-									growth_title: report.growth?.title || '',
+									growth_title: report.yearly_growth?.title || report.growth?.title || '',
 									growth_description: report.growth?.description || '',
 									er_title: report.er?.title || '',
 									er_avg: report.er?.avg || 0,
@@ -143,7 +143,14 @@ export class HypeAuditorService {
 										geo_quality: report.geo_quality || {},
 										audience_age_21_plus: report.audience_age_21_plus_prc || 0,
 										media_per_week: report.media_per_week || {}
-									}
+									},
+									// Datos adicionales que no estábamos mostrando
+									subscribers_growth_prc: report.subscribers_growth_prc || {},
+									demography_by_age: report.demography_by_age || [],
+									audience_geography: report.audience_geography || {},
+									top3_blogger_topics: report.top3_blogger_topics || [],
+									est_reach: report.est_reach || {},
+									demography: report.demography || []
 								};
 
 								// Verificar si los datos están vacíos y usar respaldo para Taylor Swift

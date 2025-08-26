@@ -50,6 +50,60 @@ export default function InfluencerAudience({ influencer }: InfluencerAudiencePro
     tiktok: { loading: false, data: null, error: null }
   });
 
+  // Función para obtener la bandera del país
+  const getCountryFlag = (countryName: string) => {
+    const flagMap: Record<string, string> = {
+      'United States (USA)': '/banderas/United States.png',
+      'United States': '/banderas/United States.png',
+      'Brazil': '/banderas/Brazil.png',
+      'Mexico': '/banderas/Mexico.png',
+      'Argentina': '/banderas/Argentina.png',
+      'Spain': '/banderas/Spain.png',
+      'Colombia': '/banderas/Colombia.png',
+      'Chile': '/banderas/Chile.png',
+      'Peru': '/banderas/Peru.png',
+      'Venezuela': '/banderas/Venezuela.png',
+      'Uruguay': '/banderas/Uruguay.png',
+      'Paraguay': '/banderas/Paraguay.png',
+      'Ecuador': '/banderas/Ecuador.png',
+      'Bolivia': '/banderas/Bolivia.png',
+      'Costa Rica': '/banderas/Costa Rica.png',
+      'Dominican Republic': '/banderas/Dominican Republic.png',
+      'Cuba': '/banderas/Cuba.png',
+      'Guatemala': '/banderas/Guatemala.png',
+      'El Salvador': '/banderas/El Salvador.png',
+      'Honduras': '/banderas/Honduras.png',
+      'Nicaragua': '/banderas/Nicaragua.png',
+      'Panama': '/banderas/Panama.png',
+      'Belize': '/banderas/Belize.png',
+      'Puerto Rico': '/banderas/Puerto Rico.png',
+      'Haiti': '/banderas/Haiti.png',
+      'Jamaica': '/banderas/Jamaica.png',
+      'Trinidad and Tobago': '/banderas/Trinidad and Tobago.png',
+      'Barbados': '/banderas/Barbados.png',
+      'Bahamas': '/banderas/Bahamas.png',
+      'Bermuda': '/banderas/Bermuda.png',
+      'Dominica': '/banderas/Dominica.png',
+      'Canada': '/banderas/Canada.png',
+      'United Kingdom (UK)': '/banderas/United Kingdom.png',
+      'United Kingdom': '/banderas/United Kingdom.png',
+      'France': '/banderas/France.png',
+      'Germany': '/banderas/Germany.png',
+      'Italy': '/banderas/Italy.png',
+      'Portugal': '/banderas/Portugal.png',
+      'Greece': '/banderas/Greece.png',
+      'China': '/banderas/China.png',
+      'Japan': '/banderas/Japan.png',
+      'Hong Kong': '/banderas/Hong Kong.png',
+      'Arab Emirates': '/banderas/Arab Emirates.png',
+      'India': '/banderas/India.png',
+      'Philippines': '/banderas/Philippines.png',
+      'Other': '/banderas/globe.svg' // Fallback para países no listados
+    };
+
+    return flagMap[countryName] || '/banderas/globe.svg';
+  };
+
   const getInstagramUsername = () => {
     if (influencer?.social_networks) {
       const instagram = influencer.social_networks.find((s: any) => s.platform === 'instagram');
@@ -279,12 +333,18 @@ export default function InfluencerAudience({ influencer }: InfluencerAudiencePro
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-800">
-                {data?.est_post_price?.min ? '$' + (data.est_post_price.min / 1000).toFixed(0) + 'K' : "N/A"}
-              </div>
-              <p className="text-xs text-orange-600 mt-1">
-                {data?.est_post_price?.max ? 'hasta $' + (data.est_post_price.max / 1000).toFixed(0) + 'K' : ''}
-              </p>
+                             <div className="text-2xl font-bold text-orange-800">
+                 {data?.est_post_price?.min ? (() => {
+                   const value = data.est_post_price.min / 1000;
+                   return value >= 1000 ? '$' + (value / 1000).toFixed(2) + 'M' : '$' + value.toFixed(0) + 'K';
+                 })() : "N/A"}
+               </div>
+               <p className="text-xs text-orange-600 mt-1">
+                 {data?.est_post_price?.max ? (() => {
+                   const value = data.est_post_price.max / 1000;
+                   return value >= 1000 ? 'hasta $' + (value / 1000).toFixed(2) + 'M' : 'hasta $' + value.toFixed(0) + 'K';
+                 })() : ''}
+               </p>
             </CardContent>
           </Card>
         </div>
@@ -333,12 +393,18 @@ export default function InfluencerAudience({ influencer }: InfluencerAudiencePro
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {data?.est_stories_price?.min ? '$' + (data.est_stories_price.min / 1000).toFixed(0) + 'K' : "N/A"}
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {data?.est_stories_price?.max ? 'hasta $' + (data.est_stories_price.max / 1000).toFixed(0) + 'K' : ''}
-              </p>
+                             <div className="text-2xl font-bold">
+                 {data?.est_stories_price?.min ? (() => {
+                   const value = data.est_stories_price.min / 1000;
+                   return value >= 1000 ? '$' + (value / 1000).toFixed(2) + 'M' : '$' + value.toFixed(0) + 'K';
+                 })() : "N/A"}
+               </div>
+               <p className="text-xs text-gray-500 mt-1">
+                 {data?.est_stories_price?.max ? (() => {
+                   const value = data.est_stories_price.max / 1000;
+                   return value >= 1000 ? 'hasta $' + (value / 1000).toFixed(2) + 'M' : 'hasta $' + value.toFixed(0) + 'K';
+                 })() : ''}
+               </p>
             </CardContent>
           </Card>
 
@@ -486,35 +552,42 @@ export default function InfluencerAudience({ influencer }: InfluencerAudiencePro
            </div>
          )}
 
-        {/* Ubicación de audiencia */}
-        {data?.audience_location && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Globe className="h-5 w-5" />
-                Ubicación de la Audiencia
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Object.entries(data.audience_location)
-                  .sort(([,a], [,b]) => (b as number) - (a as number))
-                  .slice(0, 9)
-                  .map(([country, percentage]: [string, any]) => (
-                    <div key={country} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm font-medium">{country}</span>
-                      </div>
-                      <Badge variant="outline" className="font-semibold">
-                        {percentage.toFixed(1)}%
-                      </Badge>
-                    </div>
-                  ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                 {/* Ubicación de audiencia */}
+         {data?.audience_location && (
+           <Card>
+             <CardHeader>
+               <CardTitle className="flex items-center gap-2">
+                 <Globe className="h-5 w-5" />
+                 Ubicación de la Audiencia
+               </CardTitle>
+             </CardHeader>
+             <CardContent>
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                 {Object.entries(data.audience_location)
+                   .sort(([,a], [,b]) => (b as number) - (a as number))
+                   .slice(0, 9)
+                   .map(([country, percentage]: [string, any]) => (
+                     <div key={country} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                       <div className="flex items-center gap-3">
+                         <img 
+                           src={getCountryFlag(country)} 
+                           alt={`Bandera de ${country}`}
+                           className="w-6 h-4 object-cover rounded-sm shadow-sm"
+                           onError={(e) => {
+                             e.currentTarget.src = '/banderas/globe.svg';
+                           }}
+                         />
+                         <span className="text-sm font-medium">{country}</span>
+                       </div>
+                                               <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold px-3 py-1 shadow-sm">
+                          {percentage.toFixed(1)}%
+                        </Badge>
+                     </div>
+                   ))}
+               </div>
+             </CardContent>
+           </Card>
+         )}
 
         {/* Datos demográficos avanzados */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -542,7 +615,9 @@ export default function InfluencerAudience({ influencer }: InfluencerAudiencePro
                          lang.code === 'fa' ? 'Persa' : 
                          lang.code ? lang.code.toUpperCase() : 'Otro'}
                         </span>
-                                              <Badge variant="outline">{lang.value ? lang.value.toFixed(1) : '0.0'}%</Badge>
+                                              <Badge className="bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold px-3 py-1 shadow-sm">
+                           {lang.value ? lang.value.toFixed(1) : '0.0'}%
+                         </Badge>
                     </div>
                   ))}
                 </div>
@@ -574,7 +649,9 @@ export default function InfluencerAudience({ influencer }: InfluencerAudiencePro
                            education === 'upper_secondary' ? 'Secundaria alta' :
                            education === 'post_secondary' ? 'Post-secundaria' : education}
                         </span>
-                        <Badge variant="outline">{percentage.toFixed(1)}%</Badge>
+                        <Badge className="bg-gradient-to-r from-purple-500 to-purple-600 text-white font-semibold px-3 py-1 shadow-sm">
+                          {percentage.toFixed(1)}%
+                        </Badge>
                       </div>
                     ))}
                 </div>
@@ -606,7 +683,9 @@ export default function InfluencerAudience({ influencer }: InfluencerAudiencePro
                            status === 'widowed' ? 'Viudo/a' :
                            status === 'divorced' ? 'Divorciado/a' : status}
                         </span>
-                        <Badge variant="outline">{percentage.toFixed(1)}%</Badge>
+                        <Badge className="bg-gradient-to-r from-pink-500 to-pink-600 text-white font-semibold px-3 py-1 shadow-sm">
+                          {percentage.toFixed(1)}%
+                        </Badge>
                       </div>
                     ))}
                 </div>
@@ -641,7 +720,9 @@ export default function InfluencerAudience({ influencer }: InfluencerAudiencePro
                            income === '150k-200k' ? '$150K-200K' :
                            income === '200k+' ? '$200K+' : income}
                         </span>
-                        <Badge variant="outline">{percentage.toFixed(1)}%</Badge>
+                        <Badge className="bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold px-3 py-1 shadow-sm">
+                          {percentage.toFixed(1)}%
+                        </Badge>
                       </div>
                     ))}
                 </div>
@@ -669,7 +750,7 @@ export default function InfluencerAudience({ influencer }: InfluencerAudiencePro
                    return (
                      <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
                        <span className="text-sm font-medium">{interestName}</span>
-                       <Badge variant="outline" className="text-xs">
+                       <Badge className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-semibold px-3 py-1 shadow-sm text-xs">
                          {interestPercentage ? (interestPercentage * 100).toFixed(0) : 'N/A'}%
                        </Badge>
                      </div>
@@ -682,53 +763,7 @@ export default function InfluencerAudience({ influencer }: InfluencerAudiencePro
 
                  
 
-                   {/* Calidad de la Audiencia */}
-         {data?.audience_quality && (
-           <Card>
-             <CardHeader>
-               <CardTitle className="flex items-center gap-2">
-                 <Award className="h-5 w-5" />
-                 Calidad de la Audiencia
-               </CardTitle>
-             </CardHeader>
-             <CardContent>
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                 <div className="text-center p-4 bg-blue-50 rounded-lg">
-                   <div className="text-2xl font-bold text-blue-600">
-                     {data.audience_quality.audience_age_21_plus?.toFixed(1)}%
-                   </div>
-                   <div className="text-sm text-gray-600">Mayores de 21 años</div>
-                 </div>
-                 
-                 {data.audience_quality.media_per_week?.value && (
-                   <div className="text-center p-4 bg-green-50 rounded-lg">
-                     <div className="text-2xl font-bold text-green-600">
-                       {data.audience_quality.media_per_week.value}
-                     </div>
-                     <div className="text-sm text-gray-600">Media por semana</div>
-                     <div className={`text-xs mt-1 px-2 py-1 rounded ${
-                       data.audience_quality.media_per_week.mark === 'good' ? 'bg-green-100 text-green-800' :
-                       data.audience_quality.media_per_week.mark === 'poor' ? 'bg-red-100 text-red-800' :
-                       'bg-yellow-100 text-yellow-800'
-                     }`}>
-                       {data.audience_quality.media_per_week.mark === 'good' ? 'Bueno' : 
-                        data.audience_quality.media_per_week.mark === 'poor' ? 'Bajo' : 'Promedio'}
-                     </div>
-                   </div>
-                 )}
-                 
-                 {data.audience_quality.geo_quality?.title && (
-                   <div className="text-center p-4 bg-purple-50 rounded-lg">
-                     <div className="text-lg font-bold text-purple-600">
-                       {data.audience_quality.geo_quality.title}
-                     </div>
-                     <div className="text-sm text-gray-600">Calidad Geográfica</div>
-                   </div>
-                 )}
-               </div>
-             </CardContent>
-           </Card>
-         )}
+          
 
          {/* Gráfico de Radar - Métricas Clave */}
          <Card>
@@ -792,15 +827,27 @@ export default function InfluencerAudience({ influencer }: InfluencerAudiencePro
            </CardContent>
          </Card>
 
-                  {/* Raw data for debugging */}
-        <details className="mt-4">
-          <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700">
-            Ver datos completos (debug)
-          </summary>
-          <pre className="mt-2 p-4 bg-gray-50 rounded-lg text-xs overflow-auto">
-            {JSON.stringify(data, null, 2)}
-          </pre>
-        </details>
+                                     {/* Raw data for debugging */}
+         <details className="mt-4">
+           <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700">
+             Ver datos completos (debug)
+           </summary>
+           <div className="mt-2 space-y-4">
+             <div className="p-4 bg-gray-50 rounded-lg">
+               <h4 className="text-sm font-semibold text-gray-700 mb-2">Datos procesados (frontend):</h4>
+               <pre className="text-xs overflow-auto max-h-96">
+                 {JSON.stringify(data, null, 2)}
+               </pre>
+             </div>
+             
+             <div className="p-4 bg-blue-50 rounded-lg">
+               <h4 className="text-sm font-semibold text-blue-700 mb-2">Respuesta completa de la API (backend):</h4>
+               <pre className="text-xs overflow-auto max-h-96">
+                 {JSON.stringify(audienceData[activePlatform].data, null, 2)}
+               </pre>
+             </div>
+           </div>
+         </details>
       </div>
     );
   };
