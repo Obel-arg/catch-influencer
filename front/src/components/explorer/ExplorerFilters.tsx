@@ -109,6 +109,8 @@ interface ExplorerFiltersProps {
   setAudienceGender: Dispatch<SetStateAction<{ gender: 'male' | 'female' | 'any'; percentage: number }>>;
   audienceAge: { minAge: number; maxAge: number; percentage: number };
   setAudienceAge: Dispatch<SetStateAction<{ minAge: number; maxAge: number; percentage: number }>>;
+  audienceGeo: { countries: string[]; cities: string[]; percentage: number };
+  setAudienceGeo: Dispatch<SetStateAction<{ countries: string[]; cities: string[]; percentage: number }>>;
 }
 
 const followerRanges = [
@@ -354,6 +356,8 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
     setAudienceGender,
     audienceAge,
     setAudienceAge,
+    audienceGeo,
+    setAudienceGeo,
   } = props;
 
   const [countrySearch, setCountrySearch] = useState("");
@@ -362,11 +366,7 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
   const [activeTab, setActiveTab] = useState("basicos");
 
   // 🎯 NUEVOS ESTADOS PARA FILTROS DE HYPEAUDITOR DISCOVERY
-  // audienceGender y audienceAge se pasan como props desde Explorer.tsx
-  const [audienceGeo, setAudienceGeo] = useState<AudienceGeoFilter>({
-    countries: [],
-    cities: []
-  });
+  // audienceGender, audienceAge y audienceGeo se pasan como props desde Explorer.tsx
   const [accountType, setAccountType] = useState<'brand' | 'human' | 'any'>('any');
   const [verified, setVerified] = useState<boolean | null>(null);
   const [hasContacts, setHasContacts] = useState<boolean | null>(null);
@@ -469,6 +469,23 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
       return "Any age";
     }
     return `${audienceAge.minAge}-${audienceAge.maxAge} years >${audienceAge.percentage}%`;
+  };
+
+  // ✨ NUEVA FUNCIÓN: Obtener texto del audience geo seleccionado
+  const getSelectedAudienceGeoText = () => {
+    const totalSelected = audienceGeo.countries.length + audienceGeo.cities.length;
+    if (totalSelected === 0) return "Any location";
+    if (totalSelected === 1) {
+      let locationName = "";
+      if (audienceGeo.countries.length > 0) {
+        const country = countryList.find(c => c.code === audienceGeo.countries[0]);
+        locationName = country ? country.name : audienceGeo.countries[0];
+      } else {
+        locationName = audienceGeo.cities[0];
+      }
+      return `${locationName} >${audienceGeo.percentage}%`;
+    }
+    return `${totalSelected} locations >${audienceGeo.percentage}%`;
   };
 
   // ✨ NUEVA FUNCIÓN: Toggle categoría seleccionada
@@ -871,6 +888,29 @@ const formatCategoryName = (category: string): string => {
       });
     }
 
+    // Filtro de audience geo
+    if (audienceGeo.countries.length > 0 || audienceGeo.cities.length > 0) {
+      const totalSelected = audienceGeo.countries.length + audienceGeo.cities.length;
+      let label = "";
+      if (totalSelected === 1) {
+        if (audienceGeo.countries.length > 0) {
+          const country = countryList.find(c => c.code === audienceGeo.countries[0]);
+          label = country ? `${country.name} >${audienceGeo.percentage}%` : `${audienceGeo.countries[0]} >${audienceGeo.percentage}%`;
+        } else {
+          label = `${audienceGeo.cities[0]} >${audienceGeo.percentage}%`;
+        }
+      } else {
+        label = `${totalSelected} locations >${audienceGeo.percentage}%`;
+      }
+      
+      filters.push({
+        id: "audienceGeo",
+        label: label,
+        icon: '🌍',
+        type: "audienceGeo",
+      });
+    }
+
     return filters;
   };
 
@@ -903,6 +943,9 @@ const formatCategoryName = (category: string): string => {
         break;
       case "audienceAge":
         setAudienceAge({ minAge: 18, maxAge: 54, percentage: 10 });
+        break;
+      case "audienceGeo":
+        setAudienceGeo({ countries: [], cities: [], percentage: 30 });
         break;
     }
   };
@@ -1210,7 +1253,7 @@ const formatCategoryName = (category: string): string => {
 
             {/* Location Dropdown */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">País</label>
+              <label className="text-sm font-medium text-gray-700">Account location</label>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -1598,8 +1641,8 @@ const formatCategoryName = (category: string): string => {
                     <ChevronDown className="h-4 w-4 text-gray-500" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="start"
+                  <DropdownMenuContent
+                    align="start"
                   className="w-[280px] bg-white p-3"
                 >
                   <div className="space-y-3">
@@ -1610,7 +1653,7 @@ const formatCategoryName = (category: string): string => {
                         { value: 'male', label: 'Male', icon: '👨' },
                         { value: 'female', label: 'Female', icon: '👩' }
                       ].map((option) => (
-                        <Button
+                    <Button
                           key={option.value}
                           variant="ghost"
                           className={cn(
@@ -1632,7 +1675,7 @@ const formatCategoryName = (category: string): string => {
                           </div>
                         </Button>
                       ))}
-                    </div>
+                        </div>
                     
                     {/* Slider para porcentaje - solo se muestra si no es 'any' */}
                     {audienceGender.gender !== 'any' && (
@@ -1641,7 +1684,7 @@ const formatCategoryName = (category: string): string => {
                           <span className="text-xs font-medium text-gray-700">
                             More than {audienceGender.percentage}% of audience
                           </span>
-                        </div>
+                    </div>
                         
                         <div className="relative px-2 py-1">
                           <Slider
@@ -1652,7 +1695,7 @@ const formatCategoryName = (category: string): string => {
                             step={5}
                             className="w-full [&>span:first-child]:bg-gray-300 [&>span:first-child]:h-1.5 [&>span:first-child]:rounded-full [&>span:last-child]:bg-blue-600 [&>span:last-child]:h-1.5 [&>span:last-child]:rounded-full [&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-blue-600 [&_[role=slider]]:h-4 [&_[role=slider]]:w-4 [&_[role=slider]]:shadow-md [&_[role=slider]]:transition-all [&_[role=slider]]:duration-200 [&_[role=slider]:hover]:scale-110 [&_[role=slider]:focus]:scale-110 [&_[role=slider]:focus]:ring-2 [&_[role=slider]:focus]:ring-blue-200 [&_[role=slider]]:translate-y-[-6px]"
                           />
-                        </div>
+                  </div>
                         
                         <div className="flex justify-between text-xs text-gray-500 mt-2 px-0.5">
                           <span className="font-medium">0%</span>
@@ -1700,7 +1743,7 @@ const formatCategoryName = (category: string): string => {
                       <div className="flex items-center gap-3">
                         <div className="flex-1">
                           <label className="text-xs text-gray-500 mb-1 block">From</label>
-                          <Input
+                <Input
                             type="number"
                             min={13}
                             max={80}
@@ -1708,7 +1751,7 @@ const formatCategoryName = (category: string): string => {
                             onChange={(e) => setAudienceAge({ ...audienceAge, minAge: parseInt(e.target.value) || 13 })}
                             className="text-center h-9"
                           />
-                        </div>
+                  </div>
                         
                         <div className="mt-5 text-gray-400">-</div>
                         
@@ -1723,9 +1766,9 @@ const formatCategoryName = (category: string): string => {
                             className="text-center h-9"
                           />
                         </div>
-                      </div>
-                    </div>
-                    
+              </div>
+            </div>
+
                     {/* Slider para porcentaje */}
                     <div className="p-3 bg-gray-50 rounded-xl border border-gray-200">
                       <div className="text-center mb-3">
@@ -1751,6 +1794,146 @@ const formatCategoryName = (category: string): string => {
                         <span className="font-medium">100%</span>
                       </div>
                     </div>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            {/* ✨ AUDIENCE GEO - Dropdown con filtro de ubicación de audiencia */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Audience location
+              </label>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between bg-white border-gray-200 hover:bg-gray-50"
+                  >
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-gray-500" />
+                      <span className="text-gray-600">
+                        {getSelectedAudienceGeoText()}
+                      </span>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-gray-500" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  className="w-[320px] bg-white p-3"
+                >
+                  <div className="space-y-4">
+                    {/* Búsqueda de países */}
+                    <div className="space-y-3">
+                      <div className="text-sm font-medium text-gray-700">
+                        Countries
+                      </div>
+                      
+                      <div className="relative">
+                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                        <Input
+                          placeholder="Search countries..."
+                          value={countrySearch}
+                          onChange={(e) => setCountrySearch(e.target.value)}
+                          className="w-full pl-8 bg-white border-gray-200 h-9"
+                        />
+                        </div>
+
+                      <div className="max-h-32 overflow-y-auto space-y-1">
+                        {countryList
+                          .filter(country => 
+                            countrySearch === "" || 
+                            country.name.toLowerCase().includes(countrySearch.toLowerCase())
+                          )
+                          .slice(0, 10)
+                          .map((country) => (
+                        <Button
+                            key={country.code}
+                          variant="ghost"
+                          className={cn(
+                              "w-full justify-start h-8 px-2 text-sm",
+                              audienceGeo.countries.includes(country.code)
+                              ? "bg-blue-50 text-blue-700"
+                              : "hover:bg-gray-50"
+                          )}
+                          onClick={() => {
+                              const newCountries = audienceGeo.countries.includes(country.code)
+                                ? audienceGeo.countries.filter(c => c !== country.code)
+                                : [...audienceGeo.countries, country.code];
+                              setAudienceGeo({ ...audienceGeo, countries: newCountries });
+                            }}
+                          >
+                            <div className="flex items-center gap-2 w-full">
+                              <img
+                                src={`/banderas/${country.name}.png`}
+                                alt={country.name}
+                                className="h-3 w-5 object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
+                              <span className="flex-1 text-left">{country.name}</span>
+                              {audienceGeo.countries.includes(country.code) && (
+                                <Check className="h-3 w-3 text-blue-600" />
+                              )}
+                          </div>
+                        </Button>
+                      ))}
+                    </div>
+                    </div>
+
+                    {/* Mostrar países seleccionados */}
+                    {audienceGeo.countries.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="text-xs font-medium text-gray-600">Selected Countries:</div>
+                        <div className="flex flex-wrap gap-2">
+                          {audienceGeo.countries.map((countryCode) => {
+                            const country = countryList.find(c => c.code === countryCode);
+                            return country ? (
+                              <Badge key={countryCode} variant="secondary" className="text-xs">
+                                {country.name}
+                                <X 
+                                  className="h-3 w-3 ml-1 cursor-pointer" 
+                                  onClick={() => {
+                                    const newCountries = audienceGeo.countries.filter(c => c !== countryCode);
+                                    setAudienceGeo({ ...audienceGeo, countries: newCountries });
+                                  }}
+                                />
+                              </Badge>
+                            ) : null;
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Slider para porcentaje - solo se muestra si hay ubicaciones seleccionadas */}
+                    {(audienceGeo.countries.length > 0 || audienceGeo.cities.length > 0) && (
+                      <div className="p-3 bg-gray-50 rounded-xl border border-gray-200">
+                        <div className="text-center mb-3">
+                          <span className="text-xs font-medium text-gray-700">
+                            More than {audienceGeo.percentage}% of audience
+                          </span>
+                        </div>
+                        
+                        <div className="relative px-2 py-1">
+                          <Slider
+                            value={[audienceGeo.percentage]}
+                            onValueChange={(value) => setAudienceGeo({ ...audienceGeo, percentage: value[0] })}
+                            max={100}
+                            min={0}
+                            step={5}
+                            className="w-full [&>span:first-child]:bg-gray-300 [&>span:first-child]:h-1.5 [&>span:first-child]:rounded-full [&>span:last-child]:bg-blue-600 [&>span:last-child]:h-1.5 [&>span:last-child]:rounded-full [&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-blue-600 [&_[role=slider]]:h-4 [&_[role=slider]]:w-4 [&_[role=slider]]:shadow-md [&_[role=slider]]:transition-all [&_[role=slider]]:duration-200 [&_[role=slider]:hover]:scale-110 [&_[role=slider]:focus]:scale-110 [&_[role=slider]:focus]:ring-2 [&_[role=slider]:focus]:ring-blue-200 [&_[role=slider]]:translate-y-[-6px]"
+                          />
+                        </div>
+                        
+                        <div className="flex justify-between text-xs text-gray-500 mt-2 px-0.5">
+                          <span className="font-medium">0%</span>
+                          <span className="font-medium">50%</span>
+                          <span className="font-medium">100%</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </DropdownMenuContent>
               </DropdownMenu>
