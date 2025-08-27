@@ -12,7 +12,6 @@ const path = require('path');
 const taxonomyFile = path.join(__dirname, '../data/hypeauditor-taxonomy-raw.json');
 const taxonomyData = JSON.parse(fs.readFileSync(taxonomyFile, 'utf8'));
 
-console.log('🔍 [ANÁLISIS] Buscando categorías compartidas entre plataformas...\n');
 
 // Extraer categorías por plataforma
 const platforms = {
@@ -20,11 +19,6 @@ const platforms = {
   youtube: taxonomyData.result.yt.categories || [],
   tiktok: taxonomyData.result.tt.categories || []
 };
-
-console.log('📊 [ANÁLISIS] Categorías por plataforma:');
-console.log(`   • Instagram: ${platforms.instagram.length} categorías`);
-console.log(`   • YouTube: ${platforms.youtube.length} categorías`);
-console.log(`   • TikTok: ${platforms.tiktok.length} categorías\n`);
 
 // Crear maps por título para encontrar coincidencias
 const categoryMaps = {
@@ -84,32 +78,26 @@ for (const [title, igCat] of categoryMaps.instagram) {
   }
 }
 
-console.log('🎯 [RESULTADOS] Categorías compartidas en las 3 plataformas:');
-console.log(`   • Total: ${sharedCategories.length} categorías\n`);
+s
 
-if (sharedCategories.length > 0) {
-  console.log('📋 [CATEGORÍAS COMPARTIDAS] - Las 3 plataformas:');
+if (sharedCategories.length > 0) {  
   sharedCategories.forEach((cat, index) => {
-    console.log(`   ${index + 1}. ${cat.title}`);
-    console.log(`      IG: ${cat.instagram_id} | YT: ${cat.youtube_id} | TT: ${cat.tiktok_id}`);
+   
   });
-  console.log('');
+
 }
 
-console.log('🔄 [RESULTADOS] Categorías compartidas en 2 plataformas:');
-console.log(`   • Total: ${sharedBetweenTwo.length} categorías\n`);
 
 if (sharedBetweenTwo.length > 0) {
-  console.log('📋 [CATEGORÍAS COMPARTIDAS] - 2 plataformas:');
+
   sharedBetweenTwo.slice(0, 15).forEach((cat, index) => {
-    console.log(`   ${index + 1}. ${cat.title}`);
-    console.log(`      Plataformas: ${cat.platforms.join(', ')}`);
+   
   });
   
   if (sharedBetweenTwo.length > 15) {
-    console.log(`   ... y ${sharedBetweenTwo.length - 15} más`);
+   
   }
-  console.log('');
+
 }
 
 // Guardar resultados en archivos
@@ -152,10 +140,13 @@ sharedBetweenTwo.slice(0, 20).forEach((cat, index) => {
 const textFile = path.join(outputDir, 'hypeauditor-shared-categories.txt');
 fs.writeFileSync(textFile, textContent);
 
-console.log('💾 [GUARDADO] Archivos generados:');
-console.log(`   • ${sharedAllFile}`);
-console.log(`   • ${sharedTwoFile}`);
-console.log(`   • ${textFile}`);
+  
 
-console.log('\n✅ [ANÁLISIS] Completado exitosamente!');
-console.log(`\n🎯 [RECOMENDACIÓN] Usar las ${sharedCategories.length} categorías compartidas en las 3 plataformas para el filtro.`);
+
+
+
+
+
+
+
+

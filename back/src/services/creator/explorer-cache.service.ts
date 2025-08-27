@@ -167,7 +167,7 @@ export class ExplorerCacheService {
           // 🎯 NUEVA LÓGICA: Guardar resultados en caché solo si hay items
           if (newPageResult.items?.length > 0) {
             // 🎯 NUEVO: Usar el total real de IDs disponibles para determinar si hay más páginas
-            const totalIdsAvailable = newPageResult.searchMeta?.totalIdsAvailable || newPageResult.count || 0;
+            const totalIdsAvailable = (newPageResult as any).searchMeta?.totalIdsAvailable || newPageResult.count || 0;
             const hasNextPage = (page * size) < totalIdsAvailable;
             
             console.log(`📊 [CACHE SAVE] Guardando página ${page}: ${newPageResult.items.length} items, total IDs: ${totalIdsAvailable}, hasNextPage: ${hasNextPage}`);
@@ -298,7 +298,7 @@ export class ExplorerCacheService {
       // 4. Guardar resultados paginados - ASÍNCRONO
       if (searchId && creatorDBResult.items?.length > 0) {
         // 🎯 NUEVA LÓGICA: Usar el total real de IDs disponibles
-        const totalIdsAvailable = creatorDBResult.searchMeta?.totalIdsAvailable || creatorDBResult.count || 0;
+        const totalIdsAvailable = (creatorDBResult as any).searchMeta?.totalIdsAvailable || creatorDBResult.count || 0;
         const hasNextPage = (page * size) < totalIdsAvailable;
         
         console.log(`📊 [CACHE SAVE] Guardando página ${page}: ${creatorDBResult.items.length} items, total IDs: ${totalIdsAvailable}, hasNextPage: ${hasNextPage}`);

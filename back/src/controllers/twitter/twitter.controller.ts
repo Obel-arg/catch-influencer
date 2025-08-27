@@ -24,13 +24,13 @@ class TwitterController {
         });
       }
 
-      console.log('🔄 [Twitter Controller] Generando miniatura para:', postUrl);
+
 
       // Generar y almacenar la miniatura
       const blobUrl = await TwitterApiService.generateAndStoreThumbnail(postUrl);
 
       if (blobUrl) {
-        console.log('✅ [Twitter Controller] Miniatura generada y almacenada:', blobUrl);
+
         
         return res.json({
           success: true,
@@ -39,7 +39,7 @@ class TwitterController {
           message: 'Thumbnail generated and stored successfully'
         });
       } else {
-        console.log('❌ [Twitter Controller] No se pudo generar la miniatura');
+
         
         return res.status(500).json({
           success: false,
@@ -49,7 +49,7 @@ class TwitterController {
       }
 
     } catch (error) {
-      console.error('❌ [Twitter Controller] Error:', error);
+
       
       return res.status(500).json({
         success: false,
@@ -81,13 +81,13 @@ class TwitterController {
         });
       }
 
-      console.log('🔄 [Twitter Controller] Obteniendo información del tweet:', postUrl);
+    
 
       // Obtener información del tweet
       const postInfo = await TwitterApiService.getPostInfo(postUrl);
 
       if (postInfo) {
-        console.log('✅ [Twitter Controller] Información obtenida exitosamente');
+
         
         return res.json({
           success: true,
@@ -95,7 +95,7 @@ class TwitterController {
           originalUrl: postUrl
         });
       } else {
-        console.log('❌ [Twitter Controller] No se pudo obtener la información');
+
         
         return res.status(500).json({
           success: false,
@@ -105,7 +105,7 @@ class TwitterController {
       }
 
     } catch (error) {
-      console.error('❌ [Twitter Controller] Error:', error);
+
       
       return res.status(500).json({
         success: false,
@@ -120,19 +120,19 @@ class TwitterController {
    */
   testScreenshotOneConnection = async (req: Request, res: Response) => {
     try {
-      console.log('🧪 [Twitter Controller] Probando conexión con ScreenshotOne...');
+    
 
       const isConnected = await TwitterApiService.testScreenshotOneConnection();
 
       if (isConnected) {
-        console.log('✅ [Twitter Controller] Conexión exitosa con ScreenshotOne');
+
         
         return res.json({
           success: true,
           message: 'ScreenshotOne API connection successful'
         });
       } else {
-        console.log('❌ [Twitter Controller] Conexión fallida con ScreenshotOne');
+
         
         return res.status(500).json({
           success: false,
@@ -155,19 +155,19 @@ class TwitterController {
    */
   getScreenshotOneUsage = async (req: Request, res: Response) => {
     try {
-      console.log('📊 [Twitter Controller] Obteniendo información de uso de ScreenshotOne...');
+
 
       const usageInfo = await TwitterApiService.getScreenshotOneUsage();
 
       if (usageInfo) {
-        console.log('✅ [Twitter Controller] Información de uso obtenida');
+
         
         return res.json({
           success: true,
           data: usageInfo
         });
       } else {
-        console.log('❌ [Twitter Controller] No se pudo obtener información de uso');
+
         
         return res.status(500).json({
           success: false,
@@ -176,7 +176,7 @@ class TwitterController {
       }
 
     } catch (error) {
-      console.error('❌ [Twitter Controller] Error obteniendo uso:', error);
+
       
       return res.status(500).json({
         success: false,

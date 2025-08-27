@@ -9,7 +9,7 @@
 const path = require('path');
 
 async function extractNichosDirectly() {
-  console.log('🎯 [NICHOS-DIRECT] Iniciando extracción directa de nichos...\n');
+
 
   try {
     // Importar el servicio dinámicamente
@@ -20,7 +20,7 @@ async function extractNichosDirectly() {
     const allNiches = [];
 
     for (const platform of platforms) {
-      console.log(`🔍 [NICHOS-DIRECT] Obteniendo nichos de ${platform.toUpperCase()}...`);
+     
       
       try {
         const result = await postTopicsService.getTopicNicheCategories(platform);
@@ -35,22 +35,22 @@ async function extractNichosDirectly() {
             }));
           
           allNiches.push(...platformNiches);
-          console.log(`✅ [NICHOS-DIRECT] ${platformNiches.length} nichos encontrados en ${platform}`);
+         
           
           // Mostrar algunos ejemplos
           if (platformNiches.length > 0) {
-            console.log(`   📝 Ejemplos: ${platformNiches.slice(0, 3).map(n => n.name).join(', ')}`);
+           
           }
         } else {
-          console.log(`❌ [NICHOS-DIRECT] Error obteniendo nichos de ${platform}:`, result.error || 'Sin datos');
+         
         }
       } catch (error) {
-        console.log(`❌ [NICHOS-DIRECT] Error en ${platform}:`, error.message);
+       
       }
     }
 
     if (allNiches.length === 0) {
-      console.log('❌ [NICHOS-DIRECT] No se encontraron nichos en ninguna plataforma');
+     
       return;
     }
 
@@ -59,23 +59,14 @@ async function extractNichosDirectly() {
       .sort((a, b) => b.channelCount - a.channelCount)
       .slice(0, 25);
 
-    console.log('\n🏆 [NICHOS-DIRECT] TOP 25 MEJORES NICHOS:\n');
-    console.log('='.repeat(80));
+   
     
     topNiches.forEach((niche, index) => {
-      console.log(`${(index + 1).toString().padStart(2, '0')}. ${niche.name}`);
-      console.log(`    📊 Canales: ${niche.channelCount.toLocaleString()}`);
-      console.log(`    📱 Plataforma: ${niche.platform.toUpperCase()}`);
-      console.log(`    🏷️  Categoría: ${niche.category || 'Sin categoría'}`);
-      console.log(`    🆔 ID: ${niche.id}`);
-      console.log('-'.repeat(50));
+     
     });
 
     // Estadísticas
-    console.log('\n📋 [NICHOS-DIRECT] RESUMEN:');
-    console.log(`• Total de nichos analizados: ${allNiches.length}`);
-    console.log(`• Top 25 seleccionados`);
-    console.log(`• Nicho más popular: ${topNiches[0]?.name} (${topNiches[0]?.channelCount.toLocaleString()} canales)`);
+   
 
     // Distribución por plataforma
     const platformCount = topNiches.reduce((acc, niche) => {
@@ -83,9 +74,9 @@ async function extractNichosDirectly() {
       return acc;
     }, {});
 
-    console.log('\n📱 [NICHOS-DIRECT] DISTRIBUCIÓN POR PLATAFORMA EN TOP 25:');
+   
     Object.entries(platformCount).forEach(([platform, count]) => {
-      console.log(`• ${platform.toUpperCase()}: ${count} nichos`);
+     
     });
 
     // Export JSON simplificado
@@ -108,11 +99,11 @@ async function extractNichosDirectly() {
       extraction_method: 'direct_services'
     };
 
-    console.log('\n💾 [NICHOS-DIRECT] Datos exportados:');
-    console.log(JSON.stringify(exportData, null, 2));
+
+   
 
   } catch (error) {
-    console.error('❌ [NICHOS-DIRECT] Error fatal:', error);
+   
     console.error('Stack:', error.stack);
     throw error;
   }
@@ -122,11 +113,11 @@ async function extractNichosDirectly() {
 if (require.main === module) {
   extractNichosDirectly()
     .then(() => {
-      console.log('\n✅ [NICHOS-DIRECT] Extracción completada exitosamente');
+     
       process.exit(0);
     })
     .catch((error) => {
-      console.error('\n❌ [NICHOS-DIRECT] Error fatal:', error.message);
+      
       process.exit(1);
     });
 }

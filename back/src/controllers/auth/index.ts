@@ -213,8 +213,7 @@ export class AuthController {
       const state = encodeURIComponent(JSON.stringify({ origin: originDomain }));
       const authUrl = googleOAuthService.getAuthUrl(state);
       
-      console.log('🔐 Google OAuth iniciado desde:', originDomain);
-      
+     
       // Redirigir al usuario a Google para autenticación
       res.redirect(authUrl);
     } catch (error) {
@@ -252,7 +251,6 @@ export class AuthController {
       const originDomain = this.getOriginDomain(req);
       const redirectUrl = `${originDomain}/auth/callback?token=${encodeURIComponent(result.token)}&refreshToken=${encodeURIComponent(result.refreshToken)}`;
       
-      console.log('🔄 Google OAuth callback - Redirigiendo a:', redirectUrl);
       
       res.redirect(redirectUrl);
     } catch (error) {
@@ -264,7 +262,7 @@ export class AuthController {
       
       // Manejar específicamente el error de acceso denegado
       if (error instanceof Error && error.message.includes('ACCESS_DENIED')) {
-        console.log('🚫 Access denied - redirecting to login with specific error');
+       
         const errorUrl = `${originDomain}/auth/login?error=access_denied&message=${encodeURIComponent('Solo usuarios invitados pueden acceder al sistema.')}`;
         return res.redirect(errorUrl);
       }
@@ -280,33 +278,27 @@ export class AuthController {
    * Detecta el dominio de origen de la petición
    */
   private getOriginDomain(req: Request): string {
-    console.log('🔍 Detectando dominio de origen...');
-    console.log('Headers:', {
-      referer: req.headers.referer,
-      origin: req.headers.origin,
-      host: req.headers.host
-    });
-    console.log('Query params:', req.query);
+   
 
     // Intentar obtener el dominio desde el state parameter (si se pasó)
     const state = req.query.state;
     if (state && typeof state === 'string') {
       try {
         const stateData = JSON.parse(decodeURIComponent(state));
-        console.log('State data:', stateData);
+       
         if (stateData.origin) {
-          console.log('✅ Dominio detectado desde state:', stateData.origin);
+         
           return stateData.origin;
         }
       } catch (e) {
-        console.log('❌ No se pudo parsear el state parameter:', e);
+       
       }
     }
 
     // Intentar obtener desde el origin header
     const origin = req.headers.origin;
     if (origin && config.corsOrigins.includes(origin)) {
-      console.log('✅ Dominio detectado desde origin header:', origin);
+     
       return origin;
     }
 
@@ -315,19 +307,19 @@ export class AuthController {
     if (referer) {
       try {
         const url = new URL(referer);
-        console.log('Referer URL:', url.origin);
+       
         // Verificar que el dominio esté en la lista de CORS permitidos
         if (config.corsOrigins.includes(url.origin)) {
-          console.log('✅ Dominio detectado desde referer:', url.origin);
+         
           return url.origin;
         }
       } catch (e) {
-        console.log('❌ No se pudo parsear el referer header:', e);
+       
       }
     }
 
     // Fallback al dominio por defecto
-    console.log('⚠️ Usando dominio por defecto:', config.urls.frontend);
+    
     return config.urls.frontend;
   }
 
@@ -497,8 +489,7 @@ export class AuthController {
         return res.status(400).json({ error: 'Email requerido' });
       }
 
-      console.log(`🗑️ Eliminando usuario completamente: ${email}`);
-
+     
       // 1. Buscar en user_profiles
       const profileUser = await this.userService.getUserByEmail(email);
       
@@ -525,7 +516,7 @@ export class AuthController {
           if (orgError) {
             console.warn('Error eliminando de organization_members:', orgError);
           } else {
-            console.log('✅ Eliminado de organization_members');
+           
           }
         }
       }
@@ -540,7 +531,7 @@ export class AuthController {
         if (profileError) {
           console.warn('Error eliminando de user_profiles:', profileError);
         } else {
-          console.log('✅ Eliminado de user_profiles');
+         
         }
       }
 
@@ -548,7 +539,7 @@ export class AuthController {
       if (authUser && supabaseAdmin) {
         try {
           await supabaseAdmin.auth.admin.deleteUser(authUser.id);
-          console.log('✅ Eliminado de Supabase Auth');
+         
         } catch (authError) {
           console.warn('Error eliminando de Supabase Auth:', authError);
         }
@@ -646,7 +637,7 @@ export class AuthController {
       
       // En un entorno real, aquí enviarías el email
       // Por ahora, solo logueamos el token
-      console.log('🔐 Reset token generado para:', email, 'Token:', resetToken);
+     
 
       res.status(200).json({ 
         message: 'Si el email existe en nuestro sistema, recibirás instrucciones para restablecer tu contraseña' 
@@ -724,13 +715,13 @@ export class AuthController {
    */
   async handleInviteRedirect(req: Request, res: Response) {
     try {
-      console.log('🔄 Procesando redirección de invitación...');
+     
       
       const { token, type, error, error_description } = req.query;
       
       // Si hay error, redirigir al login con el error
       if (error) {
-        console.error('❌ Error en invitación:', error, error_description);
+       
         const frontendUrl = config.urls.frontend;
         const errorUrl = `${frontendUrl}/auth/login?error=invite_error&details=${encodeURIComponent(String(error_description || error))}`;
         return res.redirect(errorUrl);
@@ -738,7 +729,7 @@ export class AuthController {
       
       // Si no hay token, error
       if (!token || typeof token !== 'string') {
-        console.error('❌ No se encontró token válido en la invitación');
+       
         const frontendUrl = config.urls.frontend;
         const errorUrl = `${frontendUrl}/auth/login?error=no_token`;
         return res.redirect(errorUrl);
@@ -746,7 +737,7 @@ export class AuthController {
       
       // Verificar que supabaseAdmin esté disponible
       if (!supabaseAdmin) {
-        console.error('❌ Supabase Admin no está configurado');
+       
         const frontendUrl = config.urls.frontend;
         const errorUrl = `${frontendUrl}/auth/login?error=admin_not_configured`;
         return res.redirect(errorUrl);
@@ -803,7 +794,6 @@ export class AuthController {
       const frontendUrl = config.urls.frontend;
       const redirectUrl = `${frontendUrl}/auth/invite-callback?access_token=${encodeURIComponent(accessToken)}&refresh_token=${encodeURIComponent(refreshToken)}&type=invite`;
       
-      console.log('✅ Redirigiendo a invitación:', redirectUrl);
       res.redirect(redirectUrl);
       
     } catch (error) {

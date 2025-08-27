@@ -11,7 +11,7 @@ export class CreatorDBService {
     try {
       const response = await creatorDBClient.get(endpoint, { params });
       const endTime = Date.now();
-      console.log(`⏱️ [CREATORDB] GET ${endpoint} completado en ${endTime - startTime}ms`);
+     
       return response.data;
     } catch (error: any) {
       console.error(`❌ [CREATOR-DB] Error calling ${endpoint}:`, {
@@ -177,7 +177,7 @@ export class CreatorDBService {
           if (insertError) {
             console.error('Error guardando en submit_creators:', insertError);
           } else {
-            console.log('✅ Guardado en submit_creators:', insertResult);
+          
           }
         }
       } catch (dbError) {
@@ -280,7 +280,6 @@ export class CreatorDBService {
     const startTime = Date.now();
     const result = await this.get('/instagramBasic', { instagramId });
     const endTime = Date.now();
-    console.log(`⏱️ [CREATORDB] getInstagramBasic(${instagramId}) completado en ${endTime - startTime}ms`);
     return result;
   }
 
@@ -360,9 +359,7 @@ export class CreatorDBService {
   static async searchInfluencers(filters: Record<string, any>) {
     const startTime = Date.now();
     const { platform = 'all' } = filters; // 🎯 Cambiar default a 'all' para nueva prioridad
-    
-    console.log(`🚀 [CREATORDB] Iniciando searchInfluencers - plataforma: ${platform}`);
-    
+
     // Soportamos todas las plataformas disponibles en CreatorDB
     const supportedPlatforms = ['youtube', 'instagram', 'tiktok', 'threads', 'facebook', 'all'];
     const normalizedPlatform = platform.toLowerCase();
@@ -413,22 +410,17 @@ export class CreatorDBService {
 
       // 🎯 NUEVA LÓGICA: Obtener 25 IDs primero
       const searchStartTime = Date.now();
-      console.log(`🔍 [CREATORDB] Iniciando búsqueda de IDs en ${endpoint} - SOLO IDs`);
-      console.log(`🔍 [CREATORDB] Body enviado a la API:`, JSON.stringify(body, null, 2));
-      
+
       const searchResponse = await creatorDBClient.post(endpoint, body) as any;
       const searchEndTime = Date.now();
-      console.log(`⏱️ [CREATORDB] Búsqueda de IDs completada en ${searchEndTime - searchStartTime}ms`);
       
       const influencerIds = searchResponse.data.results || searchResponse.data.data || searchResponse.data || [];
       
       if (!influencerIds || influencerIds.length === 0) {
-        console.log(`ℹ️ [CREATORDB] No se encontraron IDs para los filtros aplicados`);
         return { items: [], count: 0, page: filters.page || 1, size: filters.size || 5 };
       }
       
-      console.log(`📋 [CREATORDB] Obtenidos ${influencerIds.length} IDs de CreatorDB`);
-      
+
       // 🎯 NUEVA LÓGICA: Calcular qué IDs necesitamos para esta página
       const requestedPage = filters.page || 1;
       const requestedSize = filters.size || 5;
@@ -437,10 +429,9 @@ export class CreatorDBService {
       
       // Obtener solo los IDs que necesitamos para esta página
       const pageIds = influencerIds.slice(startIndex, endIndex);
-      console.log(`📄 [CREATORDB] Página ${requestedPage}: IDs ${startIndex + 1}-${Math.min(endIndex, influencerIds.length)} de ${influencerIds.length} total`);
       
       if (pageIds.length === 0) {
-        console.log(`ℹ️ [CREATORDB] No hay IDs disponibles para la página ${requestedPage}`);
+       
         return { items: [], count: influencerIds.length, page: requestedPage, size: requestedSize };
       }
       
@@ -448,7 +439,7 @@ export class CreatorDBService {
       let processingPlatform = normalizedPlatform === 'all' ? 'instagram' : normalizedPlatform;
       
       const processingStartTime = Date.now();
-      console.log(`🔄 [CREATORDB] Iniciando basic calls para ${pageIds.length} IDs de ${processingPlatform}`);
+     
       
       let pageResults: any[];
       
@@ -465,10 +456,9 @@ export class CreatorDBService {
       }
       
       const processingEndTime = Date.now();
-      console.log(`⏱️ [CREATORDB] Basic calls completados en ${processingEndTime - processingStartTime}ms - ${pageResults.length} resultados`);
 
       const totalTime = Date.now() - startTime;
-      console.log(`✅ [CREATORDB] searchInfluencers completado en ${totalTime}ms`);
+     
 
       // 🎯 ORDENAR POR FOLLOWER COUNT (considerando follower breakdown total si está disponible)
       const sortedResults = pageResults.sort((a, b) => {
@@ -603,8 +593,8 @@ export class CreatorDBService {
    */
   private static async processYouTubeSearchResults(influencerIds: string[]): Promise<any[]> {
     const startTime = Date.now();
-    console.log(`🚀 [YOUTUBE PROCESS] Iniciando procesamiento de ${influencerIds.length} IDs de YouTube`);
-    console.log(`⚡ [PARALLEL PROCESSING] Ejecutando TODAS las llamadas simultáneamente`);
+    
+    
     
     // ✅ OPTIMIZACIÓN: Procesar TODOS en paralelo real (sin delays escalonados)
     const allResults = await Promise.allSettled(
@@ -685,7 +675,7 @@ export class CreatorDBService {
     const processingTime = Date.now() - startTime;
     const tokensUsed = influencerIds.length * 2; // 2 tokens por getYoutubeBasic
     
-    console.log(`✅ [YOUTUBE PROCESS] Procesamiento completado en ${processingTime}ms - ${validResults.length}/${influencerIds.length} resultados válidos`);
+    
 
     return validResults;
   }
@@ -693,8 +683,8 @@ export class CreatorDBService {
   // NUEVA FUNCIÓN OPTIMIZADA: Procesa los resultados de Instagram Advanced Search
   private static async processInstagramSearchResults(influencerIds: string[]): Promise<any[]> {
     const startTime = Date.now();
-    console.log(`🚀 [INSTAGRAM PROCESS] Iniciando procesamiento de ${influencerIds.length} IDs de Instagram`);
-    console.log(`⚡ [PARALLEL PROCESSING] Ejecutando TODAS las llamadas simultáneamente`);
+    
+    
     
     // ✅ OPTIMIZACIÓN: Procesar TODOS en paralelo real (sin delays escalonados)
     // CreatorDB soporta hasta 50 req/seg, así que podemos hacer todas simultáneamente
@@ -708,7 +698,7 @@ export class CreatorDBService {
           const igResStartTime = Date.now();
           const igRes = await this.getInstagramBasic(id);
           const igResEndTime = Date.now();
-          console.log(`⏱️ [INSTAGRAM PROCESS] getInstagramBasic(${id}) completado en ${igResEndTime - igResStartTime}ms`);
+          
           const igData = igRes?.data?.basicInstagram;
           
           if (!igData) {
@@ -809,7 +799,7 @@ export class CreatorDBService {
       .map(result => (result as PromiseFulfilledResult<any>).value);
 
     const processingTime = Date.now() - startTime;
-    console.log(`✅ [INSTAGRAM PROCESS] Procesamiento completado en ${processingTime}ms - ${validResults.length}/${influencerIds.length} resultados válidos`);
+    
 
     return validResults;
   }
@@ -819,8 +809,7 @@ export class CreatorDBService {
    */
   private static async processTikTokSearchResults(influencerIds: string[]): Promise<any[]> {
     const startTime = Date.now();
-    console.log(`🚀 [TIKTOK PROCESS] Iniciando procesamiento de ${influencerIds.length} IDs de TikTok`);
-    console.log(`⚡ [PARALLEL PROCESSING] Ejecutando TODAS las llamadas simultáneamente`);
+    
     
     // ✅ OPTIMIZACIÓN: Procesar TODOS en paralelo real (sin delays escalonados)
     const allResults = await Promise.allSettled(
@@ -892,7 +881,7 @@ export class CreatorDBService {
       .map(result => (result as PromiseFulfilledResult<any>).value);
 
     const processingTime = Date.now() - startTime;
-    console.log(`✅ [TIKTOK PROCESS] Procesamiento completado en ${processingTime}ms - ${validResults.length}/${influencerIds.length} resultados válidos`);
+    
 
     return validResults;
   }
@@ -902,8 +891,7 @@ export class CreatorDBService {
    */
   private static async processThreadsSearchResults(influencerIds: string[]): Promise<any[]> {
     const startTime = Date.now();
-    console.log(`🚀 [THREADS PROCESS] Iniciando procesamiento de ${influencerIds.length} IDs de Threads`);
-    console.log(`⚡ [PARALLEL PROCESSING] Ejecutando TODAS las llamadas simultáneamente`);
+
     
     // ✅ OPTIMIZACIÓN: Procesar TODOS en paralelo real (sin delays escalonados)
     const allResults = await Promise.allSettled(
@@ -968,7 +956,7 @@ export class CreatorDBService {
       .map(result => (result as PromiseFulfilledResult<any>).value);
 
     const processingTime = Date.now() - startTime;
-    console.log(`✅ [THREADS PROCESS] Procesamiento completado en ${processingTime}ms - ${validResults.length}/${influencerIds.length} resultados válidos`);
+    
 
     return validResults;
   }
@@ -978,8 +966,7 @@ export class CreatorDBService {
    */
   private static async processFacebookSearchResults(influencerIds: string[]): Promise<any[]> {
     const startTime = Date.now();
-    console.log(`🚀 [FACEBOOK PROCESS] Iniciando procesamiento de ${influencerIds.length} IDs de Facebook`);
-    console.log(`⚡ [PARALLEL PROCESSING] Ejecutando TODAS las llamadas simultáneamente`);
+    
     
     // ✅ OPTIMIZACIÓN: Procesar TODOS en paralelo real (sin delays escalonados)
     const allResults = await Promise.allSettled(
@@ -1044,7 +1031,7 @@ export class CreatorDBService {
       .map(result => (result as PromiseFulfilledResult<any>).value);
 
     const processingTime = Date.now() - startTime;
-    console.log(`✅ [FACEBOOK PROCESS] Procesamiento completado en ${processingTime}ms - ${validResults.length}/${influencerIds.length} resultados válidos`);
+      
 
     return validResults;
   }
@@ -1225,7 +1212,7 @@ export class CreatorDBService {
    */
   static async smartSearch(query: string, platform: string) {
     const startTime = Date.now();
-    console.log(`🚀 [BACKEND SERVICE] Iniciando smartSearch - query: "${query}", platform: ${platform}`);
+    
     
 
     try {
@@ -1233,8 +1220,8 @@ export class CreatorDBService {
       const detectStartTime = Date.now();
       const searchType = this.detectSearchType(query);
       const detectEndTime = Date.now();
-      console.log(`⏱️ [BACKEND SERVICE] detectSearchType completado en ${detectEndTime - detectStartTime}ms - tipo: ${searchType}`);
       
+
 
       let results: any[] = [];
       let searchSummary = { youtube: 0, instagram: 0, tiktok: 0 };
@@ -1242,13 +1229,13 @@ export class CreatorDBService {
 
       if (platform === 'all') {
         // 🎯 NUEVA ESTRATEGIA: Solo buscar en Instagram y extraer IDs de otras plataformas
-        console.log(`🔍 [BACKEND SERVICE] Iniciando búsqueda optimizada: Instagram + extracción de IDs cruzados`);
+        
         
         const optimizedSearchStartTime = Date.now();
         
         // PASO 1: Buscar solo en Instagram (más rápido) - SIN FILTROS ADICIONALES
         const instagramResults = await this.searchInstagramSmart(query, searchType);
-        console.log(`✅ [BACKEND SERVICE] Instagram: ${instagramResults.length} IDs encontrados`);
+        
         
         // PASO 2: Obtener datos completos de Instagram y extraer IDs de otras plataformas
         const enrichedInstagramResults = await this.enrichSearchResults(
@@ -1260,7 +1247,7 @@ export class CreatorDBService {
         const crossPlatformResults = await this.extractCrossPlatformIds(enrichedInstagramResults);
         
         const optimizedSearchEndTime = Date.now();
-        console.log(`⏱️ [BACKEND SERVICE] Búsqueda optimizada completada en ${optimizedSearchEndTime - optimizedSearchStartTime}ms`);
+        
         
         // Combinar resultados
         results = crossPlatformResults;
@@ -1295,13 +1282,13 @@ export class CreatorDBService {
 
       // Procesar y enriquecer resultados
       const enrichStartTime = Date.now();
-      console.log(`🚀 [BACKEND SERVICE] Iniciando enrichSearchResults...`);
+      
       
       let enrichedResults: any[];
       
       if (platform === 'all') {
         // 🎯 NUEVA LÓGICA: Para búsqueda optimizada, ya tenemos los datos completos
-        console.log(`🎯 [BACKEND SERVICE] Búsqueda optimizada: usando datos ya enriquecidos`);
+        
         enrichedResults = results.map((result: any) => {
           if (result.fullData) {
             return this.convertToInfluencerFormat(result.fullData);
@@ -1314,17 +1301,17 @@ export class CreatorDBService {
       }
       
       const enrichEndTime = Date.now();
-      console.log(`⏱️ [BACKEND SERVICE] enrichSearchResults completado en ${enrichEndTime - enrichStartTime}ms - ${enrichedResults.length} resultados`);
+      
 
       // 🔄 DEDUPLICAR RESULTADOS POR NOMBRE SIMILAR Y SEGUIDORES
       const deduplicateStartTime = Date.now();
-      console.log(`🚀 [BACKEND SERVICE] Iniciando deduplicateInfluencers...`);
+
       const deduplicatedResults = this.deduplicateInfluencers(enrichedResults);
       const deduplicateEndTime = Date.now();
-      console.log(`⏱️ [BACKEND SERVICE] deduplicateInfluencers completado en ${deduplicateEndTime - deduplicateStartTime}ms - ${deduplicatedResults.length} resultados finales`);
+      
       
       const totalTime = Date.now() - startTime;
-      console.log(`✅ [BACKEND SERVICE] smartSearch completado en ${totalTime}ms`);
+      
 
       return {
         items: deduplicatedResults,
@@ -1370,7 +1357,7 @@ export class CreatorDBService {
    */
   private static async extractCrossPlatformIds(instagramResults: any[]): Promise<any[]> {
     const startTime = Date.now();
-    console.log(`🚀 [CROSS-PLATFORM] Iniciando extracción de IDs cruzados - ${instagramResults.length} resultados de Instagram`);
+    
     
     const unifiedProfiles: any[] = [];
     
@@ -1395,11 +1382,11 @@ export class CreatorDBService {
         
         // YouTube - Obtener datos completos
         if (platformInfo.youtube?.youtubeId) {
-          console.log(`🔗 [CROSS-PLATFORM] Encontrado YouTube ID: ${platformInfo.youtube.youtubeId}, obteniendo datos completos...`);
+          
           try {
             const youtubeData = await this.getYoutubeBasic(platformInfo.youtube.youtubeId);
             if (youtubeData.success && youtubeData.data) {
-              console.log(`✅ [CROSS-PLATFORM] Datos de YouTube obtenidos para: ${platformInfo.youtube.youtubeId}`);
+              
               unifiedProfile.fullData.youtube = youtubeData.data;
             }
           } catch (youtubeError) {
@@ -1409,11 +1396,11 @@ export class CreatorDBService {
         
         // TikTok - Obtener datos completos
         if (platformInfo.tiktok?.tiktokId) {
-          console.log(`🔗 [CROSS-PLATFORM] Encontrado TikTok ID: ${platformInfo.tiktok.tiktokId}, obteniendo datos completos...`);
+          
           try {
             const tiktokData = await this.getTikTokBasic(platformInfo.tiktok.tiktokId);
             if (tiktokData.success && tiktokData.data) {
-              console.log(`✅ [CROSS-PLATFORM] Datos de TikTok obtenidos para: ${platformInfo.tiktok.tiktokId}`);
+              
               unifiedProfile.fullData.tiktok = tiktokData.data;
             }
           } catch (tiktokError) {
@@ -1423,11 +1410,11 @@ export class CreatorDBService {
         
         // Threads - Obtener datos completos
         if (platformInfo.threads?.threadsId) {
-          console.log(`🔗 [CROSS-PLATFORM] Encontrado Threads ID: ${platformInfo.threads.threadsId}, obteniendo datos completos...`);
+          
           try {
             const threadsData = await this.getThreadsBasic(platformInfo.threads.threadsId);
             if (threadsData.success && threadsData.data) {
-              console.log(`✅ [CROSS-PLATFORM] Datos de Threads obtenidos para: ${platformInfo.threads.threadsId}`);
+              
               unifiedProfile.fullData.threads = threadsData.data;
             }
           } catch (threadsError) {
@@ -1437,11 +1424,11 @@ export class CreatorDBService {
         
         // Facebook - Obtener datos completos
         if (platformInfo.facebook?.facebookId) {
-          console.log(`🔗 [CROSS-PLATFORM] Encontrado Facebook ID: ${platformInfo.facebook.facebookId}, obteniendo datos completos...`);
+          
           try {
             const facebookData = await this.getFacebookBasic(platformInfo.facebook.facebookId);
             if (facebookData.success && facebookData.data) {
-              console.log(`✅ [CROSS-PLATFORM] Datos de Facebook obtenidos para: ${platformInfo.facebook.facebookId}`);
+              
               unifiedProfile.fullData.facebook = facebookData.data;
             }
           } catch (facebookError) {
@@ -1458,7 +1445,7 @@ export class CreatorDBService {
     }
     
     const totalTime = Date.now() - startTime;
-    console.log(`✅ [CROSS-PLATFORM] Extracción completada en ${totalTime}ms - ${unifiedProfiles.length} perfiles unificados`);
+
     
     return unifiedProfiles;
   }
@@ -1506,7 +1493,7 @@ export class CreatorDBService {
       variant.length >= 2 && variant.length <= 20
     );
     
-    console.log(`🎯 [VARIANTS] Generadas ${filteredVariants.length} variantes para "${query}": ${filteredVariants.join(', ')}`);
+    
     
     return filteredVariants;
   }
@@ -1570,18 +1557,18 @@ export class CreatorDBService {
    */
   private static async searchInstagramSmart(query: string, searchType: string): Promise<any[]> {
     const startTime = Date.now();
-    console.log(`🚀 [INSTAGRAM SMART] Iniciando searchInstagramSmart - query: "${query}", tipo: ${searchType}`);
+    
     
     const cleanQuery = query.replace(/^[@#]/, '');
 
     try {
       // 🎯 NUEVA ESTRATEGIA: Generar variantes de búsqueda
       const searchVariants = this.generateSearchVariants(cleanQuery);
-      console.log(`🔍 [INSTAGRAM SMART] Variantes generadas: ${searchVariants.join(', ')}`);
+      
       
       // ESTRATEGIA 1: Búsquedas directas paralelas con variantes
       const directStartTime = Date.now();
-      console.log(`🔍 [INSTAGRAM SMART] Estrategia 1: Búsquedas directas paralelas`);
+      
       
       const directPromises = searchVariants.map(async (variant: string, index: number) => {
         // Rate limiting escalonado para búsquedas directas
@@ -1595,7 +1582,7 @@ export class CreatorDBService {
           });
           
           if (response.data.success && response.data.data) {
-            console.log(`✅ [INSTAGRAM SMART] Búsqueda directa exitosa para "${variant}"`);
+            
             return variant;
           }
         } catch (error) {
@@ -1610,7 +1597,6 @@ export class CreatorDBService {
         .map((result: PromiseSettledResult<string | null>) => (result as PromiseFulfilledResult<string>).value);
       
       const directEndTime = Date.now();
-      console.log(`⏱️ [INSTAGRAM SMART] Búsquedas directas completadas en ${directEndTime - directStartTime}ms - ${successfulDirect.length} éxitos`);
       
       if (successfulDirect.length > 0) {
         return successfulDirect;
@@ -1618,8 +1604,8 @@ export class CreatorDBService {
 
       // ESTRATEGIA 2: Búsqueda general con filtros adicionales y variantes
       const generalStartTime = Date.now();
-      console.log(`🔍 [INSTAGRAM SMART] Estrategia 2: Búsqueda general con filtros adicionales`);
       
+
       // Construir filtros básicos para búsqueda inteligente - SIN FILTROS ADICIONALES
       const searchFilters = {
         size: 200, // Más resultados para filtrar con variantes
@@ -1637,7 +1623,7 @@ export class CreatorDBService {
       const responseStartTime = Date.now();
       const response = await creatorDBClient.post('/instagramAdvancedSearch', body);
       const responseEndTime = Date.now();
-      console.log(`⏱️ [INSTAGRAM SMART] CreatorDB /instagramAdvancedSearch completado en ${responseEndTime - responseStartTime}ms`);
+      
 
       // ESTRATEGIA 3: Filtrar resultados localmente con variantes
       const filterStartTime = Date.now();
@@ -1653,14 +1639,14 @@ export class CreatorDBService {
       });
       
       const filterEndTime = Date.now();
-      console.log(`⏱️ [INSTAGRAM SMART] Filtrado con variantes completado en ${filterEndTime - filterStartTime}ms - ${filtered.length}/${allResults.length} resultados`);
+      
       
       if (filtered.length === 0) {
-        console.log(`⚠️ [INSTAGRAM SMART] No se encontraron resultados que coincidan con ninguna variante de "${cleanQuery}"`);
+       
       }
       
       const totalTime = Date.now() - startTime;
-      console.log(`✅ [INSTAGRAM SMART] searchInstagramSmart completado en ${totalTime}ms - ${filtered.slice(0, 20).length} resultados finales`);
+      
       
       return filtered.slice(0, 20); // Limitar a 20 resultados
       
@@ -1675,18 +1661,18 @@ export class CreatorDBService {
    */
   private static async searchTikTokSmart(query: string, searchType: string): Promise<any[]> {
     const startTime = Date.now();
-    console.log(`🚀 [TIKTOK SMART] Iniciando searchTikTokSmart - query: "${query}", tipo: ${searchType}`);
+    
     
     const cleanQuery = query.replace(/^[@#]/, '');
 
     try {
       // 🎯 NUEVA ESTRATEGIA: Generar variantes de búsqueda
       const searchVariants = this.generateSearchVariants(cleanQuery);
-      console.log(`🔍 [TIKTOK SMART] Variantes generadas: ${searchVariants.join(', ')}`);
+      
       
       // ESTRATEGIA 1: Búsquedas directas paralelas con variantes
       const directStartTime = Date.now();
-      console.log(`🔍 [TIKTOK SMART] Estrategia 1: Búsquedas directas paralelas`);
+      
       
       const directPromises = searchVariants.map(async (variant: string, index: number) => {
         // Rate limiting escalonado para búsquedas directas
@@ -1700,7 +1686,7 @@ export class CreatorDBService {
           });
           
           if (response.data.success && response.data.data) {
-            console.log(`✅ [TIKTOK SMART] Búsqueda directa exitosa para "${variant}"`);
+            
             return variant;
           }
         } catch (error) {
@@ -1715,7 +1701,7 @@ export class CreatorDBService {
         .map((result: PromiseSettledResult<string | null>) => (result as PromiseFulfilledResult<string>).value);
       
       const directEndTime = Date.now();
-      console.log(`⏱️ [TIKTOK SMART] Búsquedas directas completadas en ${directEndTime - directStartTime}ms - ${successfulDirect.length} éxitos`);
+      
       
       if (successfulDirect.length > 0) {
         return successfulDirect;
@@ -1723,7 +1709,7 @@ export class CreatorDBService {
 
       // ESTRATEGIA 2: Búsqueda general con filtros mínimos y variantes
       const generalStartTime = Date.now();
-      console.log(`🔍 [TIKTOK SMART] Estrategia 2: Búsqueda general con filtros mínimos`);
+      
       
       const filters: {filterKey: string, op: string, value: any}[] = [];
       
@@ -1741,7 +1727,7 @@ export class CreatorDBService {
       const responseStartTime = Date.now();
       const response = await creatorDBClient.post('/tiktokAdvancedSearch', body);
       const responseEndTime = Date.now();
-      console.log(`⏱️ [TIKTOK SMART] CreatorDB /tiktokAdvancedSearch completado en ${responseEndTime - responseStartTime}ms`);
+      
 
       // ESTRATEGIA 3: Filtrar resultados localmente con variantes
       const filterStartTime = Date.now();
@@ -1757,15 +1743,12 @@ export class CreatorDBService {
       });
       
       const filterEndTime = Date.now();
-      console.log(`⏱️ [TIKTOK SMART] Filtrado con variantes completado en ${filterEndTime - filterStartTime}ms - ${filtered.length}/${allResults.length} resultados`);
-      
+
       if (filtered.length === 0) {
-        console.log(`⚠️ [TIKTOK SMART] No se encontraron resultados que coincidan con ninguna variante de "${cleanQuery}"`);
-      }
+        }
       
       const totalTime = Date.now() - startTime;
-      console.log(`✅ [TIKTOK SMART] searchTikTokSmart completado en ${totalTime}ms - ${filtered.slice(0, 20).length} resultados finales`);
-      
+        
       return filtered.slice(0, 20); // Limitar a 20 resultados
       
     } catch (error: any) {
@@ -1786,8 +1769,7 @@ export class CreatorDBService {
    */
   private static async enrichSearchResults(results: any[], platform: string): Promise<any[]> {
     const startTime = Date.now();
-    console.log(`🚀 [ENRICH] Iniciando enrichSearchResults - ${results.length} resultados, plataforma: ${platform}`);
-    
+
     // Procesar en batches para evitar saturar la API
     const batchSize = 10;
     const batches = [];
@@ -1801,7 +1783,7 @@ export class CreatorDBService {
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
       const batch = batches[batchIndex];
       const batchStartTime = Date.now();
-      console.log(`🚀 [ENRICH] Procesando batch ${batchIndex + 1}/${batches.length} - ${batch.length} resultados`);
+        
       const batchResults = await Promise.allSettled(
         batch.map(async (result: any) => {
           try {
@@ -2138,7 +2120,7 @@ export class CreatorDBService {
 
     // ✅ FILTRO POR DEFECTO: Si no hay filtros de seguidores, agregar +1M mínimo
     if (!filters.minFollowers && !filters.maxFollowers) {
-      console.log(`🔍 [BUILD BODY] Agregando filtro por defecto: followers > 1,000,000`);
+     
       body.filters.push({ filterKey: 'followers', op: '>', value: 1000000 });
     }
 
@@ -2272,35 +2254,34 @@ export class CreatorDBService {
       const minValue = filters.minGRateFollowers ? parseFloat(filters.minGRateFollowers.toString()) : 0;
       const maxValue = filters.maxGRateFollowers ? parseFloat(filters.maxGRateFollowers.toString()) : 1;
       
-      console.log(`🔍 [BUILD BODY] Valores convertidos - min: ${minValue} (${typeof minValue}), max: ${maxValue} (${typeof maxValue})`);
       
       if (filters.minGRateFollowers) {
-        console.log(`📈 [YOUTUBE] Agregando filtro minGRateFollowers: ${minValue} (${typeof minValue})`);
+       
         apiFilters.push({ filterKey: 'gSubscribers', op: '>', value: minValue });
       }
       
       if (filters.maxGRateFollowers && filters.maxGRateFollowers < 1) {
-        console.log(`📈 [YOUTUBE] Agregando filtro maxGRateFollowers: ${maxValue} (${typeof maxValue})`);
+       
         apiFilters.push({ filterKey: 'gSubscribers', op: '<', value: maxValue });
       }
     }
 
     // ✅ FILTRO DE CATEGORÍAS - ACTUALIZADO para manejar array (YouTube usa mainCategory)
     if (filters.categories && Array.isArray(filters.categories) && filters.categories.length > 0) {
-      console.log(`🎯 [YOUTUBE] Agregando filtro de categorías: ${filters.categories.join(', ')}`);
+
       // YouTube soporta múltiples categorías, las agregamos una por una
       filters.categories.forEach((category: string) => {
         apiFilters.push({ filterKey: 'mainCategory', op: '=', value: category });
       });
     } else if (filters.category) {
       // Mantener compatibilidad con filtro de categoría única
-      console.log(`🎯 [YOUTUBE] Agregando filtro de categoría única: ${filters.category}`);
+     
       apiFilters.push({ filterKey: 'mainCategory', op: '=', value: filters.category });
     }
 
     // ✅ FILTRO DE NICHOS - NUEVO (YouTube usa 'niche')
     if (filters.nicheIds && Array.isArray(filters.nicheIds) && filters.nicheIds.length > 0) {
-      console.log(`🎯 [YOUTUBE] Agregando filtro de nichos: ${filters.nicheIds.join(', ')}`);
+      
       // YouTube acepta múltiples nichos, los agregamos uno por uno
       filters.nicheIds.forEach((niche: string) => {
         apiFilters.push({ filterKey: 'niche', op: '=', value: niche });
@@ -2320,7 +2301,7 @@ export class CreatorDBService {
       filters: apiFilters,
     };
 
-    console.log(`🔍 [BUILD BODY] YouTube body final:`, JSON.stringify(body, null, 2));
+    
     return body;
   }
 
@@ -2362,7 +2343,7 @@ export class CreatorDBService {
 
     // ✅ FILTRO POR DEFECTO: Si no hay filtros de seguidores, agregar +1M mínimo
     if (!minFollowers && !maxFollowers) {
-      console.log(`🔍 [BUILD BODY] Agregando filtro por defecto: followers > 1,000,000`);
+      
       apiFilters.push({ filterKey: 'followers', op: '>', value: 1000000 });
     }
     
@@ -2383,40 +2364,39 @@ export class CreatorDBService {
 
     // ✅ FILTRO DE GROWTH RATE FOLLOWERS - TikTok usa 'gRateFollowers'
     if (filters.minGRateFollowers || filters.maxGRateFollowers) {
-      console.log(`🔍 [BUILD BODY] Procesando gRateFollowers - min: ${filters.minGRateFollowers}, max: ${filters.maxGRateFollowers}`);
+     
       
       const minValue = filters.minGRateFollowers ? parseFloat(filters.minGRateFollowers.toString()) : 0;
       const maxValue = filters.maxGRateFollowers ? parseFloat(filters.maxGRateFollowers.toString()) : 1;
       
-      console.log(`🔍 [BUILD BODY] Valores convertidos - min: ${minValue} (${typeof minValue}), max: ${maxValue} (${typeof maxValue})`);
       
       if (filters.minGRateFollowers) {
-        console.log(`📈 [TIKTOK] Agregando filtro minGRateFollowers: ${minValue} (${typeof minValue})`);
+       
         apiFilters.push({ filterKey: 'gRateFollowers', op: '>', value: minValue });
       }
       
       if (filters.maxGRateFollowers && filters.maxGRateFollowers < 1) {
-        console.log(`📈 [TIKTOK] Agregando filtro maxGRateFollowers: ${maxValue} (${typeof maxValue})`);
+       
         apiFilters.push({ filterKey: 'gRateFollowers', op: '<', value: maxValue });
       }
     }
 
     // ✅ FILTRO DE CATEGORÍAS - ACTUALIZADO para manejar array (TikTok usa category)
     if (filters.categories && Array.isArray(filters.categories) && filters.categories.length > 0) {
-      console.log(`🎯 [TIKTOK] Agregando filtro de categorías: ${filters.categories.join(', ')}`);
+     
       // TikTok soporta múltiples categorías, las agregamos una por una
       filters.categories.forEach((category: string) => {
         apiFilters.push({ filterKey: 'category', op: '=', value: category });
       });
     } else if (filters.category) {
       // Mantener compatibilidad con filtro de categoría única
-      console.log(`🎯 [TIKTOK] Agregando filtro de categoría única: ${filters.category}`);
+      
       apiFilters.push({ filterKey: 'category', op: '=', value: filters.category });
     }
 
     // ✅ FILTRO DE NICHOS - NUEVO (TikTok usa 'niche')
     if (filters.nicheIds && Array.isArray(filters.nicheIds) && filters.nicheIds.length > 0) {
-      console.log(`🎯 [TIKTOK] Agregando filtro de nichos: ${filters.nicheIds.join(', ')}`);
+      
       // TikTok acepta múltiples nichos, los agregamos uno por uno
       filters.nicheIds.forEach((niche: string) => {
         apiFilters.push({ filterKey: 'niche', op: '=', value: niche });
@@ -2431,7 +2411,7 @@ export class CreatorDBService {
       filters: apiFilters,
     };
 
-    console.log(`🔍 [BUILD BODY] TikTok body final:`, JSON.stringify(body, null, 2));
+
     return body;
   }
 
@@ -2465,7 +2445,7 @@ export class CreatorDBService {
 
     // ✅ FILTRO POR DEFECTO: Si no hay filtros de seguidores, agregar +1M mínimo
     if (!filters.minFollowers && !filters.maxFollowers) {
-      console.log(`🔍 [BUILD BODY] Agregando filtro por defecto: followers > 1,000,000`);
+      
       body.filters.push({ filterKey: 'followers', op: '>', value: 1000000 });
     }
     if (filters.minEngagement) {
@@ -2489,7 +2469,7 @@ export class CreatorDBService {
    * ⚠️ LIMITADO: Facebook NO soporta filtros de país ni engagement_rate estándar
    */
   private static buildFacebookSearchBody(filters: Record<string, any>): Record<string, any> {
-    console.log('🔍 [FACEBOOK SEARCH BODY] Building request body with filters:', filters);
+    
     
     // 🎯 NUEVO: Siempre pedir 50 resultados para optimizar caché
     const CACHE_BATCH_SIZE = 50; 
@@ -2502,12 +2482,12 @@ export class CreatorDBService {
       filters: [] as any[],
     };
 
-    console.log('🔍 [FACEBOOK SEARCH BODY] Base body structure:', body);
+    
 
     // Si hay username o query, agregar filtro por nombre de usuario
     if (filters.username || filters.query) {
       const username = filters.username || filters.query;
-      console.log('🔍 [FACEBOOK SEARCH BODY] Adding username filter:', username);
+      
       body.filters.push({ filterKey: 'facebookName', op: '=', value: username });
     }
 
@@ -2519,19 +2499,17 @@ export class CreatorDBService {
     // ✅ FILTROS DE FOLLOWERS - Estos SÍ funcionan en Facebook
     if (filters.minFollowers) {
       const minFollowersValue = parseInt(filters.minFollowers.toString(), 10);
-      console.log('🔍 [FACEBOOK SEARCH BODY] Adding minFollowers filter:', minFollowersValue);
+      
       body.filters.push({ filterKey: 'followers', op: '>', value: minFollowersValue });
     }
     
     if (filters.maxFollowers) {
       const maxFollowersValue = parseInt(filters.maxFollowers.toString(), 10);
-      console.log('🔍 [FACEBOOK SEARCH BODY] Adding maxFollowers filter:', maxFollowersValue);
       body.filters.push({ filterKey: 'followers', op: '<', value: maxFollowersValue });
     }
 
     // ✅ FILTRO POR DEFECTO: Si no hay filtros de seguidores, agregar +1M mínimo
     if (!filters.minFollowers && !filters.maxFollowers) {
-      console.log('🔍 [FACEBOOK SEARCH BODY] Agregando filtro por defecto: followers > 1,000,000');
       body.filters.push({ filterKey: 'followers', op: '>', value: 1000000 });
     }
 
@@ -2548,14 +2526,14 @@ export class CreatorDBService {
 
     // ✅ FILTRO DE CATEGORÍAS - Facebook SÍ soporta category
     if (filters.categories && Array.isArray(filters.categories) && filters.categories.length > 0) {
-      console.log('🔍 [FACEBOOK SEARCH BODY] Adding categories filter:', filters.categories);
+      
       // Facebook soporta múltiples categorías, las agregamos una por una
       filters.categories.forEach((category: string) => {
         body.filters.push({ filterKey: 'category', op: '=', value: category });
       });
     }
 
-    console.log('🔍 [FACEBOOK SEARCH BODY] Final body with filters:', body);
+   
     return body;
   }
 

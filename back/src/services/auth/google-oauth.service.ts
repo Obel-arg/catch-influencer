@@ -59,58 +59,45 @@ export class GoogleOAuthService {
    * Maneja el callback de Google OAuth y procesa el código de autorización
    */
   public async handleCallback(code: string): Promise<{ user: any; token: string; refreshToken: string }> {
-    try {
-      console.log('=== GoogleOAuthService.handleCallback Started ===');
-      console.log('Authorization code received:', code.substring(0, 20) + '...');
+    try { 
 
       // Intercambiar el código por tokens
-      console.log('Exchanging code for tokens...');
+     
       const { tokens } = await this.oAuth2Client.getToken(code);
       this.oAuth2Client.setCredentials(tokens);
 
-      console.log('Tokens received from Google:', {
-        hasAccessToken: !!tokens.access_token,
-        hasRefreshToken: !!tokens.refresh_token,
-        accessTokenPrefix: tokens.access_token?.substring(0, 20) + '...',
-        expiryDate: tokens.expiry_date
-      });
+     
 
       // Obtener información del usuario desde Google
-      console.log('Getting user info from Google...');
+     
       const userInfo = await this.getUserInfo(tokens.access_token!);
 
-      console.log('User info from Google:', {
-        id: userInfo.id,
-        email: userInfo.email,
-        name: userInfo.name,
-        verified: userInfo.verified_email
-      });
+     
 
       // Buscar usuario en nuestra base de datos (user_profiles)
-      console.log('Searching for existing user in user_profiles...');
+     
       let user = await this.userService.getUserByEmail(userInfo.email);
 
       if (!user) {
-        console.log('❌ User not found in user_profiles - Access denied');
-        console.log('🔒 This system only allows access to invited users');
+       
         
         // Verificar si el usuario existe en Supabase Auth pero no en user_profiles
         const authUser = await this.userService.getUserFromAuthByEmail(userInfo.email);
         
         if (authUser) {
-          console.log('⚠️ User exists in Supabase Auth but not in user_profiles - removing completely');
+         
           // Eliminar usuario completamente de todas las tablas
           try {
             await this.deleteUserCompletely(authUser.id, userInfo.email);
           } catch (deleteError) {
-            console.warn('Error removing user completely:', deleteError);
+           
           }
         }
         
         // Lanzar error de acceso denegado
         throw new Error('ACCESS_DENIED: Usuario no autorizado. Solo usuarios invitados pueden acceder al sistema.');
       } else {
-        console.log('Existing user found, updating information...');
+       
         // Usuario existe, actualizar información si es necesario
         await this.userService.updateUser(user.id, {
           avatar_url: userInfo.picture,
@@ -136,12 +123,12 @@ export class GoogleOAuthService {
             );
 
             if (updateError) {
-              console.warn('Error updating existing user metadata:', updateError);
+              
             } else {
-              console.log('✅ User metadata updated successfully');
+             
             }
           } catch (updateError) {
-            console.warn('Error updating user metadata:', updateError);
+           
           }
         }
         
@@ -151,7 +138,7 @@ export class GoogleOAuthService {
           throw new Error('Error al obtener usuario actualizado');
         }
         user = updatedUser;
-        console.log('✅ Existing user updated successfully');
+       
       }
 
       // Verificar que el usuario existe antes de generar tokens
@@ -159,19 +146,13 @@ export class GoogleOAuthService {
         throw new Error('Usuario no encontrado después del proceso de autenticación');
       }
 
-      console.log('Generating JWT tokens for user:', {
-        id: user.id,
-        email: user.email
-      });
+     
 
       // Generar tokens JWT
       const token = generateToken(user);
       const refreshToken = generateToken(user, '7d');
 
-      console.log('✅ JWT tokens generated successfully:', {
-        tokenLength: token.length,
-        refreshTokenLength: refreshToken.length
-      });
+     
 
       const result = {
         user: {
@@ -185,16 +166,16 @@ export class GoogleOAuthService {
         refreshToken
       };
 
-      console.log('✅ GoogleOAuthService.handleCallback completed successfully');
+     
       return result;
 
     } catch (error) {
-      console.error('❌ Error en Google OAuth callback:', error);
+     
       
       // Proporcionar mensajes de error más específicos
       if (error instanceof Error) {
         if (error.message.includes('email_exists') || error.message.includes('already been registered')) {
-          console.error('Inconsistencia detectada: usuario existe en Supabase Auth pero no en user_profiles');
+         
           throw new Error('Error de consistencia de datos en autenticación');
         }
         throw new Error(`Error al procesar autenticación con Google: ${error.message}`);
@@ -218,7 +199,7 @@ export class GoogleOAuthService {
       const userInfo = await response.json() as GoogleUserInfo;
       return userInfo;
     } catch (error) {
-      console.error('Error obteniendo información del usuario de Google:', error);
+     
       throw error;
     }
   }
@@ -234,7 +215,7 @@ export class GoogleOAuthService {
    * Elimina completamente un usuario de todas las tablas relacionadas
    */
   private async deleteUserCompletely(userId: string, email: string) {
-    console.log(`🗑️ Eliminando usuario completamente: ${email} (${userId})`);
+   
     
     try {
       // 1. Eliminar de organization_members
@@ -244,9 +225,9 @@ export class GoogleOAuthService {
         .eq('user_id', userId);
       
       if (orgError) {
-        console.warn('Error eliminando de organization_members:', orgError);
+       
       } else {
-        console.log('✅ Eliminado de organization_members');
+       
       }
 
       // 2. Eliminar de user_profiles
@@ -256,26 +237,26 @@ export class GoogleOAuthService {
         .eq('user_id', userId);
       
       if (profileError) {
-        console.warn('Error eliminando de user_profiles:', profileError);
+       
       } else {
-        console.log('✅ Eliminado de user_profiles');
+       
       }
 
       // 3. Eliminar de Supabase Auth (si supabaseAdmin está disponible)
       if (supabaseAdmin) {
         try {
           await supabaseAdmin.auth.admin.deleteUser(userId);
-          console.log('✅ Eliminado de Supabase Auth');
+
         } catch (authError) {
-          console.warn('Error eliminando de Supabase Auth:', authError);
+         
         }
       } else {
-        console.warn('⚠️ supabaseAdmin no disponible, no se puede eliminar de Auth');
+       
       }
 
-      console.log(`✅ Usuario ${email} eliminado completamente`);
+      
     } catch (error) {
-      console.error('❌ Error eliminando usuario completamente:', error);
+     
       throw error;
     }
   }

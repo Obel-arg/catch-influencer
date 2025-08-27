@@ -294,7 +294,7 @@ export default function Explorer() {
   // 🚀 NUEVA FUNCIÓN PARA BÚSQUEDA CON HYPEAUDITOR
   const handleHypeAuditorSearch = async () => {
     try {
-      console.log('🚀 [EXPLORER] Iniciando búsqueda con HypeAuditor Discovery');
+      // Búsqueda iniciada
       
       // Construir filtros para HypeAuditor
       const filters: HypeAuditorDiscoveryFilters = {
@@ -361,7 +361,7 @@ export default function Explorer() {
         filters.taxonomyCategories = taxonomyCategories;
       }
 
-      console.log('🔧 [EXPLORER] Filtros HypeAuditor completos:', filters);
+      // Filtros aplicados
 
       // Realizar búsqueda con HypeAuditor
       const result = await searchHypeAuditorInfluencers(filters);
@@ -376,7 +376,7 @@ export default function Explorer() {
       } else {
         setInfluencers([]);
         setTotalCount(0);
-        console.log('❌ [EXPLORER] No se encontraron resultados en HypeAuditor');
+        // Sin resultados encontrados
       }
     } catch (error: any) {
       console.error('❌ [EXPLORER] Error en búsqueda HypeAuditor:', error);
@@ -1046,9 +1046,7 @@ export default function Explorer() {
     ].filter(Boolean);
     const cacheKey = allIds.join('|') || influencer.creatorId;
     
-    console.log("🔍 [PANEL-OPEN] All platform IDs:", allPlatformIds);
-    console.log("🔍 [PANEL-OPEN] Data needs:", needs);
-    console.log("🔍 [PANEL-OPEN] Cache key:", cacheKey);
+
     
     // 🎯 NUEVO: Determinar si necesitamos cargar datos adicionales
     const hasMultiplePlatforms = allIds.length > 1;
@@ -1570,7 +1568,7 @@ export default function Explorer() {
       platformIds.facebookId = basicThreads.facebookId || basicThreads.facebookPageId || platformIds.facebookId;
     }
 
-    console.log("🔍 [EXTRACT-IDS] Platform IDs found:", platformIds);
+
     return platformIds;
   };
 
@@ -1672,8 +1670,7 @@ export default function Explorer() {
     needs.facebook = platformIds.facebookId && !hasData.facebook;
     needs.threads = platformIds.threadsId && !hasData.threads;
 
-    console.log("🔍 [DATA-NEEDS] Has data:", hasData);
-    console.log("🔍 [DATA-NEEDS] Needs data:", needs);
+
 
     return { needs, hasData };
   };

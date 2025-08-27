@@ -5,28 +5,28 @@ import supabase from '../config/supabase';
  */
 async function fixAllWorkers() {
   try {
-    console.log('🔧 [FIX-ALL-WORKERS] Starting comprehensive worker fix...');
+   
 
     // 1. Limpiar jobs corruptos
-    console.log('🧹 [FIX-ALL-WORKERS] Step 1: Cleaning corrupted jobs...');
+   
     await cleanupCorruptedJobs();
 
     // 2. Marcar jobs stuck en processing como failed
-    console.log('🔄 [FIX-ALL-WORKERS] Step 2: Marking stuck jobs as failed...');
+   
     await markStuckJobsAsFailed();
 
     // 3. Reiniciar jobs failed recientemente
-    console.log('🔄 [FIX-ALL-WORKERS] Step 3: Restarting recent failed jobs...');
+   
     await restartRecentFailedJobs();
 
     // 4. Mostrar estadísticas finales
-    console.log('📊 [FIX-ALL-WORKERS] Step 4: Final statistics...');
+   
     await showFinalStats();
 
-    console.log('✅ [FIX-ALL-WORKERS] All workers fixed successfully!');
+   
 
   } catch (error) {
-    console.error('❌ [FIX-ALL-WORKERS] Error during fix:', error);
+   
   }
 }
 
@@ -42,16 +42,16 @@ async function cleanupCorruptedJobs() {
       .or('data.is.null,data.eq."{}",data.eq."null"');
 
     if (selectError) {
-      console.error('❌ [FIX-ALL-WORKERS] Error finding corrupted jobs:', selectError);
+     
       return;
     }
 
     if (!corruptedJobs || corruptedJobs.length === 0) {
-      console.log('✅ [FIX-ALL-WORKERS] No corrupted jobs found');
+     
       return;
     }
 
-    console.log(`🔍 [FIX-ALL-WORKERS] Found ${corruptedJobs.length} corrupted jobs`);
+   
 
     // Eliminar jobs corruptos
     const jobIds = corruptedJobs.map(job => job.id);
@@ -61,14 +61,14 @@ async function cleanupCorruptedJobs() {
       .in('id', jobIds);
 
     if (deleteError) {
-      console.error('❌ [FIX-ALL-WORKERS] Error deleting corrupted jobs:', deleteError);
+     
       return;
     }
 
-    console.log(`✅ [FIX-ALL-WORKERS] Successfully deleted ${corruptedJobs.length} corrupted jobs`);
+   
 
   } catch (error) {
-    console.error('❌ [FIX-ALL-WORKERS] Error during corrupted jobs cleanup:', error);
+   
   }
 }
 
@@ -87,16 +87,16 @@ async function markStuckJobsAsFailed() {
       .lt('started_at', tenMinutesAgo.toISOString());
 
     if (selectError) {
-      console.error('❌ [FIX-ALL-WORKERS] Error finding stuck jobs:', selectError);
+     
       return;
     }
 
     if (!stuckJobs || stuckJobs.length === 0) {
-      console.log('✅ [FIX-ALL-WORKERS] No stuck jobs found');
+
       return;
     }
 
-    console.log(`🔍 [FIX-ALL-WORKERS] Found ${stuckJobs.length} stuck jobs`);
+   
 
     // Marcar como failed
     const jobIds = stuckJobs.map(job => job.id);
@@ -110,14 +110,14 @@ async function markStuckJobsAsFailed() {
       .in('id', jobIds);
 
     if (updateError) {
-      console.error('❌ [FIX-ALL-WORKERS] Error marking stuck jobs as failed:', updateError);
+     
       return;
     }
 
-    console.log(`✅ [FIX-ALL-WORKERS] Successfully marked ${stuckJobs.length} stuck jobs as failed`);
+   
 
   } catch (error) {
-    console.error('❌ [FIX-ALL-WORKERS] Error during stuck jobs fix:', error);
+   
   }
 }
 
@@ -137,16 +137,16 @@ async function restartRecentFailedJobs() {
       .lt('attempts', 3); // Solo jobs con menos de 3 intentos
 
     if (selectError) {
-      console.error('❌ [FIX-ALL-WORKERS] Error finding recent failed jobs:', selectError);
+     
       return;
     }
 
     if (!recentFailedJobs || recentFailedJobs.length === 0) {
-      console.log('✅ [FIX-ALL-WORKERS] No recent failed jobs to restart');
+     
       return;
     }
 
-    console.log(`🔍 [FIX-ALL-WORKERS] Found ${recentFailedJobs.length} recent failed jobs to restart`);
+   
 
     // Reiniciar jobs
     const jobIds = recentFailedJobs.map(job => job.id);
@@ -162,14 +162,14 @@ async function restartRecentFailedJobs() {
       .in('id', jobIds);
 
     if (updateError) {
-      console.error('❌ [FIX-ALL-WORKERS] Error restarting failed jobs:', updateError);
+     
       return;
     }
 
-    console.log(`✅ [FIX-ALL-WORKERS] Successfully restarted ${recentFailedJobs.length} failed jobs`);
+   
 
   } catch (error) {
-    console.error('❌ [FIX-ALL-WORKERS] Error during failed jobs restart:', error);
+   
   }
 }
 
@@ -183,7 +183,7 @@ async function showFinalStats() {
       .select('status', { count: 'exact' });
 
     if (error) {
-      console.error('❌ [FIX-ALL-WORKERS] Error getting final stats:', error);
+     
       return;
     }
 
@@ -192,10 +192,10 @@ async function showFinalStats() {
       return acc;
     }, {});
 
-    console.log('📊 [FIX-ALL-WORKERS] Final queue statistics:', statusCounts);
+    
 
   } catch (error) {
-    console.error('❌ [FIX-ALL-WORKERS] Error showing final stats:', error);
+   
   }
 }
 

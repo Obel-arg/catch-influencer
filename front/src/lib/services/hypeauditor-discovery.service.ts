@@ -140,7 +140,7 @@ class HypeAuditorDiscoveryService {
               const response = await httpApiClient.post<HypeAuditorDiscoveryResponse>(`${this.baseUrl}/search-sandbox`, filters);
               return response.data;
             } catch (error) {
-              console.error('❌ [HYPEAUDITOR DISCOVERY SERVICE] Error en búsqueda:', error);
+              console.error('Error en búsqueda HypeAuditor:', error);
               throw error;
             }
           }
@@ -153,7 +153,7 @@ class HypeAuditorDiscoveryService {
               const response = await httpApiClient.get<HypeAuditorHealthResponse>(`${this.baseUrl}/health`);
               return response.data;
             } catch (error) {
-              console.error('❌ [HYPEAUDITOR DISCOVERY SERVICE] Error en health check:', error);
+              console.error('Error en health check HypeAuditor:', error);
               throw error;
             }
           }

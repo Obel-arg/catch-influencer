@@ -46,17 +46,13 @@ function makeRequest(url) {
 }
 
 async function extractTopNichesHttp() {
-  console.log("🎯 [NICHOS-HTTP] Iniciando extracción de nichos via HTTP...\n");
-
+ 
   try {
     const allNiches = [];
 
     // Obtener nichos de cada plataforma
     for (const platform of PLATFORMS) {
-      console.log(
-        `🔍 [NICHOS-HTTP] Obteniendo nichos de ${platform.toUpperCase()}...`
-      );
-
+     
       const url = `${API_BASE_URL}/post-topics/categories?platform=${platform}`;
 
       try {
@@ -72,30 +68,17 @@ async function extractTopNichesHttp() {
             }));
 
           allNiches.push(...platformNiches);
-          console.log(
-            `✅ [NICHOS-HTTP] ${platformNiches.length} nichos encontrados en ${platform}`
-          );
+         
         } else {
-          console.log(
-            `❌ [NICHOS-HTTP] Error en respuesta de ${platform}:`,
-            response.error || "Sin datos"
-          );
+         
         }
       } catch (error) {
-        console.log(
-          `❌ [NICHOS-HTTP] Error de conexión con ${platform}:`,
-          error.message
-        );
+       
       }
     }
 
     if (allNiches.length === 0) {
-      console.log(
-        "❌ [NICHOS-HTTP] No se encontraron nichos en ninguna plataforma"
-      );
-      console.log(
-        "💡 Asegúrate de que el servidor esté ejecutándose en http://localhost:5000"
-      );
+     
       return;
     }
 
@@ -104,27 +87,12 @@ async function extractTopNichesHttp() {
       .sort((a, b) => b.channelCount - a.channelCount)
       .slice(0, 25);
 
-    console.log("\n🏆 [NICHOS-HTTP] TOP 25 MEJORES NICHOS:\n");
-    console.log("=".repeat(80));
-
     topNiches.forEach((niche, index) => {
-      console.log(`${(index + 1).toString().padStart(2, "0")}. ${niche.name}`);
-      console.log(`    📊 Canales: ${niche.channelCount.toLocaleString()}`);
-      console.log(`    📱 Plataforma: ${niche.platform.toUpperCase()}`);
-      console.log(`    🏷️  Categoría: ${niche.category || "Sin categoría"}`);
-      console.log(`    🆔 ID: ${niche.id}`);
-      console.log("-".repeat(50));
+     
     });
 
     // Estadísticas
-    console.log("\n📋 [NICHOS-HTTP] RESUMEN:");
-    console.log(`• Total de nichos analizados: ${allNiches.length}`);
-    console.log(`• Top 25 seleccionados`);
-    console.log(
-      `• Nicho más popular: ${
-        topNiches[0]?.name
-      } (${topNiches[0]?.channelCount.toLocaleString()} canales)`
-    );
+    
 
     // Distribución por plataforma
     const platformCount = topNiches.reduce((acc, niche) => {
@@ -132,9 +100,8 @@ async function extractTopNichesHttp() {
       return acc;
     }, {});
 
-    console.log("\n📱 [NICHOS-HTTP] DISTRIBUCIÓN POR PLATAFORMA EN TOP 25:");
     Object.entries(platformCount).forEach(([platform, count]) => {
-      console.log(`• ${platform.toUpperCase()}: ${count} nichos`);
+     
     });
 
     // Export JSON
@@ -147,10 +114,9 @@ async function extractTopNichesHttp() {
       extraction_method: "http_requests",
     };
 
-    console.log("\n💾 [NICHOS-HTTP] JSON de exportación:");
-    console.log(JSON.stringify(exportData, null, 2));
+   
   } catch (error) {
-    console.error("❌ [NICHOS-HTTP] Error fatal:", error.message);
+   
     throw error;
   }
 }
@@ -159,11 +125,11 @@ async function extractTopNichesHttp() {
 if (require.main === module) {
   extractTopNichesHttp()
     .then(() => {
-      console.log("\n✅ [NICHOS-HTTP] Extracción completada exitosamente");
+     
       process.exit(0);
     })
     .catch((error) => {
-      console.error("\n❌ [NICHOS-HTTP] Error fatal:", error.message);
+      
       process.exit(1);
     });
 }

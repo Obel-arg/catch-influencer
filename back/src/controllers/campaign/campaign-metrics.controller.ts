@@ -132,13 +132,7 @@ export class CampaignMetricsController {
         const totalEngagement = likes + comments;
         engagement = views > 0 ? (totalEngagement / views) : 0; // Ya en decimal
         
-        console.log('📸 [CAMPAIGN-METRICS] Story metrics processed:', {
-          platform,
-          likes,
-          comments,
-          reach: views,
-          engagement
-        });
+       
       } else {
         // Try to get data from platform_data first, then raw_response
         const dataSource = postMetric.platform_data || postMetric.raw_response?.data;

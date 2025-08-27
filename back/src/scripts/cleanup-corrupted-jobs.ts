@@ -5,8 +5,7 @@ import supabase from '../config/supabase';
  * Jobs corruptos son aquellos con datos inválidos o vacíos
  */
 async function cleanupCorruptedJobs() {
-  try {
-    console.log('🧹 [CLEANUP] Starting corrupted jobs cleanup...');
+  try { 
 
     // 1. Encontrar jobs con datos vacíos o inválidos
     const { data: corruptedJobs, error: selectError } = await supabase
@@ -15,27 +14,20 @@ async function cleanupCorruptedJobs() {
       .or('data.is.null,data.eq."{}",data.eq."null"');
 
     if (selectError) {
-      console.error('❌ [CLEANUP] Error finding corrupted jobs:', selectError);
+     
       return;
     }
 
     if (!corruptedJobs || corruptedJobs.length === 0) {
-      console.log('✅ [CLEANUP] No corrupted jobs found');
+     
       return;
     }
 
-    console.log(`🔍 [CLEANUP] Found ${corruptedJobs.length} corrupted jobs`);
+   
 
     // 2. Mostrar información de los jobs corruptos
     for (const job of corruptedJobs) {
-      console.log(`📋 [CLEANUP] Corrupted job:`, {
-        id: job.id,
-        name: job.name,
-        status: job.status,
-        data: job.data,
-        created_at: job.created_at,
-        attempts: job.attempts
-      });
+     
     }
 
     // 3. Eliminar jobs corruptos
@@ -46,11 +38,11 @@ async function cleanupCorruptedJobs() {
       .in('id', jobIds);
 
     if (deleteError) {
-      console.error('❌ [CLEANUP] Error deleting corrupted jobs:', deleteError);
+     
       return;
     }
 
-    console.log(`✅ [CLEANUP] Successfully deleted ${corruptedJobs.length} corrupted jobs`);
+   
 
     // 4. Mostrar estadísticas actuales
     const { data: stats, error: statsError } = await supabase
@@ -63,11 +55,11 @@ async function cleanupCorruptedJobs() {
         return acc;
       }, {});
 
-      console.log('📊 [CLEANUP] Current queue stats:', statusCounts);
+     
     }
 
   } catch (error) {
-    console.error('❌ [CLEANUP] Error during cleanup:', error);
+   
   }
 }
 
@@ -76,7 +68,7 @@ async function cleanupCorruptedJobs() {
  */
 async function validateExistingJobs() {
   try {
-    console.log('🔍 [VALIDATION] Starting job validation...');
+   
 
     // Obtener todos los jobs activos
     const { data: activeJobs, error } = await supabase
@@ -85,16 +77,16 @@ async function validateExistingJobs() {
       .in('status', ['pending', 'processing']);
 
     if (error) {
-      console.error('❌ [VALIDATION] Error getting active jobs:', error);
+     
       return;
     }
 
     if (!activeJobs || activeJobs.length === 0) {
-      console.log('✅ [VALIDATION] No active jobs to validate');
+     
       return;
     }
 
-    console.log(`🔍 [VALIDATION] Validating ${activeJobs.length} active jobs`);
+    
 
     let validJobs = 0;
     let invalidJobs = 0;
@@ -125,22 +117,18 @@ async function validateExistingJobs() {
           validJobs++;
         } else {
           invalidJobs++;
-          console.log(`❌ [VALIDATION] Invalid job ${job.id}:`, {
-            name: job.name,
-            status: job.status,
-            data: jobData
-          });
+         
         }
       } catch (parseError) {
         invalidJobs++;
-        console.log(`❌ [VALIDATION] Job ${job.id} has invalid JSON data:`, job.data);
+       
       }
     }
 
-    console.log(`📊 [VALIDATION] Results: ${validJobs} valid, ${invalidJobs} invalid jobs`);
+   
 
   } catch (error) {
-    console.error('❌ [VALIDATION] Error during validation:', error);
+   
   }
 }
 
@@ -160,10 +148,7 @@ async function main() {
       await validateExistingJobs();
       break;
     default:
-      console.log('Usage: npm run cleanup-jobs [cleanup|validate|all]');
-      console.log('  cleanup: Remove corrupted jobs');
-      console.log('  validate: Check existing jobs for validity');
-      console.log('  all: Run both cleanup and validation');
+        
   }
 }
 

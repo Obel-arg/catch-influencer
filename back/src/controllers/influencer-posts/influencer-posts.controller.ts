@@ -56,7 +56,7 @@ export class InfluencerPostsController {
     try {
       // Omitir procesamiento automático para historias de Instagram
       if (platform.toLowerCase() === 'instagram' && /instagram\.com\/stories\//i.test(postUrl)) {
-        console.log(`📸 [BACKGROUND] Omitiendo procesamiento automático para historia: ${postUrl}`);
+       
         return;
       }
 
@@ -207,8 +207,7 @@ export class InfluencerPostsController {
         });
       }
 
-      console.log(`🔍 [ALL-METRICS] Fetching metrics for campaign: ${campaignId}`);
-
+      
       // Get all posts for this campaign using the service
       const influencerPosts = await this.influencerPostService.getInfluencerPostsByCampaign(campaignId, 1000, 0);
 

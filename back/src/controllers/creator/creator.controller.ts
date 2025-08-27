@@ -510,8 +510,7 @@ export class CreatorDBController {
   // 🔍 BÚSQUEDA INTELIGENTE NUEVA
   static async smartSearch(req: Request, res: Response) {
     const controllerStartTime = Date.now();
-    console.log(`🚀 [BACKEND CONTROLLER] Iniciando smartSearch - query: "${req.body.query}"`);
-    
+
     try {
       const { 
         query, 
@@ -531,13 +530,13 @@ export class CreatorDBController {
 
       // Ejecutar búsqueda inteligente - SOLO QUERY Y PLATFORM
       const serviceStartTime = Date.now();
-      console.log(`🚀 [BACKEND CONTROLLER] Llamando CreatorDBService.smartSearch...`);
+     
       const searchResult = await CreatorDBService.smartSearch(
         query.trim(),
         platform
       );
       const serviceEndTime = Date.now();
-      console.log(`⏱️ [BACKEND CONTROLLER] CreatorDBService.smartSearch completado en ${serviceEndTime - serviceStartTime}ms`);
+     
 
       // Obtener información del usuario si está autenticado
       const userId = (req as any).user?.id || null;
@@ -574,7 +573,7 @@ export class CreatorDBController {
       });
     } finally {
       const controllerEndTime = Date.now();
-      console.log(`✅ [BACKEND CONTROLLER] smartSearch completado en ${controllerEndTime - controllerStartTime}ms`);
+     
     }
   }
 

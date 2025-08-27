@@ -159,13 +159,8 @@ function makeFullHypeAuditorRequest() {
     }
   };
 
-  console.log('🔥 [HYPEAUDITOR FULL] Enviando payload COMPLETO con todos los campos...');
-  console.log('📦 [HYPEAUDITOR FULL] Datos enviados:', JSON.stringify(fullRequestData, null, 2));
-  console.log('\n' + '='.repeat(80) + '\n');
 
   const req = https.request(options, (res) => {
-    console.log(`📊 [HYPEAUDITOR FULL] Status: ${res.statusCode}`);
-    console.log(`📋 [HYPEAUDITOR FULL] Headers:`, res.headers);
 
     let data = '';
     res.on('data', (chunk) => {
@@ -176,84 +171,59 @@ function makeFullHypeAuditorRequest() {
       try {
         const response = JSON.parse(data);
         
-        console.log('✅ [HYPEAUDITOR FULL] RESPUESTA COMPLETA:');
-        console.log('='.repeat(80));
-        console.log(JSON.stringify(response, null, 2));
-        console.log('='.repeat(80));
+       
         
         // Análisis detallado de la respuesta
         if (response.result && response.result.search_results) {
-          console.log('\n🎯 [HYPEAUDITOR FULL] ANÁLISIS DETALLADO:');
-          console.log(`📊 Total de resultados: ${response.result.search_results.length}`);
-          console.log(`📄 Página actual: ${response.result.current_page}`);
-          console.log(`📚 Total de páginas: ${response.result.total_pages}`);
-          console.log(`🔢 Queries restantes: ${response.result.queries_left}`);
+         
           
           if (response.result.search_results.length > 0) {
-            console.log('\n🔍 [HYPEAUDITOR FULL] PRIMER RESULTADO DETALLADO:');
+           
             const firstResult = response.result.search_results[0];
             
             // Basic info
-            console.log('\n📝 INFORMACIÓN BÁSICA:');
-            console.log(`   • Username: ${firstResult.basic?.username || 'N/A'}`);
-            console.log(`   • Título: ${firstResult.basic?.title || 'N/A'}`);
-            console.log(`   • Avatar: ${firstResult.basic?.avatar_url || 'N/A'}`);
-            console.log(`   • ID: ${firstResult.basic?.id || 'N/A'}`);
+           
             
             // Metrics
-            console.log('\n📊 MÉTRICAS:');
-            console.log(`   • Seguidores: ${firstResult.metrics?.subscribers_count?.value?.toLocaleString() || 'N/A'}`);
-            console.log(`   • Engagement Rate: ${firstResult.metrics?.er?.value || 'N/A'}%`);
-            console.log(`   • Seguidores reales: ${firstResult.metrics?.real_subscribers_count?.value?.toLocaleString() || 'N/A'}`);
-            console.log(`   • Likes promedio: ${firstResult.metrics?.likes_count?.value?.toLocaleString() || 'N/A'}`);
-            console.log(`   • Views promedio: ${firstResult.metrics?.views_avg?.value?.toLocaleString() || 'N/A'}`);
-            console.log(`   • Comentarios promedio: ${firstResult.metrics?.comments_avg?.value?.toLocaleString() || 'N/A'}`);
+           
             
             // Features
-            console.log('\n🏷️ FEATURES Y CALIDAD:');
-            console.log(`   • AQS: ${firstResult.features?.aqs?.data?.mark || 'N/A'}`);
-            console.log(`   • CQS: ${firstResult.features?.cqs?.data?.mark || 'N/A'}`);
-            console.log(`   • Blogger Topics: ${JSON.stringify(firstResult.features?.blogger_topics?.data) || 'N/A'}`);
+           
             
             // Social networks
             if (firstResult.features?.social_networks?.length > 0) {
-              console.log('\n🌐 REDES SOCIALES:');
+             
               firstResult.features.social_networks.forEach((social, index) => {
-                console.log(`   ${index + 1}. ${social.type || 'N/A'} - ID: ${social.social_id || 'N/A'} - Estado: ${social.state || 'N/A'}`);
+               
               });
             }
             
             // Audience data (si está disponible)
             if (firstResult.audience) {
-              console.log('\n👥 DATOS DE AUDIENCIA:');
-              console.log(`   • Geo: ${JSON.stringify(firstResult.audience.geo) || 'N/A'}`);
-              console.log(`   • Age: ${JSON.stringify(firstResult.audience.age) || 'N/A'}`);
-              console.log(`   • Gender: ${JSON.stringify(firstResult.audience.gender) || 'N/A'}`);
+             
             }
             
             // Mostrar TODOS los campos disponibles
-            console.log('\n🔍 [HYPEAUDITOR FULL] ESTRUCTURA COMPLETA DEL PRIMER RESULTADO:');
-            console.log('📦 Campos disponibles:', Object.keys(firstResult));
+            
             
             Object.keys(firstResult).forEach(key => {
               if (typeof firstResult[key] === 'object' && firstResult[key] !== null) {
-                console.log(`   📁 ${key}:`, Object.keys(firstResult[key]));
+               
               }
             });
           }
         } else {
-          console.log('❌ [HYPEAUDITOR FULL] No se encontraron resultados en la respuesta');
+         
         }
         
       } catch (error) {
-        console.error('❌ [HYPEAUDITOR FULL] Error al parsear la respuesta JSON:', error.message);
-        console.log('📄 [HYPEAUDITOR FULL] Respuesta raw:', data);
+       
       }
     });
   });
 
   req.on('error', (error) => {
-    console.error('❌ [HYPEAUDITOR FULL] Error en la petición:', error.message);
+   
   });
 
   req.write(postData);
@@ -261,9 +231,6 @@ function makeFullHypeAuditorRequest() {
 }
 
 // Ejecutar el script
-console.log('🚀 [HYPEAUDITOR FULL] Iniciando búsqueda con PAYLOAD COMPLETO...');
-console.log('🎯 [HYPEAUDITOR FULL] Endpoint: https://hypeauditor.com/api/method/auditor.searchSandbox/');
-console.log('🔑 [HYPEAUDITOR FULL] Client ID:', CLIENT_ID);
-console.log('📝 [HYPEAUDITOR FULL] Este payload incluye TODOS los filtros posibles de HypeAuditor\n');
+
 
 makeFullHypeAuditorRequest();

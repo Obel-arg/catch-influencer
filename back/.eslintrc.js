@@ -17,7 +17,7 @@ module.exports = {
   rules: {
     '@typescript-eslint/no-unused-vars': 'off',
     '@typescript-eslint/no-explicit-any': 'off',
-    'no-console': 'off', // Permitir console.log en backend
+    'no-console': 'off', 
     'prefer-const': 'warn', // Cambiar a warning en lugar de error
     'no-var': 'error',
     'no-undef': 'off', // Desactivar porque TypeScript ya maneja esto

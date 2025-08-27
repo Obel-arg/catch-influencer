@@ -19,7 +19,6 @@ export class HypeAuditorDiscoveryController {
 		const startTime = Date.now();
 		
 		try {
-			console.log(`🚀 [HYPEAUDITOR DISCOVERY CONTROLLER] Iniciando búsqueda de discovery`);
 			
 			const filters: ExplorerFilters = req.body;
 			
@@ -37,7 +36,7 @@ export class HypeAuditorDiscoveryController {
 			// Transformar filtros del Explorer a formato HypeAuditor
 			const hypeAuditorRequest = service.transformExplorerFiltersToHypeAuditor(filters);
 			
-			console.log(`🔧 [HYPEAUDITOR DISCOVERY CONTROLLER] Filtros transformados:`, JSON.stringify(hypeAuditorRequest, null, 2));
+
 
 			// Realizar búsqueda en HypeAuditor
 			const discoveryResponse = await service.searchDiscovery(hypeAuditorRequest);
@@ -55,7 +54,7 @@ export class HypeAuditorDiscoveryController {
 				filtersApplied: HypeAuditorDiscoveryController.getAppliedFilters(filters)
 			};
 
-			console.log(`✅ [HYPEAUDITOR DISCOVERY CONTROLLER] Búsqueda completada en ${searchTime}ms. Resultados: ${explorerResponse.items.length}`);
+
 
 			res.json(explorerResponse);
 
@@ -63,7 +62,7 @@ export class HypeAuditorDiscoveryController {
 			const endTime = Date.now();
 			const searchTime = endTime - startTime;
 			
-			console.error(`❌ [HYPEAUDITOR DISCOVERY CONTROLLER] Error en búsqueda después de ${searchTime}ms:`, error.message);
+			
 			
 			res.status(400).json({
 				success: false,
@@ -84,7 +83,7 @@ export class HypeAuditorDiscoveryController {
 		const startTime = Date.now();
 		
 		try {
-			console.log(`🚀 [HYPEAUDITOR DISCOVERY CONTROLLER] Iniciando búsqueda sandbox`);
+			
 			
 			const filters = req.body;
 			
@@ -102,7 +101,7 @@ export class HypeAuditorDiscoveryController {
 			// Usar la transformación completa de filtros (incluyendo audiencia)
 			const hypeAuditorRequest = service.transformExplorerFiltersToHypeAuditor(filters);
 			
-			console.log(`🔧 [HYPEAUDITOR DISCOVERY CONTROLLER] Filtros transformados (sandbox):`, JSON.stringify(hypeAuditorRequest, null, 2));
+
 
 			// Realizar búsqueda en HypeAuditor (sandbox)
 			const discoveryResponse = await service.searchDiscoverySandbox(hypeAuditorRequest);
@@ -110,7 +109,7 @@ export class HypeAuditorDiscoveryController {
 			const endTime = Date.now();
 			const searchTime = endTime - startTime;
 
-			console.log(`✅ [HYPEAUDITOR DISCOVERY CONTROLLER] Búsqueda sandbox completada en ${searchTime}ms. Resultados: ${discoveryResponse.result.search_results.length}`);
+
 
 			// Devolver la respuesta tal como viene de HypeAuditor
 			res.json({
@@ -129,7 +128,7 @@ export class HypeAuditorDiscoveryController {
 			const endTime = Date.now();
 			const searchTime = endTime - startTime;
 			
-			console.error(`❌ [HYPEAUDITOR DISCOVERY CONTROLLER] Error en búsqueda sandbox después de ${searchTime}ms:`, error.message);
+			
 			
 			res.status(400).json({
 				success: false,
@@ -151,7 +150,7 @@ export class HypeAuditorDiscoveryController {
 		const startTime = Date.now();
 		
 		try {
-			console.log(`🚀 [HYPEAUDITOR DISCOVERY CONTROLLER] Iniciando búsqueda directa`);
+			
 			
 			const request: DiscoverySearchRequest = req.body;
 			
@@ -164,7 +163,7 @@ export class HypeAuditorDiscoveryController {
 				});
 			}
 
-			console.log(`🔧 [HYPEAUDITOR DISCOVERY CONTROLLER] Parámetros directos:`, JSON.stringify(request, null, 2));
+
 
 			const service = HypeAuditorDiscoveryController.getDiscoveryService();
 
@@ -174,7 +173,7 @@ export class HypeAuditorDiscoveryController {
 			const endTime = Date.now();
 			const searchTime = endTime - startTime;
 
-			console.log(`✅ [HYPEAUDITOR DISCOVERY CONTROLLER] Búsqueda directa completada en ${searchTime}ms. Resultados: ${discoveryResponse.result.search_results.length}`);
+
 
 			res.json({
 				success: true,
@@ -190,7 +189,7 @@ export class HypeAuditorDiscoveryController {
 			const endTime = Date.now();
 			const searchTime = endTime - startTime;
 			
-			console.error(`❌ [HYPEAUDITOR DISCOVERY CONTROLLER] Error en búsqueda directa después de ${searchTime}ms:`, error.message);
+			
 			
 			res.status(400).json({
 				success: false,
@@ -210,12 +209,12 @@ export class HypeAuditorDiscoveryController {
 	 */
 	static async getTaxonomy(req: Request, res: Response) {
 		try {
-			console.log(`🔍 [HYPEAUDITOR DISCOVERY CONTROLLER] Obteniendo taxonomía`);
+
 			
 			const service = HypeAuditorDiscoveryController.getDiscoveryService();
 			const taxonomy = await service.getTaxonomy();
 			
-			console.log(`✅ [HYPEAUDITOR DISCOVERY CONTROLLER] Taxonomía obtenida`);
+
 			
 			res.json({
 				success: true,
@@ -224,7 +223,7 @@ export class HypeAuditorDiscoveryController {
 			});
 
 		} catch (error: any) {
-			console.error(`❌ [HYPEAUDITOR DISCOVERY CONTROLLER] Error obteniendo taxonomía:`, error.message);
+
 			
 			res.status(400).json({
 				success: false,
@@ -251,7 +250,7 @@ export class HypeAuditorDiscoveryController {
 
 			const contentIdsArray = Array.isArray(contentIds) ? contentIds.map(id => String(id)) : [String(contentIds)];
 			
-			console.log(`🔍 [HYPEAUDITOR DISCOVERY CONTROLLER] Buscando posts por keywords para ${socialNetwork}`);
+
 			
 			const service = HypeAuditorDiscoveryController.getDiscoveryService();
 			const result = await service.searchKeywordsPosts(
@@ -259,7 +258,7 @@ export class HypeAuditorDiscoveryController {
 				contentIdsArray
 			);
 			
-			console.log(`✅ [HYPEAUDITOR DISCOVERY CONTROLLER] Posts por keywords obtenidos`);
+
 			
 			res.json({
 				success: true,
@@ -268,7 +267,7 @@ export class HypeAuditorDiscoveryController {
 			});
 
 		} catch (error: any) {
-			console.error(`❌ [HYPEAUDITOR DISCOVERY CONTROLLER] Error buscando posts por keywords:`, error.message);
+
 			
 			res.status(400).json({
 				success: false,
@@ -285,7 +284,7 @@ export class HypeAuditorDiscoveryController {
 		const startTime = Date.now();
 		
 		try {
-			console.log(`🚀 [HYPEAUDITOR DISCOVERY CONTROLLER] Iniciando búsqueda inteligente`);
+
 			
 			const { query, platform, filters = {} } = req.body;
 			
@@ -310,7 +309,7 @@ export class HypeAuditorDiscoveryController {
 			// Transformar filtros del Explorer a formato HypeAuditor
 			const hypeAuditorRequest = service.transformExplorerFiltersToHypeAuditor(combinedFilters);
 			
-			console.log(`🔧 [HYPEAUDITOR DISCOVERY CONTROLLER] Filtros inteligentes:`, JSON.stringify(hypeAuditorRequest, null, 2));
+	
 
 			// Realizar búsqueda en HypeAuditor
 			const discoveryResponse = await service.searchDiscovery(hypeAuditorRequest);
@@ -331,7 +330,7 @@ export class HypeAuditorDiscoveryController {
 				platform
 			};
 
-			console.log(`✅ [HYPEAUDITOR DISCOVERY CONTROLLER] Búsqueda inteligente completada en ${searchTime}ms. Resultados: ${explorerResponse.items.length}`);
+	
 
 			res.json(explorerResponse);
 
@@ -339,7 +338,7 @@ export class HypeAuditorDiscoveryController {
 			const endTime = Date.now();
 			const searchTime = endTime - startTime;
 			
-			console.error(`❌ [HYPEAUDITOR DISCOVERY CONTROLLER] Error en búsqueda inteligente después de ${searchTime}ms:`, error.message);
+
 			
 			res.status(400).json({
 				success: false,
@@ -359,7 +358,7 @@ export class HypeAuditorDiscoveryController {
 	 */
 	static async healthCheck(req: Request, res: Response) {
 		try {
-			console.log(`🏥 [HYPEAUDITOR DISCOVERY CONTROLLER] Verificando salud del servicio`);
+
 			
 			const service = HypeAuditorDiscoveryController.getDiscoveryService();
 			
@@ -375,7 +374,7 @@ export class HypeAuditorDiscoveryController {
 			const endTime = Date.now();
 			const responseTime = endTime - startTime;
 
-			console.log(`✅ [HYPEAUDITOR DISCOVERY CONTROLLER] Salud verificada en ${responseTime}ms`);
+
 			
 			res.json({
 				success: true,
@@ -388,7 +387,7 @@ export class HypeAuditorDiscoveryController {
 			});
 
 		} catch (error: any) {
-			console.error(`❌ [HYPEAUDITOR DISCOVERY CONTROLLER] Error en health check:`, error.message);
+
 			
 			res.status(503).json({
 				success: false,
@@ -405,8 +404,8 @@ export class HypeAuditorDiscoveryController {
 	 */
 	static async getUsageStats(req: Request, res: Response) {
 		try {
-			console.log(`📊 [HYPEAUDITOR DISCOVERY CONTROLLER] Obteniendo estadísticas de uso`);
-			
+
+
 			const service = HypeAuditorDiscoveryController.getDiscoveryService();
 			
 			// Realizar una búsqueda simple para obtener queries_left
@@ -418,7 +417,7 @@ export class HypeAuditorDiscoveryController {
 
 			const discoveryResponse = await service.searchDiscoverySandbox(testRequest);
 			
-			console.log(`✅ [HYPEAUDITOR DISCOVERY CONTROLLER] Estadísticas obtenidas`);
+
 			
 			res.json({
 				success: true,

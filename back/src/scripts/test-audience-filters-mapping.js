@@ -23,7 +23,7 @@ const headers = {
 };
 
 async function testAudienceFiltersMapping() {
-    console.log('🧪 [AUDIENCE FILTERS TEST] Probando mapeo de filtros de audiencia\n');
+   
 
     try {
         // Filtros de audiencia completos para probar el mapeo
@@ -52,22 +52,17 @@ async function testAudienceFiltersMapping() {
             }
         };
 
-        console.log('📤 Enviando filtros con audiencia (formato frontend):');
-        console.log(JSON.stringify(filtersWithAudience, null, 2));
-        console.log('\n');
+       
 
         const response = await axios.post(`${BASE_URL}/hypeauditor/discovery/search-sandbox`, filtersWithAudience, { headers });
         
-        console.log('✅ Respuesta del servidor:');
-        console.log(`- Success: ${response.data.success}`);
-        console.log(`- Provider: ${response.data.provider}`);
-        console.log(`- Results: ${response.data.data?.result?.search_results?.length || 0}`);
+
         
         // Los logs de transformación deberían aparecer en la consola del servidor
-        console.log('\n📝 Revisa la consola del servidor para ver los filtros transformados al formato HypeAuditor');
+        
         
         // Probar también con audienceGender = 'any' (no debería enviar el filtro)
-        console.log('\n🧪 Probando con audienceGender = "any" (no debería enviarse a HypeAuditor)');
+        
         
         const filtersWithAnyGender = {
             ...filtersWithAudience,
@@ -78,11 +73,10 @@ async function testAudienceFiltersMapping() {
         };
 
         const response2 = await axios.post(`${BASE_URL}/hypeauditor/discovery/search-sandbox`, filtersWithAnyGender, { headers });
-        console.log(`- Success: ${response2.data.success}`);
-        console.log('- El filtro audience_gender NO debería aparecer en los logs del servidor');
+        
 
     } catch (error) {
-        console.error('❌ Error en el test:', error.response?.data || error.message);
+       
     }
 }
 

@@ -8,7 +8,6 @@
 const fetch = require("node-fetch").default || require("node-fetch");
 
 async function getTopNiches() {
-  console.log("🎯 [NICHOS-SIMPLE] Iniciando extracción de nichos...\n");
 
   const API_BASE = "http://localhost:5000/api";
   const platforms = ["instagram", "youtube", "tiktok"];
@@ -16,7 +15,7 @@ async function getTopNiches() {
 
   try {
     for (const platform of platforms) {
-      console.log(`🔍 Obteniendo nichos de ${platform.toUpperCase()}...`);
+     
 
       const url = `${API_BASE}/post-topics/categories?platform=${platform}`;
 
@@ -29,7 +28,7 @@ async function getTopNiches() {
         });
 
         if (!response.ok) {
-          console.log(`❌ Error HTTP ${response.status} para ${platform}`);
+         
           continue;
         }
 
@@ -42,19 +41,17 @@ async function getTopNiches() {
             .map((niche) => ({ ...niche, platform }));
 
           allNiches.push(...niches);
-          console.log(`✅ ${niches.length} nichos encontrados en ${platform}`);
+         
         } else {
-          console.log(`⚠️  Sin datos para ${platform}`);
+         
         }
       } catch (error) {
-        console.log(`❌ Error con ${platform}:`, error.message);
+       
       }
     }
 
     if (allNiches.length === 0) {
-      console.log("\n❌ No se encontraron nichos. Verificaciones:");
-      console.log("1. ¿Está el servidor corriendo en localhost:5000?");
-      console.log("2. ¿Tienes configurada la API key de CreatorDB?");
+     
       return;
     }
 
@@ -63,16 +60,11 @@ async function getTopNiches() {
       .sort((a, b) => b.channelCount - a.channelCount)
       .slice(0, 25);
 
-    console.log("\n🏆 TOP 25 MEJORES NICHOS:\n");
-    console.log("═".repeat(80));
+   
 
     topNiches.forEach((niche, i) => {
       const rank = (i + 1).toString().padStart(2, "0");
-      console.log(`${rank}. ${niche.name}`);
-      console.log(`    📊 ${niche.channelCount.toLocaleString()} canales`);
-      console.log(`    📱 ${niche.platform.toUpperCase()}`);
-      console.log(`    🏷️  ${niche.category || "Sin categoría"}`);
-      console.log("─".repeat(50));
+     
     });
 
     // Resumen
@@ -81,18 +73,11 @@ async function getTopNiches() {
       return acc;
     }, {});
 
-    console.log("\n📊 RESUMEN:");
-    console.log(`• Total nichos analizados: ${allNiches.length}`);
-    console.log(`• Top 25 mostrados`);
-    console.log(
-      `• Nicho #1: ${
-        topNiches[0]?.name
-      } (${topNiches[0]?.channelCount.toLocaleString()} canales)`
-    );
 
-    console.log("\n📱 DISTRIBUCIÓN POR PLATAFORMA:");
+
+   
     Object.entries(platformStats).forEach(([platform, count]) => {
-      console.log(`• ${platform.toUpperCase()}: ${count} nichos`);
+     
     });
 
     // JSON para exportar
@@ -114,10 +99,9 @@ async function getTopNiches() {
       },
     };
 
-    console.log("\n💾 JSON EXPORTADO:");
-    console.log(JSON.stringify(exportData, null, 2));
+   
   } catch (error) {
-    console.error("❌ Error fatal:", error.message);
+   
   }
 }
 
@@ -126,7 +110,7 @@ async function checkAndInstallFetch() {
   try {
     require("node-fetch");
   } catch (error) {
-    console.log("📦 Instalando node-fetch...");
+   
     const { execSync } = require("child_process");
     execSync("npm install node-fetch", { stdio: "inherit" });
   }
@@ -137,11 +121,11 @@ if (require.main === module) {
   checkAndInstallFetch()
     .then(() => getTopNiches())
     .then(() => {
-      console.log("\n✅ Extracción completada exitosamente");
+     
       process.exit(0);
     })
     .catch((error) => {
-      console.error("\n❌ Error:", error.message);
+     
       process.exit(1);
     });
 }

@@ -19,7 +19,6 @@ export class InfluencerController {
   async createInfluencer(req: Request, res: Response) {
     try {
       const influencerData = req.body;
-      console.log(`🔄 [CONTROLLER] Creando influencer: ${influencerData.name}`);
 
       const result = await this.influencerService.createInfluencer(influencerData);
 
@@ -208,8 +207,6 @@ export class InfluencerController {
     try {
       const { youtubeId, instagramId, tiktokId } = req.query;
 
-      console.log(`🔄 [CONTROLLER] Obteniendo datos básicos de plataformas:`, { youtubeId, instagramId, tiktokId });
-
       const data = await this.influencerService.getBasicPlatformData({
         youtubeId: youtubeId as string,
         instagramId: instagramId as string,
@@ -280,8 +277,6 @@ export class InfluencerController {
   async refreshInfluencerData(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      
-      console.log(`🔄 [CONTROLLER] Iniciando refresh de datos para influencer ${id}`);
       
       const result = await this.influencerService.refreshInfluencerData(id);
       

@@ -106,13 +106,9 @@ export class BrandController {
   async deleteBrand(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      console.log('🗑️ [Controller] DELETE request recibido para marca:', id);
-      console.log('🗑️ [Controller] User ID:', req.user?.id);
-      console.log('🗑️ [Controller] Headers:', req.headers.authorization ? 'Token presente' : 'Sin token');
-      
+
       await this.brandService.deleteBrand(id);
-      console.log('🗑️ [Controller] Marca eliminada exitosamente');
-      
+
       res.status(204).json({ message: 'Marca eliminada exitosamente' });
     } catch (error) {
       console.error('🗑️ [Controller] Error al eliminar marca:', error);

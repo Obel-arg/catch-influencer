@@ -44,9 +44,8 @@ function makeHypeAuditorRequest() {
     }
   };
 
-  const req = https.request(options, (res) => {
-    console.log(`Status: ${res.statusCode}`);
-    console.log(`Headers:`, res.headers);
+  const req = https.request(options, (res) => { 
+   
 
     let data = '';
     res.on('data', (chunk) => {
@@ -56,38 +55,26 @@ function makeHypeAuditorRequest() {
     res.on('end', () => {
       try {
         const response = JSON.parse(data);
-        console.log('Respuesta completa:');
-        console.log(JSON.stringify(response, null, 2));
+       
         
         // Mostrar información específica de los resultados
         if (response.result && response.result.search_results) {
-          console.log('\n=== RESUMEN DE RESULTADOS ===');
-          console.log(`Total de páginas: ${response.result.total_pages}`);
-          console.log(`Página actual: ${response.result.current_page}`);
-          console.log(`Consultas restantes: ${response.result.queries_left}`);
-          console.log(`Resultados encontrados: ${response.result.search_results.length}`);
+
           
           if (response.result.search_results.length > 0) {
-            console.log('\n=== PRIMEROS 3 RESULTADOS ===');
             response.result.search_results.slice(0, 3).forEach((result, index) => {
-              console.log(`\n--- Resultado ${index + 1} ---`);
-              console.log(`Username: ${result.basic.username}`);
-              console.log(`Título: ${result.basic.title}`);
-              console.log(`Seguidores: ${result.metrics.subscribers_count.value}`);
-              console.log(`ER: ${result.metrics.er.value}%`);
-              console.log(`Seguidores reales: ${result.metrics.real_subscribers_count.value}`);
+             
             });
           }
         }
       } catch (error) {
-        console.error('Error al parsear la respuesta JSON:', error);
-        console.log('Respuesta raw:', data);
+       
       }
     });
   });
 
   req.on('error', (error) => {
-    console.error('Error en la petición:', error);
+   
   });
 
   req.write(postData);
@@ -95,10 +82,6 @@ function makeHypeAuditorRequest() {
 }
 
 // Ejecutar el script
-console.log('Iniciando búsqueda en HypeAuditor Sandbox...');
-console.log('Endpoint: https://hypeauditor.com/api/method/auditor.searchSandbox/');
-console.log('Client ID:', CLIENT_ID);
-console.log('Datos de búsqueda:', JSON.stringify(requestData, null, 2));
-console.log('\n' + '='.repeat(50) + '\n');
+  
 
 makeHypeAuditorRequest();

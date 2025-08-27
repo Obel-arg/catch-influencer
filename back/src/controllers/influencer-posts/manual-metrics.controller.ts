@@ -15,12 +15,7 @@ export class ManualMetricsController {
       const { postId } = req.params;
       const { likes, comments, alcance } = req.body;
 
-      console.log('📸 [MANUAL-METRICS] Guardando métricas manuales:', {
-        postId,
-        likes,
-        comments,
-        alcance
-      });
+     
 
       if (!postId || (likes === undefined && comments === undefined && alcance === undefined)) {
         return res.status(400).json({
@@ -93,8 +88,6 @@ export class ManualMetricsController {
       // Guardar en la base de datos
       const savedMetrics = await this.postMetricsService.createUserPostMetrics(metricsData);
 
-      console.log('✅ [MANUAL-METRICS] Métricas guardadas exitosamente:', savedMetrics.id);
-
       return res.json({
         success: true,
         message: 'Métricas guardadas exitosamente',
@@ -119,15 +112,7 @@ export class ManualMetricsController {
       const { postId } = req.params;
       const file = req.file;
 
-      console.log('📸 [MANUAL-METRICS] Request recibida:', { 
-        postId, 
-        hasFile: !!file,
-        fileName: file?.originalname,
-        fileSize: file?.size,
-        fieldname: file?.fieldname,
-        mimetype: file?.mimetype,
-        headers: req.headers['content-type']
-      });
+    
 
       if (!postId) {
         return res.status(400).json({
@@ -137,7 +122,7 @@ export class ManualMetricsController {
       }
 
       if (!file) {
-        console.log('❌ [MANUAL-METRICS] No se recibió archivo');
+       
         return res.status(400).json({
           success: false,
           message: 'Archivo es requerido'
@@ -177,7 +162,7 @@ export class ManualMetricsController {
         fileName
       );
 
-      console.log('✅ [MANUAL-METRICS] Screenshot subido a:', screenshotUrl);
+     
 
       // Actualizar o crear métricas con la URL del screenshot
       const { data: existingMetrics } = await supabase
@@ -232,7 +217,7 @@ export class ManualMetricsController {
         await this.postMetricsService.createUserPostMetrics(metricsData);
       }
 
-      console.log('✅ [MANUAL-METRICS] Screenshot guardado exitosamente');
+     
 
       return res.json({
         success: true,
@@ -258,8 +243,7 @@ export class ManualMetricsController {
    */
   async uploadPostImage(req: Request, res: Response) {
     try {
-      console.log('📸 [MANUAL-METRICS] Iniciando upload de imagen personalizada');
-
+      
       const file = req.file;
       if (!file) {
         return res.status(400).json({
@@ -267,12 +251,6 @@ export class ManualMetricsController {
           message: 'No se recibió ningún archivo'
         });
       }
-
-      console.log('📸 [MANUAL-METRICS] Archivo recibido:', {
-        originalName: file.originalname,
-        mimeType: file.mimetype,
-        size: file.size
-      });
 
       // Generar nombre único para la imagen
       const fileName = `posts/custom_images/image_${Date.now()}.${file.originalname.split('.').pop()}`;
@@ -284,7 +262,7 @@ export class ManualMetricsController {
         fileName
       );
 
-      console.log('✅ [MANUAL-METRICS] Imagen personalizada subida a:', imageUrl);
+      
 
       res.json({
         success: true,

@@ -788,11 +788,7 @@ export class CampaignService {
       throw new Error(`Error al asignar usuarios a la campaña: ${insertError.message}`);
     }
 
-    console.log('✅ [CAMPAIGN_SERVICE] Asignaciones insertadas exitosamente:', {
-      campaignId,
-      assignedUsers: newUserIds,
-      timestamp: new Date().toISOString()
-    });
+   
   }
 
   async removeUsersFromCampaign(campaignId: string, userIds: string[]): Promise<void> {

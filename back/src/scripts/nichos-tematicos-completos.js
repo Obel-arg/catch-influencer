@@ -8,13 +8,12 @@
 require('dotenv').config();
 
 async function getInstagramNichosTematicoCompletos() {
-  console.log('🎨 [NICHOS-TEMÁTICOS] Analizando nichos temáticos específicos de Instagram...\n');
 
   const API_KEY = process.env.CREATORDB_API_KEY;
   const BASE_URL = 'https://dev.creatordb.app/v2/topicTable';
   
   if (!API_KEY) {
-    console.error('❌ CREATORDB_API_KEY no está configurada');
+   
     return;
   }
 
@@ -26,7 +25,7 @@ async function getInstagramNichosTematicoCompletos() {
     const data = await response.json();
     
     if (!data.success || !data.data?.niches) {
-      console.log('❌ Error obteniendo datos');
+     
       return;
     }
 
@@ -37,7 +36,7 @@ async function getInstagramNichosTematicoCompletos() {
       }))
       .sort((a, b) => b.channelCount - a.channelCount);
 
-    console.log(`✅ ${allNiches.length} nichos analizados\n`);
+   
 
     // CLASIFICACIÓN TEMÁTICA ESPECÍFICA
     const nichosTematicosPorCategoria = {
@@ -156,12 +155,10 @@ async function getInstagramNichosTematicoCompletos() {
     });
 
     // MOSTRAR RESULTADOS POR CATEGORÍA
-    console.log('🎨 NICHOS TEMÁTICOS ESPECÍFICOS POR CATEGORÍA\n');
-    console.log('='.repeat(80));
+   
 
     Object.entries(resultadosTematicos).forEach(([categoria, nichos]) => {
-      console.log(`\n📂 ${categoria.toUpperCase()}:`);
-      console.log('-'.repeat(50));
+     
       
       nichos.forEach((niche, index) => {
         const rank = (index + 1).toString().padStart(2, '0');
@@ -170,8 +167,8 @@ async function getInstagramNichosTematicoCompletos() {
                               niche.channelCount > 200000 ? '⚡ALTO' : 
                               niche.channelCount > 100000 ? '📈MEDIO' : '💫MODERADO';
         
-        console.log(`   ${rank}. ${niche.name.padEnd(20)} | ${channels} canales | ${popularityLevel}`);
-      });
+       
+      });   
     });
 
     // RESUMEN DE TODOS LOS NICHOS TEMÁTICOS PARA EL FRONTEND
@@ -191,23 +188,19 @@ async function getInstagramNichosTematicoCompletos() {
     // Ordenar todos por popularidad
     todosLosNichosTematicos.sort((a, b) => b.channelCount - a.channelCount);
 
-    console.log('\n📊 RESUMEN GENERAL:');
-    console.log(`• Total categorías temáticas: ${Object.keys(resultadosTematicos).length}`);
-    console.log(`• Total nichos temáticos encontrados: ${todosLosNichosTematicos.length}`);
-    console.log(`• Nicho temático más popular: ${todosLosNichosTematicos[0]?.name} (${todosLosNichosTematicos[0]?.channelCount.toLocaleString()} canales)`);
+   
 
     // TOP 30 NICHOS TEMÁTICOS PARA IMPLEMENTAR
     const top30Tematicos = todosLosNichosTematicos.slice(0, 30);
     
-    console.log('\n🏆 TOP 30 NICHOS TEMÁTICOS RECOMENDADOS PARA EL FRONTEND:');
-    console.log('='.repeat(80));
+   
     
     top30Tematicos.forEach((niche, index) => {
       const rank = (index + 1).toString().padStart(2, '0');
       const channels = niche.channelCount.toLocaleString().padStart(8);
       const category = niche.categoria_tematica.slice(0, 20).padEnd(20);
       
-      console.log(`${rank}. ${niche.name.padEnd(18)} | ${channels} canales | ${category} | ${niche.popularity_level.toUpperCase()}`);
+      
     });
 
     // JSON PARA EL FRONTEND
@@ -240,11 +233,10 @@ async function getInstagramNichosTematicoCompletos() {
       para_frontend: true
     };
 
-    console.log('\n💾 JSON COMPLETO PARA EL FRONTEND:');
-    console.log(JSON.stringify(frontendData, null, 2));
+   
 
   } catch (error) {
-    console.error('❌ Error:', error);
+   
   }
 }
 
@@ -261,11 +253,11 @@ if (require.main === module) {
   ensureFetch()
     .then(() => getInstagramNichosTematicoCompletos())
     .then(() => {
-      console.log('\n✅ Análisis temático completado exitosamente');
+     
       process.exit(0);
     })
     .catch((error) => {
-      console.error('\n❌ Error fatal:', error.message);
+     
       process.exit(1);
     });
 }
