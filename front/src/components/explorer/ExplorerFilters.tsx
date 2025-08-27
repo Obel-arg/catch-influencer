@@ -56,9 +56,12 @@ import {
   MonitorPlay,
   ChefHat,
   Coffee,
-  Radio,
   Utensils,
   Shield,
+  Activity,
+  Palette,
+  HelpCircle,
+  Stethoscope,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
@@ -186,14 +189,7 @@ const countryList = [
   { code: "VEN", name: "Venezuela" },
 ].sort((a, b) => a.name.localeCompare(b.name));
 
-// 🎯 CATEGORÍAS ESPECÍFICAS DE FACEBOOK
-const facebookCategories = [
-  "Page · Athlete",
-  "Page · Kitchen/cooking", 
-  "Page · Broadcasting & media production company",
-  "Page · Food & beverage company",
-  "Page · Artist"
-];
+
 
 // 🎯 CATEGORÍAS ESPECÍFICAS DE YOUTUBE (mainCategory)
 const youtubeCategories = [
@@ -395,27 +391,9 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
 
   // 🎯 NUEVO: Funciones para verificar compatibilidad de filtros por plataforma
   const isFilterDisabled = (filterType: string): boolean => {
-    if (platform === "Facebook" || platform === "Threads") {
-      const disabledFilters = {
-        location: true, // Facebook y Threads no tienen country
-        engagement: platform === "Threads", // Threads no tiene engagement rate
-
-
-        categories: platform === "Threads", // Threads no tiene categorías
-      };
-      return disabledFilters[filterType as keyof typeof disabledFilters] || false;
-    }
-    
     if (platform === "TikTok") {
       const disabledFilters = {
-        categories: true, // TikTok no tiene categorías
-      };
-      return disabledFilters[filterType as keyof typeof disabledFilters] || false;
-    }
-
-    if (platform === "YouTube") {
-      const disabledFilters = {
-
+        categories: true, // TikTok no tiene categorías en el taxonomy actual
       };
       return disabledFilters[filterType as keyof typeof disabledFilters] || false;
     }
@@ -423,28 +401,11 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
     return false;
   };
 
-  const getDisabledMessage = (filterType: string): string => {
-    const platformName = platform === "Facebook" ? "Facebook" : "Threads";
-    const messages = {
-      location: `${platformName} actualmente no soporta filtrado por país`,
-      engagement: `${platformName} actualmente no soporta filtrado por engagement rate`,
-
-
-      categories: `${platformName} actualmente no soporta filtrado por categorías`,
-    };
-    return messages[filterType as keyof typeof messages] || "";
-  };
-
   const getTikTokDisabledMessage = (filterType: string): string => {
     const messages = {
-      categories: "TikTok actualmente no soporta filtrado por categorías",
-    };
-    return messages[filterType as keyof typeof messages] || "";
-  };
-
-  const getYouTubeDisabledMessage = (filterType: string): string => {
-    const messages = {
-
+      categories: "TikTok actualmente no soporta filtrado por categorías en el taxonomy",
+      location: "Este filtro no está disponible para esta plataforma",
+      engagement: "Este filtro no está disponible para esta plataforma",
     };
     return messages[filterType as keyof typeof messages] || "";
   };
@@ -554,52 +515,14 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
     }
   };
 
-  // 🎯 NUEVA FUNCIÓN: Limpiar filtros incompatibles cuando se cambia de plataforma
+    // 🎯 NUEVA FUNCIÓN: Limpiar filtros incompatibles cuando se cambia de plataforma
   const clearIncompatibleFilters = (newPlatform: string) => {
-    // Crear un objeto temporal para verificar incompatibilidades
-    const tempPlatform = newPlatform;
-    
-    // Función auxiliar para verificar si un filtro está deshabilitado en la nueva plataforma
-    const isFilterDisabledForPlatform = (filterType: string, platform: string): boolean => {
-      if (platform === "Facebook" || platform === "Threads") {
-        const disabledFilters = {
-          location: true, // Facebook y Threads no tienen country
-          engagement: platform === "Threads", // Threads no tiene engagement rate
-  
-  
-          categories: platform === "Threads", // Threads no tiene categorías
-        };
-        return disabledFilters[filterType as keyof typeof disabledFilters] || false;
+    // Solo TikTok tiene filtros deshabilitados actualmente
+    if (newPlatform === "TikTok") {
+      // TikTok no tiene categorías en el taxonomy, limpiar categorías seleccionadas
+      if (selectedCategories.length > 0) {
+        setSelectedCategories([]);
       }
-      
-      if (platform === "TikTok") {
-        const disabledFilters = {
-          categories: true, // TikTok no tiene categorías
-        };
-        return disabledFilters[filterType as keyof typeof disabledFilters] || false;
-      }
-      
-      return false;
-    };
-
-    // Limpiar location si no es compatible
-    if (isFilterDisabledForPlatform("location", tempPlatform) && location !== "all") {
-      setLocation("all");
-    }
-
-    // Limpiar engagement si no es compatible
-    if (isFilterDisabledForPlatform("engagement", tempPlatform) && (minEngagement !== 0 || maxEngagement !== 100)) {
-      setMinEngagement(0);
-      setMaxEngagement(100);
-    }
-
- 
-
-
-
-    // Limpiar categorías si no es compatible
-    if (isFilterDisabledForPlatform("categories", tempPlatform) && selectedCategories.length > 0) {
-      setSelectedCategories([]);
     }
   };
 
@@ -715,17 +638,43 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
         return "Trophy";
       case "Politician":
         return "Vote";
-      // 🎯 CATEGORÍAS ESPECÍFICAS DE FACEBOOK
-      case "Page · Athlete":
+        
+      // ✨ CATEGORÍAS ESPECÍFICAS DEL TAXONOMY DE YOUTUBE
+      case "Fitness":
         return "Trophy";
-      case "Page · Kitchen/cooking":
-        return "ChefHat";
-      case "Page · Broadcasting & media production company":
-        return "Radio";
-      case "Page · Food & beverage company":
+      case "Food & Drinks":
         return "Coffee";
-      case "Page · Artist":
-        return "Mic";
+      case "Music & Dance":
+        return "Music";
+      case "Video games":
+        return "Gamepad2";
+      case "Animals & Pets":
+        return "PawPrint";
+      case "Animation":
+        return "Video";
+      case "ASMR":
+        return "Activity";
+      case "Daily vlogs":
+        return "Camera";
+      case "Design/art":
+        return "Palette";
+      case "DIY & Life Hacks":
+        return "Scissors";
+      case "Family & Parenting":
+        return "Baby";
+      case "Health & Self Help":
+        return "Stethoscope";
+      case "Humor":
+        return "Laugh";
+      case "Movies":
+        return "Film";
+      case "Mystery":
+        return "HelpCircle";
+      case "Show":
+        return "Tv";
+      case "Toys":
+        return "Baby";
+
       // 🎯 CATEGORÍAS ESPECÍFICAS DE YOUTUBE
       case "Anime/Animation":
         return "Video";
@@ -852,17 +801,43 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
         return "text-teal-500";
       case "Politician":
         return "text-gray-600";
-      // 🎯 COLORES PARA CATEGORÍAS DE FACEBOOK
-      case "Page · Athlete":
-        return "text-yellow-500";
-      case "Page · Kitchen/cooking":
-        return "text-orange-600";
-      case "Page · Broadcasting & media production company":
-        return "text-blue-600";
-      case "Page · Food & beverage company":
+        
+      // ✨ COLORES PARA CATEGORÍAS ESPECÍFICAS DEL TAXONOMY DE YOUTUBE
+      case "Fitness":
+        return "text-red-500";
+      case "Food & Drinks":
         return "text-amber-600";
-      case "Page · Artist":
-        return "text-purple-500";
+      case "Music & Dance":
+        return "text-green-600";
+      case "Video games":
+        return "text-blue-600";
+      case "Animals & Pets":
+        return "text-amber-600";
+      case "Animation":
+        return "text-purple-600";
+      case "ASMR":
+        return "text-indigo-600";
+      case "Daily vlogs":
+        return "text-pink-600";
+      case "Design/art":
+        return "text-purple-700";
+      case "DIY & Life Hacks":
+        return "text-orange-700";
+      case "Family & Parenting":
+        return "text-pink-700";
+      case "Health & Self Help":
+        return "text-green-700";
+      case "Humor":
+        return "text-yellow-600";
+      case "Movies":
+        return "text-orange-800";
+      case "Mystery":
+        return "text-gray-700";
+      case "Show":
+        return "text-purple-800";
+      case "Toys":
+        return "text-pink-800";
+
       // 🎯 COLORES PARA CATEGORÍAS DE YOUTUBE
       case "Anime/Animation":
         return "text-purple-500";
@@ -911,15 +886,6 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
 
   // 🎯 FUNCIÓN PARA FORMATEAR EL NOMBRE DE LA CATEGORÍA
 const formatCategoryName = (category: string): string => {
-  // Para categorías de Facebook, remover el prefijo "Page ·"
-  if (category.startsWith("Page · ")) {
-    const withoutPrefix = category.replace("Page · ", "");
-    // Caso especial para "Broadcasting & media production company"
-    if (withoutPrefix === "Broadcasting & media production company") {
-      return "media company";
-    }
-    return withoutPrefix;
-  }
   return category;
   };
 
@@ -939,10 +905,6 @@ const formatCategoryName = (category: string): string => {
             ? "/icons/instagram.svg"
             : platform === "TikTok"
             ? "/icons/tiktok.svg"
-            : platform === "Facebook"
-            ? "/icons/facebook.svg"
-            : platform === "Threads"
-            ? "/icons/threads.svg"
             : null,
         type: "platform",
       });
@@ -1202,9 +1164,6 @@ const formatCategoryName = (category: string): string => {
                       {filter.icon === "ChefHat" && (
                         <ChefHat className="h-3 w-3" />
                       )}
-                      {filter.icon === "Radio" && (
-                        <Radio className="h-3 w-3" />
-                      )}
                       {filter.icon === "Coffee" && (
                         <Coffee className="h-3 w-3" />
                       )}
@@ -1241,6 +1200,18 @@ const formatCategoryName = (category: string): string => {
                       )}
                       {filter.icon === "Plane" && (
                         <Plane className="h-3 w-3" />
+                      )}
+                      {filter.icon === "Activity" && (
+                        <Activity className="h-3 w-3" />
+                      )}
+                      {filter.icon === "Palette" && (
+                        <Palette className="h-3 w-3" />
+                      )}
+                      {filter.icon === "HelpCircle" && (
+                        <HelpCircle className="h-3 w-3" />
+                      )}
+                      {filter.icon === "Stethoscope" && (
+                        <Stethoscope className="h-3 w-3" />
                       )}
                     </div>
                   ) : filter.icon && typeof filter.icon === "string" ? (
@@ -1322,26 +1293,6 @@ const formatCategoryName = (category: string): string => {
                             className="h-5 w-5"
                           />
                           <span>TikTok</span>
-                        </>
-                      )}
-                      {platform === "Facebook" && (
-                        <>
-                          <img
-                            src="/icons/facebook.svg"
-                            alt="Facebook"
-                            className="h-5 w-5"
-                          />
-                          <span>Facebook</span>
-                        </>
-                      )}
-                      {platform === "Threads" && (
-                        <>
-                          <img
-                            src="/icons/threads.svg"
-                            alt="Threads"
-                            className="h-5 w-5"
-                          />
-                          <span>Threads</span>
                         </>
                       )}
                     </div>
@@ -1428,46 +1379,6 @@ const formatCategoryName = (category: string): string => {
                     />
                     <span className="font-medium">TikTok</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      clearIncompatibleFilters("Facebook");
-                      setPlatform("Facebook");
-                      clearSearchOnFilterChange();
-                    }}
-                    className={cn(
-                      "flex items-center gap-3 py-2 px-2 rounded-md cursor-pointer",
-                      platform === "Facebook"
-                        ? "bg-blue-50 text-blue-700"
-                        : "hover:bg-gray-50"
-                    )}
-                  >
-                    <img
-                      src="/icons/facebook.svg"
-                      alt="Facebook"
-                      className="h-5 w-5"
-                    />
-                    <span className="font-medium">Facebook</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      clearIncompatibleFilters("Threads");
-                      setPlatform("Threads");
-                      clearSearchOnFilterChange();
-                    }}
-                    className={cn(
-                      "flex items-center gap-3 py-2 px-2 rounded-md cursor-pointer",
-                      platform === "Threads"
-                        ? "bg-blue-50 text-blue-700"
-                        : "hover:bg-gray-50"
-                    )}
-                  >
-                    <img
-                      src="/icons/threads.svg"
-                      alt="Threads"
-                      className="h-5 w-5"
-                    />
-                    <span className="font-medium">Threads</span>
-                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -1518,7 +1429,7 @@ const formatCategoryName = (category: string): string => {
                     className="w-[300px] bg-white p-3"
                   >
                     <div className="text-sm text-gray-600 text-center">
-                      {platform === "TikTok" ? getTikTokDisabledMessage("location") : getDisabledMessage("location")}
+                      {getTikTokDisabledMessage("location")}
                     </div>
                   </DropdownMenuContent>
                 ) : (
@@ -1731,7 +1642,7 @@ const formatCategoryName = (category: string): string => {
                     className="w-[300px] bg-white p-3"
                   >
                     <div className="text-sm text-gray-600 text-center">
-                      {platform === "TikTok" ? getTikTokDisabledMessage("engagement") : getDisabledMessage("engagement")}
+                      {getTikTokDisabledMessage("engagement")}
                     </div>
                   </DropdownMenuContent>
                 ) : (
@@ -2263,7 +2174,7 @@ const formatCategoryName = (category: string): string => {
                     className="w-[300px] bg-white p-3"
                   >
                     <div className="text-sm text-gray-600 text-center">
-                      {platform === "TikTok" ? getTikTokDisabledMessage("categories") : getDisabledMessage("categories")}
+                      {getTikTokDisabledMessage("categories")}
                     </div>
                   </DropdownMenuContent>
                 ) : (
@@ -2315,7 +2226,6 @@ const formatCategoryName = (category: string): string => {
                              {getCategoryIcon(category) === "GraduationCap" && <GraduationCap className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Vote" && <Vote className="h-4 w-4" />}
                              {getCategoryIcon(category) === "ChefHat" && <ChefHat className="h-4 w-4" />}
-                             {getCategoryIcon(category) === "Radio" && <Radio className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Coffee" && <Coffee className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Tv" && <Tv className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Gamepad2" && <Gamepad2 className="h-4 w-4" />}
@@ -2329,6 +2239,10 @@ const formatCategoryName = (category: string): string => {
                              {getCategoryIcon(category) === "Play" && <Play className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Film" && <Film className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Plane" && <Plane className="h-4 w-4" />}
+                             {getCategoryIcon(category) === "Activity" && <Activity className="h-4 w-4" />}
+                             {getCategoryIcon(category) === "Palette" && <Palette className="h-4 w-4" />}
+                             {getCategoryIcon(category) === "HelpCircle" && <HelpCircle className="h-4 w-4" />}
+                             {getCategoryIcon(category) === "Stethoscope" && <Stethoscope className="h-4 w-4" />}
                            </div>
                           <span className="text-sm">{formatCategoryName(category)}</span>
                         </div>
