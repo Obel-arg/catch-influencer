@@ -5,6 +5,9 @@ import { authenticateToken } from '../../middleware/auth';
 const router = Router();
 const influencerController = new InfluencerController();
 
+// Ruta para búsqueda local (DEBE ir ANTES de las rutas con parámetros)
+router.get('/search/local', authenticateToken, influencerController.searchLocal.bind(influencerController));
+
 // Rutas principales de influencers
 router.post('/', authenticateToken, influencerController.createInfluencer.bind(influencerController));
 router.get('/:id', authenticateToken, influencerController.getInfluencerById.bind(influencerController));

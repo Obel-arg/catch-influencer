@@ -326,4 +326,44 @@ export class InfluencerController {
       res.status(500).json({ error: 'Error al obtener influencers' });
     }
   }
+
+  /**
+   * Búsqueda local de influencers con filtros avanzados
+   * GET /influencers/search/local
+   */
+  async searchLocal(req: Request, res: Response) {
+    try {
+      const {
+        platform,
+        category,
+        location,
+        minFollowers,
+        maxFollowers,
+        minEngagement,
+        maxEngagement,
+        query,
+        page,
+        size,
+      } = req.query;
+
+      const filters = {
+        platform: platform as string,
+        category: category as string,
+        location: location as string,
+        minFollowers: minFollowers ? Number(minFollowers) : undefined,
+        maxFollowers: maxFollowers ? Number(maxFollowers) : undefined,
+        minEngagement: minEngagement ? Number(minEngagement) : undefined,
+        maxEngagement: maxEngagement ? Number(maxEngagement) : undefined,
+        query: query as string,
+        page: page ? Number(page) : undefined,
+        size: size ? Number(size) : undefined,
+      };
+
+      const result = await this.influencerService.searchInfluencers(filters);
+      res.json(result);
+    } catch (error) {
+      console.error('Error searching influencers:', error);
+      res.status(500).json({ error: 'Error searching influencers' });
+    }
+  }
 } 

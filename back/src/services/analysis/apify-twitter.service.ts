@@ -29,7 +29,7 @@ export interface ApifyRunResult {
 
 export class ApifyTwitterService {
   private static instance: ApifyTwitterService;
-  private apiToken = 'apify_api_2kNmLwhgbS02MR2Xmh1zL6PmQ8wetW1aC5PN';
+  private apiToken = process.env.APIFY_API_TOKEN || '';
   private actorId = 'aLoAjAhdEpacDuwjr'; // Actor correcto que no requiere cookies
   private baseUrl = 'https://api.apify.com/v2';
 

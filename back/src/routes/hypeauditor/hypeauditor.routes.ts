@@ -11,7 +11,7 @@ router.post('/search', authenticateToken, HypeAuditorController.search);
 router.post('/sandbox', authenticateToken, HypeAuditorController.sandbox);
 
 // Reporte de Instagram por username
-router.get('/report', HypeAuditorController.getInstagramReport);
+router.get('/report', authenticateToken, HypeAuditorController.getInstagramReport);
 
 // Info
 router.get('/', (req, res) => {

@@ -1,7 +1,11 @@
 import { Router } from 'express';
+import { authenticateToken } from '../../middleware/auth';
 import { ConfigDebugController } from '../../controllers/debug/config-debug.controller';
 
 const router = Router();
+
+// 🔐 PROTECCIÓN: Solo usuarios autenticados pueden acceder a debug de configuración
+router.use(authenticateToken);
 const configDebugController = new ConfigDebugController();
 
 // Endpoints de diagnóstico de configuración

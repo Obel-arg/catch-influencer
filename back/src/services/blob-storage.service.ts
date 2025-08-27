@@ -2,7 +2,7 @@ import { put } from "@vercel/blob";
 import axios from "axios";
 
 export class BlobStorageService {
-  private static readonly BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN || 'vercel_blob_rw_9F6OBManbzdwczKP_qcZ65o3cvTffQsECA0DqZq5Q1QOoKF';
+  private static readonly BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN || '';
 
   /**
    * Sube una imagen desde una URL a Vercel Blob

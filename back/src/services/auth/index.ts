@@ -33,6 +33,17 @@ export const generateToken = (user: User, expiresIn: string | number = '24h'): s
   return jwt.sign(payload, config.jwtSecret, options);
 };
 
+// 🔐 MEJORA: Generar refresh token diferente con menos información
+export const generateRefreshToken = (user: User): string => {
+  const payload = { 
+    id: user.id,
+    type: 'refresh'  // Marcador para identificar refresh tokens
+  };
+  const options: SignOptions = { expiresIn: '7d' };
+  
+  return jwt.sign(payload, config.jwtSecret, options);
+};
+
 export const verifyToken = (token: string): any => {
   return jwt.verify(token, config.jwtSecret);
 };

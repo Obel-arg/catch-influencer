@@ -2,7 +2,7 @@ const https = require('https');
 
 // Datos hardcodeados
 const CLIENT_ID = '360838';
-const API_TOKEN = '$2y$04$Ai3PO.ApJUZd2tSpIEvrwuJowWPOVY5DwCE4RNnTVTD6ayQHKtZh6';
+const API_TOKEN = process.env.HYPEAUDITOR_API_TOKEN || '$2y$04$Ai3PO.ApJUZd2tSpIEvrwuJowWPOVY5DwCE4RNnTVTD6ayQHKtZh6';
 
 // Datos de la petición JSON - Filtros simplificados
 const requestData = {

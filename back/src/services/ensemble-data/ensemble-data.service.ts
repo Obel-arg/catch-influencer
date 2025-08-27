@@ -2,7 +2,7 @@ import { PostMetricsCreateDTO, YouTubeMetrics, InstagramMetrics, TikTokMetrics }
 
 export class EnsembleDataService {
   private readonly API_ROOT = 'https://ensembledata.com/apis';
-  private readonly API_TOKEN = '8Px5m3gZronXTte4';
+  private readonly API_TOKEN = process.env.ENSEMBLE_DATA_API_TOKEN || '';
 
   private async makeRequest(endpoint: string, params: Record<string, any>): Promise<any> {
     const queryParams = new URLSearchParams({

@@ -1,7 +1,11 @@
 import { Router } from 'express';
+import { authenticateToken } from '../../middleware/auth';
 import { InfluencerExtendedController } from '../../controllers/influencer/influencer-extended.controller';
 
 const router = Router();
+
+// 🔐 PROTECCIÓN: Solo usuarios autenticados pueden acceder a datos extendidos
+router.use(authenticateToken);
 const influencerExtendedController = new InfluencerExtendedController();
 
 /**

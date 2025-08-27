@@ -16,7 +16,7 @@ import metricsRoutes from './metrics/metrics.routes';
 import engagementRoutes from './engagement/engagement.routes';
 import notificationRoutes from './notification/notification.routes';
 import reportRoutes from './report/report.routes';
-import paymentRoutes from './payment/payment.routes';
+
 import creatorRoutes from './creator/creator.routes';
 
 import analysisRoutes from './analysis/youtube-analysis.routes';
@@ -98,7 +98,7 @@ router.use('/metrics', metricsRoutes);
 router.use('/engagement', engagementRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/reports', reportRoutes);
-router.use('/payments', paymentRoutes);
+
 router.use('/creator', creatorRoutes);
 router.use('/analysis', analysisRoutes);
 router.use('/analysis', instagramAnalysisRoutes);

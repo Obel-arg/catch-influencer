@@ -2,7 +2,7 @@ import axios from 'axios';
 import { postgresCacheService } from '../cache/postgres-cache.service';
 
 // TikTok API configuration
-const APIFY_API_TOKEN = process.env.APIFY_API_TOKEN || 'YOUR_APIFY_API_TOKEN';
+const APIFY_API_TOKEN = process.env.APIFY_API_TOKEN || '';
 const APIFY_ACTOR_ID = 'clockworks~tiktok-scraper';
 const APIFY_API_BASE_URL = 'https://api.apify.com/v2';
 

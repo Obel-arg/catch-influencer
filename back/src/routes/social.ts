@@ -1,10 +1,14 @@
 import { Router } from 'express';
+import { authenticateToken } from '../middleware/auth';
 import { TikTokApiService } from '../services/social/tiktok-api.service';
 import { InstagramApiService } from '../services/social/instagram-api.service';
 import { TwitterApiService } from '../services/social/twitter-api.service';
 import { InstagramCommentsService } from '../services/instagram/instagram-comments.service';
 
 const router = Router();
+
+// 🔐 PROTECCIÓN: Solo usuarios autenticados pueden usar servicios sociales
+router.use(authenticateToken);
 
 /**
  * GET /api/social/tiktok/thumbnail

@@ -1,7 +1,11 @@
 import { Router } from 'express';
+import { authenticateToken } from '../../middleware/auth';
 import CreatorDBController from '../../controllers/creator/creator.controller';
 
 const router = Router();
+
+// 🔐 PROTECCIÓN: Aplicar autenticación a TODAS las rutas de CreatorDB
+router.use(authenticateToken);
 
 // ==============================================
 // 🆕 RUTAS GENERALES

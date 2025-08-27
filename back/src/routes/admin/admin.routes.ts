@@ -1,10 +1,14 @@
 import { Router } from 'express';
+import { authenticateToken } from '../../middleware/auth';
 import { AdminController } from '../../controllers/admin/admin.controller';
 import jobControlRoutes from './job-control.routes';
 import alertRoutes from './alert.routes';
 import cleanupRoutes from './cleanup.routes';
 
 const router = Router();
+
+// 🔐 PROTECCIÓN CRÍTICA: Solo administradores autenticados pueden controlar workers
+router.use(authenticateToken);
 const adminController = new AdminController();
 
 // Obtener estado de todos los workers

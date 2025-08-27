@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { UserService } from '../../services/user';
 import { UserCreateDTO, UserLoginDTO } from '../../models/user/user.model';
-import { generateToken, verifyToken } from '../../services/auth';
+import { generateToken, generateRefreshToken, verifyToken } from '../../services/auth';
 import { GoogleOAuthService } from '../../services/auth/google-oauth.service';
 import supabase, { supabaseAdmin } from '../../config/supabase';
 import { config } from '../../config/environment';
@@ -21,8 +21,8 @@ export class AuthController {
       // Generar token JWT
       const token = generateToken(user);
       
-      // Generar refresh token (por simplicidad, usaremos el mismo token pero con mayor duración)
-      const refreshToken = generateToken(user, '7d');
+      // Generar refresh token específico
+      const refreshToken = generateRefreshToken(user);
 
       res.status(201).json({
         user: {
@@ -70,8 +70,8 @@ export class AuthController {
       // Generar token JWT
       const token = generateToken(user);
       
-      // Generar refresh token (por simplicidad, usaremos el mismo token pero con mayor duración)
-      const refreshToken = generateToken(user, '7d');
+      // Generar refresh token específico
+      const refreshToken = generateRefreshToken(user);
      
       res.json({
         user: {
@@ -102,6 +102,11 @@ export class AuthController {
       // Verificar el refresh token
       const decoded = verifyToken(refreshToken);
       
+      // 🔐 MEJORA: Validar que sea un refresh token válido
+      if (decoded.type !== 'refresh') {
+        return res.status(401).json({ error: 'Token no es un refresh token válido' });
+      }
+      
       // Obtener datos actualizados del usuario
       const user = await this.userService.getUserById(decoded.id);
       if (!user) {
@@ -111,8 +116,8 @@ export class AuthController {
       // Generar nuevo token de acceso
       const newToken = generateToken(user);
       
-      // Opcionalmente generar un nuevo refresh token
-      const newRefreshToken = generateToken(user, '7d');
+      // Generar nuevo refresh token
+      const newRefreshToken = generateRefreshToken(user);
 
       res.json({
         token: newToken,

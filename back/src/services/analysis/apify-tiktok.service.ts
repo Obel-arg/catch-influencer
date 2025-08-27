@@ -27,7 +27,7 @@ export interface ApifyRunResult {
 
 export class ApifyTikTokService {
   private static instance: ApifyTikTokService;
-  private apiToken = 'apify_api_2kNmLwhgbS02MR2Xmh1zL6PmQ8wetW1aC5PN';
+  private apiToken = process.env.APIFY_API_TOKEN || '';
   private actorId = 'BDec00yAmCm1QbMEI'; // TikTok Scraper con soporte para comentarios
   private baseUrl = 'https://api.apify.com/v2';
 

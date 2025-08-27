@@ -21,7 +21,7 @@ export class IntelligentTopicAnalysisService {
   private static instance: IntelligentTopicAnalysisService;
   private readonly MODEL_NAME = "HuggingFaceH4/zephyr-7b-beta";
   private readonly HF_API_URL = "https://api-inference.huggingface.co/models/";
-  private readonly HF_API_TOKEN = "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";
+  private readonly HF_API_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
   private constructor() {}
 

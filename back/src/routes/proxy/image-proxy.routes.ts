@@ -1,7 +1,11 @@
 import { Router } from 'express';
+import { authenticateToken } from '../../middleware/auth';
 import { imageProxyController } from '../../controllers/proxy/image-proxy.controller';
 
 const router = Router();
+
+// 🔐 PROTECCIÓN: Solo usuarios autenticados pueden usar el proxy de imágenes
+router.use(authenticateToken);
 
 // Manejar peticiones OPTIONS (preflight) para CORS
 router.options('/', imageProxyController.handleOptions);

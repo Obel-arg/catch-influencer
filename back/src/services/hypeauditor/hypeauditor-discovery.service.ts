@@ -314,7 +314,7 @@ export class HypeAuditorDiscoveryService {
 	
 	// Credenciales hardcodeadas (las mismas que funcionan en el script)
 	private readonly CLIENT_ID = '360838';
-	private readonly API_TOKEN = '$2y$04$Ai3PO.ApJUZd2tSpIEvrwuJowWPOVY5DwCE4RNnTVTD6ayQHKtZh6';
+	private readonly API_TOKEN = process.env.HYPEAUDITOR_API_TOKEN || '';
 
 	private constructor() {}
 
