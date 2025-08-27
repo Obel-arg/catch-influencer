@@ -52,6 +52,13 @@ import {
   Film,
   Plane,
   Calendar,
+  Globe,
+  MonitorPlay,
+  ChefHat,
+  Coffee,
+  Radio,
+  Utensils,
+  Shield,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
@@ -609,13 +616,21 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
 
   // 🎯 FUNCIÓN: Obtener categorías del taxonomy de HypeAuditor según la plataforma
   const getAvailableCategories = (): string[] => {
+    // Si la plataforma es "all" (por defecto), usar las categorías del taxonomy de Instagram
+    if (platform === "all") {
+      const instagramTaxonomyCategories = getCategoriesForPlatform("Instagram");
+      return instagramTaxonomyCategories.map(cat => cat.name);
+    }
+    
     const taxonomyCategories = getCategoriesForPlatform(platform);
     return taxonomyCategories.map(cat => cat.name);
   };
 
   // 🎯 FUNCIÓN: Obtener el ID de la categoría del taxonomy
   const getTaxonomyCategoryId = (categoryName: string): string | null => {
-    const taxonomyCategories = getCategoriesForPlatform(platform);
+    // Si la plataforma es "all", usar Instagram por defecto para los IDs
+    const platformForId = platform === "all" ? "Instagram" : platform;
+    const taxonomyCategories = getCategoriesForPlatform(platformForId);
     const found = taxonomyCategories.find(cat => cat.name === categoryName);
     return found ? found.id : null;
   };
@@ -623,6 +638,59 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
   // 🎯 FUNCIÓN PARA OBTENER EL ICONO DE LA CATEGORÍA
   const getCategoryIcon = (cat: string) => {
     switch (cat) {
+      // ✨ CATEGORÍAS DEL TAXONOMY DE INSTAGRAM (cuando platform === "all")
+      case "Beauty":
+        return "Heart";
+      case "Fashion":
+        return "Camera";
+      case "Fitness & Gym":
+        return "Trophy";
+      case "Food & Cooking":
+        return "ChefHat";
+      case "Gaming":
+        return "Gamepad2";
+      case "Music":
+        return "Music";
+      case "Travel":
+        return "Plane";
+      case "Lifestyle":
+        return "Heart";
+      case "Modeling":
+        return "Camera";
+      case "Art/Artists":
+        return "Mic";
+      case "Photography":
+        return "Camera";
+      case "Sports with a ball":
+        return "Trophy";
+      case "Education":
+        return "GraduationCap";
+      case "Business & Careers":
+        return "Building2";
+      case "Health & Medicine":
+        return "Heart";
+      case "Accessories & Jewellery":
+        return "Award";
+      case "Cinema & Actors/actresses":
+        return "Film";
+      case "Clothing & Outfits":
+        return "Scissors";
+      case "Computers & Gadgets":
+        return "Zap";
+      case "Family":
+        return "Baby";
+      case "Finance & Economics":
+        return "Building2";
+      case "Nature & landscapes":
+        return "PawPrint";
+      case "Trainers & Coaches":
+        return "Award";
+      case "Crypto":
+        return "Zap";
+      case "NFT":
+        return "Zap";
+        
+      // 🎯 CATEGORÍAS GENERALES PARA INSTAGRAM Y TIKTOK (legacy)
       case "Artist":
         return "Mic";
       case "Brand":
@@ -635,27 +703,27 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
         return "Camera";
       case "Media/news company":
         return "Newspaper";
-      case "SPORTS_TEAM":
-        return "Users";
-      case "COMEDIAN":
+      case "Entertainment website":
+        return "MonitorPlay";
+      case "Sports team":
+        return "Shield";
+      case "Comedian":
         return "Laugh";
       case "Sportsperson":
         return "Award";
       case "Sports":
         return "Trophy";
-      case "Education":
-        return "GraduationCap";
       case "Politician":
         return "Vote";
       // 🎯 CATEGORÍAS ESPECÍFICAS DE FACEBOOK
       case "Page · Athlete":
         return "Trophy";
       case "Page · Kitchen/cooking":
-        return "Trophy"; // Using Trophy as placeholder for Utensils
+        return "ChefHat";
       case "Page · Broadcasting & media production company":
-        return "Newspaper"; // Using Newspaper as placeholder for Radio
+        return "Radio";
       case "Page · Food & beverage company":
-        return "Trophy"; // Using Trophy as placeholder for Coffee
+        return "Coffee";
       case "Page · Artist":
         return "Mic";
       // 🎯 CATEGORÍAS ESPECÍFICAS DE YOUTUBE
@@ -707,6 +775,57 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
   // 🎯 FUNCIÓN PARA OBTENER EL COLOR DEL ICONO
   const getCategoryIconColor = (cat: string) => {
     switch (cat) {
+      // ✨ COLORES PARA CATEGORÍAS DEL TAXONOMY DE INSTAGRAM (cuando platform === "all")
+      case "Beauty":
+        return "text-pink-500";
+      case "Fashion":
+        return "text-purple-500";
+      case "Fitness & Gym":
+        return "text-red-500";
+      case "Food & Cooking":
+        return "text-orange-500";
+      case "Gaming":
+        return "text-blue-500";
+      case "Music":
+        return "text-green-500";
+      case "Travel":
+        return "text-cyan-500";
+      case "Lifestyle":
+        return "text-pink-400";
+      case "Modeling":
+        return "text-purple-400";
+      case "Art/Artists":
+        return "text-purple-600";
+      case "Photography":
+        return "text-indigo-500";
+      case "Sports with a ball":
+        return "text-red-600";
+      case "Business & Careers":
+        return "text-blue-600";
+      case "Health & Medicine":
+        return "text-green-600";
+      case "Accessories & Jewellery":
+        return "text-amber-500";
+      case "Cinema & Actors/actresses":
+        return "text-orange-600";
+      case "Clothing & Outfits":
+        return "text-indigo-400";
+      case "Computers & Gadgets":
+        return "text-blue-700";
+      case "Family":
+        return "text-pink-600";
+      case "Finance & Economics":
+        return "text-green-700";
+      case "Nature & landscapes":
+        return "text-emerald-500";
+      case "Trainers & Coaches":
+        return "text-yellow-600";
+      case "Crypto":
+        return "text-yellow-500";
+      case "NFT":
+        return "text-purple-700";
+        
+      // 🎯 COLORES PARA CATEGORÍAS GENERALES (legacy)
       case "Artist":
         return "text-purple-500";
       case "Brand":
@@ -719,9 +838,11 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
         return "text-pink-500";
       case "Media/news company":
         return "text-orange-500";
-      case "SPORTS_TEAM":
+      case "Entertainment website":
+        return "text-purple-600";
+      case "Sports team":
         return "text-indigo-500";
-      case "COMEDIAN":
+      case "Comedian":
         return "text-purple-500";
       case "Sportsperson":
         return "text-red-500";
@@ -735,11 +856,11 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
       case "Page · Athlete":
         return "text-yellow-500";
       case "Page · Kitchen/cooking":
-        return "text-orange-500";
+        return "text-orange-600";
       case "Page · Broadcasting & media production company":
-        return "text-blue-500";
+        return "text-blue-600";
       case "Page · Food & beverage company":
-        return "text-green-500";
+        return "text-amber-600";
       case "Page · Artist":
         return "text-purple-500";
       // 🎯 COLORES PARA CATEGORÍAS DE YOUTUBE
@@ -1065,6 +1186,12 @@ const formatCategoryName = (category: string): string => {
                       {filter.icon === "Newspaper" && (
                         <Newspaper className="h-3 w-3" />
                       )}
+                      {filter.icon === "MonitorPlay" && (
+                        <MonitorPlay className="h-3 w-3" />
+                      )}
+                      {filter.icon === "Shield" && (
+                        <Shield className="h-3 w-3" />
+                      )}
                       {filter.icon === "Users" && <Users className="h-3 w-3" />}
                       {filter.icon === "Laugh" && <Laugh className="h-3 w-3" />}
                       {filter.icon === "Award" && <Award className="h-3 w-3" />}
@@ -1072,6 +1199,49 @@ const formatCategoryName = (category: string): string => {
                         <GraduationCap className="h-3 w-3" />
                       )}
                       {filter.icon === "Vote" && <Vote className="h-3 w-3" />}
+                      {filter.icon === "ChefHat" && (
+                        <ChefHat className="h-3 w-3" />
+                      )}
+                      {filter.icon === "Radio" && (
+                        <Radio className="h-3 w-3" />
+                      )}
+                      {filter.icon === "Coffee" && (
+                        <Coffee className="h-3 w-3" />
+                      )}
+                      {filter.icon === "Tv" && <Tv className="h-3 w-3" />}
+                      {filter.icon === "Gamepad2" && (
+                        <Gamepad2 className="h-3 w-3" />
+                      )}
+                      {filter.icon === "Video" && (
+                        <Video className="h-3 w-3" />
+                      )}
+                      {filter.icon === "Car" && (
+                        <Car className="h-3 w-3" />
+                      )}
+                      {filter.icon === "Baby" && (
+                        <Baby className="h-3 w-3" />
+                      )}
+                      {filter.icon === "Scissors" && (
+                        <Scissors className="h-3 w-3" />
+                      )}
+                      {filter.icon === "Heart" && (
+                        <Heart className="h-3 w-3" />
+                      )}
+                      {filter.icon === "PawPrint" && (
+                        <PawPrint className="h-3 w-3" />
+                      )}
+                      {filter.icon === "Zap" && (
+                        <Zap className="h-3 w-3" />
+                      )}
+                      {filter.icon === "Play" && (
+                        <Play className="h-3 w-3" />
+                      )}
+                      {filter.icon === "Film" && (
+                        <Film className="h-3 w-3" />
+                      )}
+                      {filter.icon === "Plane" && (
+                        <Plane className="h-3 w-3" />
+                      )}
                     </div>
                   ) : filter.icon && typeof filter.icon === "string" ? (
                     <span className="text-xs">{filter.icon}</span>
@@ -2137,11 +2307,16 @@ const formatCategoryName = (category: string): string => {
                              {getCategoryIcon(category) === "Music" && <Music className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Camera" && <Camera className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Newspaper" && <Newspaper className="h-4 w-4" />}
+                             {getCategoryIcon(category) === "MonitorPlay" && <MonitorPlay className="h-4 w-4" />}
+                             {getCategoryIcon(category) === "Shield" && <Shield className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Users" && <Users className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Laugh" && <Laugh className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Award" && <Award className="h-4 w-4" />}
                              {getCategoryIcon(category) === "GraduationCap" && <GraduationCap className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Vote" && <Vote className="h-4 w-4" />}
+                             {getCategoryIcon(category) === "ChefHat" && <ChefHat className="h-4 w-4" />}
+                             {getCategoryIcon(category) === "Radio" && <Radio className="h-4 w-4" />}
+                             {getCategoryIcon(category) === "Coffee" && <Coffee className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Tv" && <Tv className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Gamepad2" && <Gamepad2 className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Video" && <Video className="h-4 w-4" />}
