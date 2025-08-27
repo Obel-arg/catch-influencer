@@ -70,7 +70,19 @@ export const LazyInfluencerAvatar = ({
       return;
     }
 
-    // 🎯 Usar IntersectionObserver para lazy loading
+    // 🚨 DETECTAR URLs DE INSTAGRAM CDN (HypeAuditor) y usar fallback directo
+    const isInstagramCDN = originalSrc.includes('cdninstagram.com') || 
+                           originalSrc.includes('scontent-') ||
+                           originalSrc.includes('fbcdn.net');
+    
+    if (isInstagramCDN) {
+      console.warn(`⚠️ [LAZY AVATAR] URL de Instagram CDN detectada para ${displayName}, usando fallback para evitar 403`);
+      setImageSrc(generateFallbackAvatar(displayName));
+      setIsLoading(false);
+      return;
+    }
+
+    // 🎯 Usar IntersectionObserver para lazy loading (solo para URLs no-Instagram)
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -106,8 +118,20 @@ export const LazyInfluencerAvatar = ({
       setIsLoading(true);
       setHasError(false);
 
-      // ✅ USAR FUNCIÓN OPTIMIZADA para procesar avatares (igual que SmartAvatar)
-      const processedUrl = getOptimizedAvatarUrl(originalSrc, influencer.name || '');
+      // ✅ DETECTAR SI ES URL DE HYPEAUDITOR (Instagram directo)
+      const isHypeAuditorUrl = originalSrc.includes('cdninstagram.com') || 
+                               originalSrc.includes('scontent-') ||
+                               originalSrc.startsWith('https://scontent');
+      
+      let processedUrl;
+      if (isHypeAuditorUrl) {
+        // Para HypeAuditor, usar URL directamente (ya está optimizada)
+        processedUrl = originalSrc;
+        console.log('🎯 [LAZY AVATAR] Usando URL directa de HypeAuditor:', processedUrl);
+      } else {
+        // Para otros casos, usar función de optimización
+        processedUrl = getOptimizedAvatarUrl(originalSrc, influencer.name || '');
+      }
             
       setImageSrc(processedUrl);
       setHasError(false);
@@ -122,7 +146,7 @@ export const LazyInfluencerAvatar = ({
   };
 
   const handleImageError = () => {
-    console.warn(`⚠️ [LAZY AVATAR] Error cargando imagen para ${displayName}, usando fallback`);
+    console.warn(`⚠️ [LAZY AVATAR] Error cargando imagen para ${displayName} (probablemente 403 de Instagram CDN), usando fallback`);
     setHasError(true);
     setImageSrc(generateFallbackAvatar(displayName));
   };

@@ -1,0 +1,35 @@
+[
+  {
+    "title": "Animals",
+    "platforms": [
+      "Instagram",
+      "TikTok"
+    ],
+    "ids": {
+      "instagram": 1026,
+      "tiktok": 1
+    }
+  },
+  {
+    "title": "Education",
+    "platforms": [
+      "Instagram",
+      "YouTube"
+    ],
+    "ids": {
+      "instagram": 1033,
+      "youtube": 9
+    }
+  },
+  {
+    "title": "Gaming",
+    "platforms": [
+      "Instagram",
+      "TikTok"
+    ],
+    "ids": {
+      "instagram": 1049,
+      "tiktok": 14
+    }
+  }
+]

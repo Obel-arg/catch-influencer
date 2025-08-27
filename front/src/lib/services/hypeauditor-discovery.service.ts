@@ -26,6 +26,11 @@ export interface HypeAuditorDiscoveryFilters {
   audienceGender?: { gender: 'male' | 'female' | 'any'; percentage: number };
   audienceAge?: { minAge: number; maxAge: number; percentage: number };
   audienceGeo?: { countries: { [key: string]: number }; cities: { [key: string]: number } };
+  // Categorías del taxonomy de HypeAuditor
+  taxonomyCategories?: {
+    include: string[];
+    exclude: string[];
+  };
 }
 
 export interface HypeAuditorDiscoveryResult {
@@ -107,6 +112,23 @@ export interface HypeAuditorUsageStatsResponse {
   timestamp: string;
 }
 
+export interface HypeAuditorTaxonomyCategory {
+  id: string;
+  name: string;
+  parent_id?: string | null;
+  level: number;
+  children?: HypeAuditorTaxonomyCategory[];
+}
+
+export interface HypeAuditorTaxonomyResponse {
+  success: boolean;
+  data: {
+    categories: HypeAuditorTaxonomyCategory[];
+    total: number;
+  };
+  provider: string;
+}
+
 class HypeAuditorDiscoveryService {
   private readonly baseUrl = '/hypeauditor/discovery';
 
@@ -145,6 +167,19 @@ class HypeAuditorDiscoveryService {
               return response.data;
             } catch (error) {
               console.error('❌ [HYPEAUDITOR DISCOVERY SERVICE] Error obteniendo estadísticas:', error);
+              throw error;
+            }
+          }
+
+          /**
+           * Obtiene el taxonomy de categorías de HypeAuditor
+           */
+          async getTaxonomy(): Promise<HypeAuditorTaxonomyResponse> {
+            try {
+              const response = await httpApiClient.get<HypeAuditorTaxonomyResponse>(`${this.baseUrl}/taxonomy`);
+              return response.data;
+            } catch (error) {
+              console.error('❌ [HYPEAUDITOR DISCOVERY SERVICE] Error obteniendo taxonomy:', error);
               throw error;
             }
           }

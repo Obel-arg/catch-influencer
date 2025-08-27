@@ -1,6 +1,8 @@
 "use client";
 
-import { Dispatch, SetStateAction, useState } from "react";
+import { Dispatch, SetStateAction, useState, useEffect } from "react";
+import { hypeAuditorDiscoveryService, HypeAuditorTaxonomyCategory } from "@/lib/services/hypeauditor-discovery.service";
+import { getCategoriesForPlatform, getPlatformDisplayName, HypeAuditorCategory } from "@/constants/hypeauditor-categories";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -112,6 +114,10 @@ interface ExplorerFiltersProps {
   setAudienceAge: Dispatch<SetStateAction<{ minAge: number; maxAge: number; percentage: number }>>;
   audienceGeo: { countries: { [key: string]: number }; cities: { [key: string]: number } };
   setAudienceGeo: Dispatch<SetStateAction<{ countries: { [key: string]: number }; cities: { [key: string]: number } }>>;
+
+  // ✨ NUEVO: Categorías del taxonomy de HypeAuditor
+  taxonomyCategories: { include: string[]; exclude: string[] };
+  setTaxonomyCategories: Dispatch<SetStateAction<{ include: string[]; exclude: string[] }>>;
 }
 
 const followerRanges = [
@@ -359,6 +365,10 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
     setAudienceAge,
     audienceGeo,
     setAudienceGeo,
+    
+    // ✨ NUEVO: Props para categorías del taxonomy
+    taxonomyCategories,
+    setTaxonomyCategories,
   } = props;
 
   const [countrySearch, setCountrySearch] = useState("");
@@ -451,9 +461,11 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
     return country ? country.name : location;
   };
 
-  // ⚠️ FUNCIÓN TEMPORALMENTE DESHABILITADA - Obtener texto de categorías seleccionadas
+  // ✨ FUNCIÓN: Obtener texto de categorías seleccionadas
   const getSelectedCategoriesText = () => {
-    if (selectedCategories.length === 0) return "Seleccionar categorías";
+    if (selectedCategories.length === 0) {
+      return "Seleccionar categorías";
+    }
     if (selectedCategories.length === 1) return formatCategoryName(selectedCategories[0]);
     return `${selectedCategories.length} categorías seleccionadas`;
   };
@@ -494,12 +506,33 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
     return `${totalSelected} locations selected`;
   };
 
-  // ✨ NUEVA FUNCIÓN: Toggle categoría seleccionada
+  // ✨ FUNCIÓN: Toggle categoría del taxonomy de HypeAuditor
   const toggleCategory = (categoryCode: string) => {
+    const categoryId = getTaxonomyCategoryId(categoryCode);
+    if (!categoryId || !setTaxonomyCategories) return;
+
+    // Actualizar taxonomyCategories (para el backend)
+    setTaxonomyCategories((prev: { include: string[]; exclude: string[] }) => {
+      const isCurrentlyIncluded = prev.include.includes(categoryId);
+      
+      if (isCurrentlyIncluded) {
+        // Remover de include
+        return {
+          ...prev,
+          include: prev.include.filter((id: string) => id !== categoryId)
+        };
+      } else {
+        // Agregar a include
+        return {
+          ...prev,
+          include: [...prev.include, categoryId]
+        };
+      }
+    });
+    
+    // Actualizar selectedCategories (para la UI)
     if (selectedCategories.includes(categoryCode)) {
-      setSelectedCategories(
-        selectedCategories.filter((c) => c !== categoryCode)
-      );
+      setSelectedCategories(selectedCategories.filter((c) => c !== categoryCode));
     } else {
       setSelectedCategories([...selectedCategories, categoryCode]);
     }
@@ -574,16 +607,17 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
 
  
 
-  // 🎯 NUEVA FUNCIÓN: Obtener categorías según la plataforma seleccionada
+  // 🎯 FUNCIÓN: Obtener categorías del taxonomy de HypeAuditor según la plataforma
   const getAvailableCategories = (): string[] => {
-    if (platform === "Facebook") {
-      return facebookCategories;
-    }
-    if (platform === "YouTube") {
-      return youtubeCategories;
-    }
-    // Para Instagram y TikTok, usar las categorías generales
-    return instagramGeneralCategories;
+    const taxonomyCategories = getCategoriesForPlatform(platform);
+    return taxonomyCategories.map(cat => cat.name);
+  };
+
+  // 🎯 FUNCIÓN: Obtener el ID de la categoría del taxonomy
+  const getTaxonomyCategoryId = (categoryName: string): string | null => {
+    const taxonomyCategories = getCategoriesForPlatform(platform);
+    const found = taxonomyCategories.find(cat => cat.name === categoryName);
+    return found ? found.id : null;
   };
 
   // 🎯 FUNCIÓN PARA OBTENER EL ICONO DE LA CATEGORÍA
@@ -2024,7 +2058,7 @@ const formatCategoryName = (category: string): string => {
               </DropdownMenu>
             </div>
 
-            {/* ✨ CATEGORÍAS - Dropdown con categorías de CreatorDB */}
+            {/* ✨ CATEGORÍAS - Dropdown con categorías del taxonomy */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">
                 Categorías

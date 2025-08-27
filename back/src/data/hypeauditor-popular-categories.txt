@@ -1,0 +1,91 @@
+# CATEGORÍAS POPULARES DE HYPEAUDITOR TAXONOMY
+# ==============================================
+# Estas son las categorías más relevantes para implementar en el filtro
+
+## CATEGORÍAS PRINCIPALES SUGERIDAS (Instagram)
+# Estas son las más populares y útiles para filtros
+
+1000 | Accessories & Jewellery
+1020 | Beauty  
+1021 | Fashion
+1023 | Fitness & Gym
+1035 | Food & Cooking
+1049 | Gaming
+1027 | Music
+1009 | Travel
+1002 | Art/Artists
+1032 | Cinema & Actors/actresses
+1007 | Clothing & Outfits
+1034 | Computers & Gadgets
+1033 | Education
+1042 | Family
+1006 | Finance & Economics
+1022 | Health & Medicine
+1041 | Lifestyle
+1039 | Modeling
+1025 | Nature & landscapes
+1038 | Photography
+1013 | Sports with a ball
+1031 | Trainers & Coaches
+1005 | Business & Careers
+1050 | Crypto
+1051 | NFT
+
+## CATEGORÍAS MÁS ESPECÍFICAS (Instagram Interests/Labels)
+# Para filtros más detallados
+
+1 | Beauty
+2 | Makeup  
+3 | Skincare
+4 | Haircare
+8 | Traveling
+11 | Gastronomy
+14 | Cooking
+20 | Football & Soccer
+21 | Basketball
+29 | Fitness & Bodybuilding
+30 | Yoga
+50 | Video Gaming
+75 | Fashion
+79 | Music
+80 | Photography
+
+## CATEGORÍAS YOUTUBE (para cuando se implemente YT)
+5 | Beauty
+11 | Fashion  
+12 | Fitness
+13 | Food & Drinks
+17 | Music & Dance
+21 | Science & Technology
+22 | Sports
+24 | Travel
+25 | Video games
+
+## CATEGORÍAS TIKTOK (para cuando se implemente TT)
+5 | Beauty
+9 | Dance
+11 | Fashion
+12 | Fitness  
+13 | Food & Beverage
+14 | Gaming
+25 | Sport
+26 | Travel
+
+## RECOMENDACIÓN PARA IMPLEMENTACIÓN
+# Empezar con estas 15 categorías más populares:
+
+1020 | Beauty
+1021 | Fashion  
+1023 | Fitness & Gym
+1035 | Food & Cooking
+1049 | Gaming
+1027 | Music
+1009 | Travel
+1041 | Lifestyle
+1039 | Modeling
+1002 | Art/Artists
+1038 | Photography
+1013 | Sports with a ball
+1033 | Education
+1005 | Business & Careers
+1022 | Health & Medicine

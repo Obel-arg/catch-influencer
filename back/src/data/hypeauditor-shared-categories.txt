@@ -1,0 +1,40 @@
+# CATEGORÍAS COMPARTIDAS EN HYPEAUDITOR TAXONOMY
+# ===============================================
+
+## CATEGORÍAS COMPARTIDAS EN LAS 3 PLATAFORMAS (3)
+## Estas son las mejores para implementar en el filtro
+
+1. Beauty
+   Instagram ID: 1020
+   YouTube ID: 5
+   TikTok ID: 5
+
+2. Fashion
+   Instagram ID: 1021
+   YouTube ID: 11
+   TikTok ID: 11
+
+3. Travel
+   Instagram ID: 1009
+   YouTube ID: 24
+   TikTok ID: 26
+
+
+## CATEGORÍAS COMPARTIDAS EN 2 PLATAFORMAS (3)
+## Alternativas si necesitamos más opciones
+
+1. Animals
+   Plataformas: Instagram, TikTok
+   instagram: 1026
+   tiktok: 1
+
+2. Education
+   Plataformas: Instagram, YouTube
+   instagram: 1033
+   youtube: 9
+
+3. Gaming
+   Plataformas: Instagram, TikTok
+   instagram: 1049
+   tiktok: 14
+

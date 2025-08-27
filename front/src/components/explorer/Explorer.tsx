@@ -113,6 +113,16 @@ export default function Explorer() {
     countries: {},
     cities: {}
   });
+
+  // 🎯 NUEVO: Estado para categorías del taxonomy de HypeAuditor
+  const [taxonomyCategories, setTaxonomyCategories] = useState<{
+    include: string[];
+    exclude: string[];
+  }>({
+    include: [],
+    exclude: []
+  });
+
   const [accountType, setAccountType] = useState<'brand' | 'human' | 'any'>('any');
   const [verified, setVerified] = useState<boolean | null>(null);
   const [hasContacts, setHasContacts] = useState<boolean | null>(null);
@@ -344,6 +354,11 @@ export default function Explorer() {
       }
       if (Object.keys(audienceGeo.countries).length > 0 || Object.keys(audienceGeo.cities).length > 0) {
         filters.audienceGeo = audienceGeo;
+      }
+
+      // 🎯 FILTROS DE CATEGORÍAS DEL TAXONOMY
+      if (taxonomyCategories.include.length > 0 || taxonomyCategories.exclude.length > 0) {
+        filters.taxonomyCategories = taxonomyCategories;
       }
 
       console.log('🔧 [EXPLORER] Filtros HypeAuditor completos:', filters);
@@ -1718,6 +1733,9 @@ export default function Explorer() {
             setAudienceGender({ gender: 'any', percentage: 50 });
             setAudienceAge({ minAge: 18, maxAge: 54, percentage: 10 });
             setAudienceGeo({ countries: {}, cities: {} });
+            
+            // Limpiar filtros de taxonomy
+            setTaxonomyCategories({ include: [], exclude: [] });
 
         
             setLoadingInfluencers(false); // ✅ Asegurar que no haya loading al limpiar
@@ -1731,6 +1749,10 @@ export default function Explorer() {
           }}
           showFilters={showFilters}
           setShowFilters={setShowFilters}
+          
+          // ✨ NUEVO: Props para categorías del taxonomy de HypeAuditor
+          taxonomyCategories={taxonomyCategories}
+          setTaxonomyCategories={setTaxonomyCategories}
         />
       </div>
 

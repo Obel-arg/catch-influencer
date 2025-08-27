@@ -8,7 +8,7 @@ export interface DiscoverySearchRequest {
 	search?: string[];
 	search_content?: string[];
 	search_description?: string[];
-	category?: { include: number[] };
+	category?: { include?: number[]; exclude?: number[] };
 	account_geo?: { country: string[] };
 	account_gender?: 'male' | 'female';
 	account_age?: { min: number; max: number };
@@ -154,6 +154,12 @@ export interface ExplorerFilters {
 	
 	// Categorías
 	selectedCategories?: string[];
+	
+	// 🎯 NUEVO: Categorías del taxonomy de HypeAuditor
+	taxonomyCategories?: {
+		include: string[];
+		exclude: string[];
+	};
 	
 	// Crecimiento
 	selectedGrowthRate?: { min: number; max: number; period?: string };
@@ -422,8 +428,24 @@ export class HypeAuditorDiscoveryService {
 			hypeAuditorRequest.search_description = filters.searchDescription;
 		}
 
-		// Categorías
-		if (filters.selectedCategories && filters.selectedCategories.length > 0) {
+		// 🎯 CATEGORÍAS DEL TAXONOMY DE HYPEAUDITOR
+		if (filters.taxonomyCategories) {
+			const includeIds = filters.taxonomyCategories.include?.map(id => parseInt(id)).filter(id => !isNaN(id)) || [];
+			const excludeIds = filters.taxonomyCategories.exclude?.map(id => parseInt(id)).filter(id => !isNaN(id)) || [];
+			
+			if (includeIds.length > 0 || excludeIds.length > 0) {
+				hypeAuditorRequest.category = {};
+				if (includeIds.length > 0) {
+					hypeAuditorRequest.category.include = includeIds;
+				}
+				if (excludeIds.length > 0) {
+					hypeAuditorRequest.category.exclude = excludeIds;
+				}
+			}
+		}
+		
+		// 📊 CATEGORÍAS LEGACY (para compatibilidad hacia atrás)
+		else if (filters.selectedCategories && filters.selectedCategories.length > 0) {
 			const categoryIds = filters.selectedCategories.map(cat => parseInt(cat)).filter(id => !isNaN(id));
 			if (categoryIds.length > 0) {
 				hypeAuditorRequest.category = { include: categoryIds };
@@ -704,7 +726,7 @@ export class HypeAuditorDiscoveryService {
 				realFollowers: item.metrics?.real_subscribers_count?.value,
 				engagement: item.metrics?.er?.value,
 				aqs: item.features?.aqs?.data?.mark,
-				topics: item.features?.blogger_topics?.data
+				topics: (item.features as any)?.blogger_topics?.data
 			});
 
 			// Extraer seguidores y engagement de los datos reales
@@ -713,8 +735,8 @@ export class HypeAuditorDiscoveryService {
 			const engagementRate = item.metrics?.er?.value || 0;
 			
 			// Mapear topics a categorías (necesitaremos un mapeo de IDs a nombres)
-			const topicIds = item.features?.blogger_topics?.data || [];
-			const contentNiches = topicIds.map(id => `Topic ${id}`); // Temporal hasta tener el mapeo real
+			const topicIds = (item.features as any)?.blogger_topics?.data || [];
+			const contentNiches = topicIds.map((id: any) => `Topic ${id}`); // Temporal hasta tener el mapeo real
 			
 			// Determinar plataforma basada en el context de la búsqueda 
 			const platform = 'instagram'; // Por ahora, ya que estamos buscando en Instagram
@@ -769,11 +791,17 @@ export class HypeAuditorDiscoveryService {
 
 		console.log('✅ [HYPEAUDITOR SERVICE] Transformación completada:', {
 			totalTransformed: items.length,
-			itemsWithFollowers: items.filter(i => i.followersCount > 0).length,
-			itemsWithEngagement: items.filter(i => i.averageEngagementRate > 0).length,
+			itemsWithFollowers: items.filter(i => i.socialPlatforms.some(p => p.followers > 0)).length,
+			itemsWithEngagement: items.filter(i => i.socialPlatforms.some(p => p.engagement > 0)).length,
 			itemsWithNiches: items.filter(i => i.contentNiches && i.contentNiches.length > 0).length,
-			avgFollowers: Math.round(items.reduce((sum, i) => sum + (i.followersCount || 0), 0) / items.length),
-			avgEngagement: (items.reduce((sum, i) => sum + (i.averageEngagementRate || 0), 0) / items.length * 100).toFixed(2) + '%'
+			avgFollowers: Math.round(items.reduce((sum, i) => {
+				const maxFollowers = Math.max(...i.socialPlatforms.map(p => p.followers || 0));
+				return sum + maxFollowers;
+			}, 0) / items.length),
+			avgEngagement: (items.reduce((sum, i) => {
+				const avgEngagement = i.socialPlatforms.reduce((s, p) => s + (p.engagement || 0), 0) / i.socialPlatforms.length;
+				return sum + avgEngagement;
+			}, 0) / items.length * 100).toFixed(2) + '%'
 		});
 
 		return {
