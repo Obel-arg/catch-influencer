@@ -142,7 +142,7 @@ export class BrandService {
    * Eliminar marca (soft delete)
    */
   async deleteBrand(id: string): Promise<void> {
-    console.log('🗑️ [BackendService] Iniciando soft delete para marca:', id);
+   
     
     try {
       const { error } = await supabase
@@ -154,7 +154,7 @@ export class BrandService {
         })
         .eq('id', id);
 
-      console.log('🗑️ [BackendService] Supabase update ejecutado');
+      console.log('🗑️ [BackendService] Supabase update ejecutado');   
       console.log('🗑️ [BackendService] Error de Supabase:', error);
 
       if (error) {

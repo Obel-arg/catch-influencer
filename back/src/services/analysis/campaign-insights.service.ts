@@ -377,12 +377,7 @@ Responde SOLO en formato JSON:
 
     // Calcular métricas agregadas
     posts.forEach((post, index) => {
-      console.log(`🔍 [INSIGHTS] Processing post ${index + 1}/${posts.length}:`, {
-        id: post.id,
-        platform: post.platform,
-        hasManualMetrics: !!post.post_metrics?.raw_response?.manual_metrics,
-        hasRawData: !!post.post_metrics?.raw_response?.data
-      });
+     
       
       // Analizar raw_response para obtener datos más precisos
       let likes = 0, comments = 0, views = 0, shares = 0, reach = 0, engagement = 0;
@@ -401,14 +396,7 @@ Responde SOLO en formato JSON:
         const totalEngagement = likes + comments;
         engagement = reach > 0 ? (totalEngagement / reach) : 0;
         
-        console.log('📸 [INSIGHTS] Story metrics processed:', {
-          postId: post.id,
-          platform, 
-          likes, 
-          comments, 
-          reach, 
-          engagement: (engagement * 100).toFixed(2) + '%'
-        });
+       
       }
       // SEGUNDO: Procesar otros tipos de posts con rawData
       else {
@@ -529,15 +517,7 @@ Responde SOLO en formato JSON:
       metrics.platformPerformance[platformName].totalEngagement += engagement;
       
       // Log final del post procesado
-      console.log(`📊 [INSIGHTS] Post ${index + 1} final metrics:`, {
-        id: post.id,
-        platform: platformName,
-        likes,
-        comments,
-        views,
-        reach,
-        engagement: (engagement * 100).toFixed(2) + '%'
-      });
+     
       
       if (engagement > 0) {
         // Convertir a porcentaje para el array de posts (como lo hace el frontend)
@@ -565,14 +545,7 @@ Responde SOLO en formato JSON:
          // Mismo cálculo que en campaign-metrics.service.ts: (data.engagement * 100) / data.posts
          platformData.averageEngagement = (platformData.totalEngagement * 100) / platformData.posts;
          
-         console.log(`🎯 [INSIGHTS] Platform ${platform} final stats:`, {
-           posts: platformData.posts,
-           totalEngagement: platformData.totalEngagement,
-           averageEngagement: platformData.averageEngagement.toFixed(2) + '%',
-           totalReach: platformData.totalReach,
-           totalLikes: platformData.totalLikes,
-           totalComments: platformData.totalComments
-         });
+        
          
         
        }
