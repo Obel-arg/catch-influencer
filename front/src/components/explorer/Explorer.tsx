@@ -14,7 +14,6 @@ import { BookmarkIcon, ExternalLink, Filter, Instagram, Music, Search, X, Zap } 
 import { Youtube } from "lucide-react";
 import { InfluencerProfilePanel } from "@/components/explorer/influencer-profile-panel";
 import { useInfluencers } from "@/hooks/influencer/useInfluencers";
-import { creatorService } from '@/lib/services/creator';
 import { influencerService } from '@/lib/services/influencer';
 import { HypeAuditorDiscoveryFilters } from '@/lib/services/hypeauditor-discovery.service';
 import ExplorerFilters from "./ExplorerFilters";
@@ -28,10 +27,9 @@ import { getInstagramThumbnailValidated, getInstagramDefaultThumbnail, getOptimi
 import { getTikTokThumbnailValidated, getTikTokDefaultThumbnail, getSafeAvatarUrlForModal } from '@/utils/tiktok';
 import { getYouTubeThumbnail } from '@/utils/youtube';
 
-// 🎯 Nuevos imports para las mejoras
+// 🎯 Imports para las mejoras
 import { SkeletonInfluencerTable } from "./SkeletonInfluencerRow";
 import { LazyInfluencerAvatar } from "./LazyInfluencerAvatar";
-import { explorerCacheService, SearchFilters } from '@/lib/services/explorer-cache.service';
 
 
 
@@ -69,17 +67,15 @@ export default function Explorer() {
   // Toast notifications
   const { toast } = useToast();
 
-  // 🚀 NUEVO: Hook de influencers para HypeAuditor
+  // 🚀 Hook de influencers para HypeAuditor
   const { searchHypeAuditorInfluencers, loading: loadingHypeAuditor } = useInfluencers();
   
-  // 🎯 Estado para manejar información de cache
-  const [cacheInfo, setCacheInfo] = useState<{
-    isFromCache: boolean;
+  // 🎯 Estado para manejar información de búsqueda
+  const [searchInfo, setSearchInfo] = useState<{
     searchHash?: string;
     tokensUsed?: number;
     expiresAt?: string;
-    pagesAvailable?: number;
-  }>({ isFromCache: false });
+  }>({});
   
   // State for filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -136,7 +132,8 @@ export default function Explorer() {
 
   // Estado para paginado y filtros
   const [page, setPage] = useState(1);
-  const [size] = useState(6); // 6 influencers por página
+  const [size] = useState(6); // 🎯 UI: 6 influencers por página (para mantener tamaño)
+  const [totalResultsPerPage] = useState(20); // 🚀 HypeAuditor: 20 resultados por página
 
   // 🎯 MEJORA: Influencers con persistencia de datos previos
   const [influencers, setInfluencers] = useState<any[]>([]);
@@ -178,8 +175,8 @@ export default function Explorer() {
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [hasEverSearched, setHasEverSearched] = useState(false);
 
-  // 🚀 NUEVO: Estado para cambiar entre proveedores
-  const [provider, setProvider] = useState<'creatordb' | 'hypeauditor'>('hypeauditor');
+  // 🚀 Estado del proveedor (solo HypeAuditor)
+  const [provider] = useState<'hypeauditor'>('hypeauditor');
 
   // ✨ NUEVO: Estado para manejar avatares procesados
   const [processedAvatars, setProcessedAvatars] = useState<{ [key: string]: string }>({});
@@ -390,205 +387,51 @@ export default function Explorer() {
     }
   };
 
-  // 🎯 FUNCIÓN INTELIGENTE DE BÚSQUEDA
+  // 🎯 FUNCIÓN DE BÚSQUEDA CON HYPEAUDITOR
   const handleSearch = async () => {
     const searchStartTime = Date.now();
 
-    
     setHasEverSearched(true);
     setLoadingInfluencers(true);
-    setIsSearchActive(true); // 🎯 SKELETON SIEMPRE POR 1 SEGUNDO
+    setIsSearchActive(true);
 
     // Reiniciar paginación
     setPage(1);
 
     try {
-      // 🚀 NUEVO: Usar HypeAuditor si está seleccionado
-      if (provider === 'hypeauditor') {
-        await handleHypeAuditorSearch();
-      } else {
-        // 🎯 DECIDIR ENTRE BÚSQUEDA INTELIGENTE O POR FILTROS (CreatorDB)
-        if (searchQuery.trim()) {
-          // 🔍 BÚSQUEDA INTELIGENTE cuando hay texto - SOLO QUERY Y PLATFORM
-          const searchData = {
-            query: searchQuery.trim(),
-            platform: platform === "all" ? undefined : platform,
-          };
-          
-          const smartSearchStartTime = Date.now();
-
-          const result = await creatorService.smartSearch(searchData);
-          const smartSearchEndTime = Date.now();
-
-           
-           if (result.success) {
-             // 🔧 FALLBACK: Si no hay items pero sí hay searchSummary con resultados
-             if ((!result.items || result.items.length === 0) && result.searchSummary) {
-               const totalFound = Object.values(result.searchSummary).reduce((sum: number, count: any) => sum + (count || 0), 0);
-               
-               if (totalFound > 0) {
-                 // Construir array de platform IDs basado en searchSummary
-                 const platformIds = [];
-                 if (result.searchSummary.instagram > 0) {
-                   // Para el fallback, simularemos algunos IDs comunes que podrían coincidir
-                   platformIds.push({ platform: 'instagram', ids: [searchQuery.trim().toLowerCase()] });
-                 }
-                 if (result.searchSummary.tiktok > 0) {
-                   platformIds.push({ platform: 'tiktok', ids: [searchQuery.trim().toLowerCase()] });
-                 }
-                 if (result.searchSummary.youtube > 0) {
-                   platformIds.push({ platform: 'youtube', ids: [searchQuery.trim().toLowerCase()] });
-                 }
-                 
-                 // Intentar fallback
-                 try {
-                   const fallbackResult = await creatorService.getInfluencersByIds(platformIds);
-                   if (fallbackResult.success && fallbackResult.items && fallbackResult.items.length > 0) {
-                     setInfluencers(fallbackResult.items);
-                     setTotalCount(fallbackResult.count || 0);
-                   } else {
-                     setInfluencers([]);
-                     setTotalCount(0);
-                   }
-                 } catch (fallbackError) {
-                   setInfluencers([]);
-                   setTotalCount(0);
-                 }
-               } else {
-                 setInfluencers([]);
-                 setTotalCount(0);
-               }
-             } else {
-               // Funcionamiento normal
-               setInfluencers(result.items || []);
-               setTotalCount(result.count || 0);
-             }
-           } else {
-             setInfluencers([]);
-             setTotalCount(0);
-           }
-        } else {
-          // 📋 BÚSQUEDA POR FILTROS cuando no hay texto
-          const filters: any = {};
-          if (platform !== "all") filters.platform = platform;
-          if (topics.length > 0) filters.topicIds = topics;
-
-          if (location !== "all") filters.country = location;
-          if (minFollowers > 0) filters.minFollowers = minFollowers;
-          if (maxFollowers < 100000000) filters.maxFollowers = maxFollowers;
-          if (minEngagement > 0) filters.minEngagement = minEngagement;
-          if (maxEngagement < 100) filters.maxEngagement = maxEngagement;
-
-
-          if (selectedCategories.length > 0) filters.categories = selectedCategories;
-
-          const result = await creatorService.explorerSearch({
-            ...filters,
-            page: 1,
-            size: 6
-          });
-
-          // Actualizar datos
-          setInfluencers(result.items || []);
-          setTotalCount(result.count || 0);
-        }
-      }
-
+      await handleHypeAuditorSearch();
     } catch (error: any) {
       console.error('❌ Error en búsqueda:', error);
       setInfluencers([]);
       setTotalCount(0);
+      toast({
+        title: "Error",
+        description: "Error al buscar influencers",
+        variant: "destructive"
+      });
     } finally {
-      // 🎯 EARLY RETURN: Mostrar resultados inmediatamente cuando lleguen
-      setLoadingInfluencers(false);
-      setIsSearchActive(false);
-    }
-  };
-
-  // 🎯 PAGINACIÓN INTELIGENTE
-  const handlePageChange = async (newPage: number) => {
-    const pageChangeStartTime = Date.now();
-
-    // 🎯 ACTUALIZAR PÁGINA INMEDIATAMENTE para mostrar "Cargando página X"
-    setPage(newPage);
-    
-    setLoadingInfluencers(true);
-    setIsSearchActive(true); // 🎯 SKELETON SIEMPRE POR 750ms
-
-    try {
-      // 🎯 MANTENER EL MISMO TIPO DE BÚSQUEDA
-      if (searchQuery.trim()) {
-        // 🔍 PAGINACIÓN CON BÚSQUEDA INTELIGENTE
-        const searchData = {
-          query: searchQuery.trim(),
-          platform: platform === "all" ? undefined : platform,
-          country: location !== "all" ? location : undefined,
-          topicIds: topics.length > 0 ? topics : undefined,
-
-          minFollowers: minFollowers > 0 ? minFollowers : undefined,
-          maxFollowers: maxFollowers < 100000000 ? maxFollowers : undefined,
-          minEngagement: minEngagement > 0 ? minEngagement : undefined,
-          maxEngagement: maxEngagement < 100 ? maxEngagement : undefined,
-
-          categories: selectedCategories.length > 0 ? selectedCategories : undefined,
-          page: newPage,
-          size: 6
-        };
-        
-        const result = await creatorService.smartSearch(searchData);
-        
-        if (result.success) {
-          setInfluencers(result.items || []);
-          setTotalCount(result.count || 0);
-        }
-      } else {
-        // 📋 PAGINACIÓN CON FILTROS
-        const filters: any = {};
-        if (platform !== "all") filters.platform = platform;
-        if (topics.length > 0) filters.topicIds = topics;
-
-        if (location !== "all") filters.country = location;
-        if (minFollowers > 0) filters.minFollowers = minFollowers;
-        if (maxFollowers < 100000000) filters.maxFollowers = maxFollowers;
-        if (minEngagement > 0) filters.minEngagement = minEngagement;
-        if (maxEngagement < 100) filters.maxEngagement = maxEngagement;
-
-
-        if (selectedCategories.length > 0) filters.categories = selectedCategories;
-
-        const result = await creatorService.explorerSearch({
-          ...filters,
-          page: newPage,
-          size: 6
-        });
-
-        // Actualizar datos
-        setInfluencers(result.items || []);
-        setTotalCount(result.count || 0);
-      }
-
-    } catch (error: any) {
-      console.error('❌ Error en paginación:', error);
-    } finally {
-      const pageChangeEndTime = Date.now();
-
+      const searchEndTime = Date.now();
+      console.log(`⏱️ [EXPLORER] Búsqueda completada en ${searchEndTime - searchStartTime}ms`);
       
-      // 🎯 EARLY RETURN: Mostrar resultados inmediatamente cuando lleguen
       setLoadingInfluencers(false);
       setIsSearchActive(false);
     }
   };
 
-  // 🗑️ ELIMINADA handleSmartSearch - funcionalidad integrada en handleSearch
+  // 🎯 PAGINACIÓN INTERNA (solo HypeAuditor)
+  const handlePageChange = async (newPage: number) => {
+    console.log("🔍 [PAGE CHANGE] Cambiando a página:", newPage);
+    
+    // 🚀 PAGINACIÓN INTERNA: Solo cambiar página local
+    setPage(newPage);
+    setLoadingInfluencers(false);
+    setIsSearchActive(false);
+  };
 
-  // 🗑️ ELIMINADAS LAS FUNCIONES COMPLICADAS:
-  // - fetchInfluencers ❌
-  // - prefetchNextPage ❌  
-  // - generateCacheKey ❌
-  // - Cache en memoria ❌
-  // Ahora solo usamos handleSearch y handlePageChange
-
-  // 🗑️ ELIMINADO: useEffect de paginación automática - ahora es manual con handlePageChange
+  // 🎯 Sistema simplificado: Solo HypeAuditor
+  // - Búsqueda directa con HypeAuditor Discovery
+  // - Paginación interna con datos cargados
+  // - Sin cache complejo ni múltiples proveedores
 
   const adaptedInfluencers = useMemo(() => {
 
@@ -751,6 +594,17 @@ export default function Explorer() {
   const detectAvailablePlatforms = (influencer: any) => {
     if (!influencer) return [];
 
+    // 🚀 MINI DEBUG: Mostrar estructura de datos que llega a la tabla
+    console.log("🔍 [EXPLORER DEBUG] Influencer en tabla:", {
+      id: influencer.id || influencer.creatorId,
+      name: influencer.name,
+      platformInfo: influencer.platformInfo ? Object.keys(influencer.platformInfo) : 'none',
+      socialPlatforms: influencer.socialPlatforms?.length || 0,
+      followersCount: influencer.followersCount,
+      averageEngagementRate: influencer.averageEngagementRate,
+      mainSocialPlatform: influencer.mainSocialPlatform,
+      platform: influencer.platform
+    });
 
     const platformInfo = influencer.platformInfo || {};
     const platforms = [];
@@ -848,16 +702,24 @@ export default function Explorer() {
 
     // ✅ FALLBACK MEJORADO: Si no hay plataformas en platformInfo, usar socialPlatforms o detectar por avatar URL
     if (platforms.length === 0) {
+      console.log("🔍 [EXPLORER DEBUG] No se detectaron plataformas en platformInfo, usando fallback");
      
       // Usar socialPlatforms si está disponible
       if (influencer.socialPlatforms && influencer.socialPlatforms.length > 0) {
-        influencer.socialPlatforms.forEach((platform: string) => {
-          platforms.push({ name: platform.charAt(0).toUpperCase() + platform.slice(1), followers: 0 });
+        console.log("🔍 [EXPLORER DEBUG] Usando socialPlatforms como fallback:", influencer.socialPlatforms);
+        influencer.socialPlatforms.forEach((platform: any) => {
+          const platformName = typeof platform === 'string' ? platform : platform.platform;
+          const followers = typeof platform === 'object' ? platform.followers : 0;
+          platforms.push({ 
+            name: platformName.charAt(0).toUpperCase() + platformName.slice(1), 
+            followers: followers 
+          });
         });
          
       }
       // Si no, detectar por avatar URL como último recurso
       else {
+        console.log("🔍 [EXPLORER DEBUG] Usando detección por avatar URL");
         const avatar = influencer.avatar || '';
         if (avatar.includes('googleusercontent.com') || avatar.includes('ytimg.com') || avatar.includes('ggpht.com')) {
           platforms.push({ name: 'YouTube', followers: 0 });
@@ -869,6 +731,7 @@ export default function Explorer() {
         
         // Si aún no hay nada, usar la plataforma principal
         if (platforms.length === 0 && influencer.mainSocialPlatform) {
+          console.log("🔍 [EXPLORER DEBUG] Usando mainSocialPlatform:", influencer.mainSocialPlatform);
           platforms.push({ 
             name: influencer.mainSocialPlatform.charAt(0).toUpperCase() + influencer.mainSocialPlatform.slice(1), 
             followers: influencer.followersCount || 0 
@@ -877,7 +740,7 @@ export default function Explorer() {
       }
     }
 
-
+    console.log("🔍 [EXPLORER DEBUG] Plataformas detectadas:", platforms);
     return platforms;
   };
 
@@ -1265,7 +1128,7 @@ export default function Explorer() {
 
   // 🎯 NUEVA: Función para seleccionar/deseleccionar todos los influencers visibles
   const handleSelectAll = () => {
-    const dataToShow = limitedInfluencers.slice(0, size);
+    const dataToShow = limitedInfluencers.slice((page - 1) * size, page * size);
     const visibleIds = dataToShow.map(inf => inf.creatorId);
     const allSelected = visibleIds.every(id => selectedInfluencers.includes(id));
     
@@ -1765,14 +1628,12 @@ export default function Explorer() {
                 <h2 className="text-lg font-semibold text-gray-900">Resultados de búsqueda</h2>
                 <div className="flex items-center gap-3">
                   
-                                     {/* 🎯 INDICADOR DE CACHE */}
-                   {cacheInfo.isFromCache && (
-                     <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50 border border-green-200 rounded-md">
-                       <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                       <span className="text-xs font-medium text-green-700">Cache</span>
-                       {cacheInfo.tokensUsed && (
-                         <span className="text-xs text-green-600">({cacheInfo.tokensUsed} tokens)</span>
-                       )}
+                                     {/* 🎯 INDICADOR DE BÚSQUEDA */}
+                   {searchInfo.tokensUsed && (
+                     <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-50 border border-blue-200 rounded-md">
+                       <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                       <span className="text-xs font-medium text-blue-700">HypeAuditor</span>
+                       <span className="text-xs text-blue-600">({searchInfo.tokensUsed} tokens)</span>
                      </div>
                    )}
 
@@ -1782,8 +1643,53 @@ export default function Explorer() {
               </div>
                              <div className="flex items-center gap-3">
 
+                {/* 🚀 MINI DEBUG PANEL */}
+                <details className="bg-gray-50 border border-gray-200 rounded-lg">
+                  <summary className="text-xs font-medium text-gray-700 cursor-pointer hover:text-gray-900 px-3 py-2">
+                    🔍 Debug Explorer
+                  </summary>
+                  <div className="p-3 space-y-2 text-xs text-left max-w-md">
+                    <div className="bg-white p-2 rounded border">
+                      <div className="font-semibold text-gray-600 mb-1">📊 ESTADO ACTUAL</div>
+                      <div><strong>Provider:</strong> HypeAuditor</div>
+                      <div><strong>Has Ever Searched:</strong> {hasEverSearched ? '✅ Sí' : '❌ No'}</div>
+                      <div><strong>Loading:</strong> {loadingInfluencers ? '⏳ Sí' : '✅ No'}</div>
+                      <div><strong>Total Results:</strong> {totalCount}</div>
+                      <div><strong>Current Page:</strong> {page}</div>
+                      <div><strong>Influencers Loaded:</strong> {limitedInfluencers.length}</div>
+                      <div><strong>UI Size:</strong> {size} per page</div>
+                      <div><strong>HypeAuditor Size:</strong> {totalResultsPerPage} per page</div>
+                      <div><strong>Available in Current Page:</strong> {Math.min(limitedInfluencers.length, totalResultsPerPage)}</div>
+                      <div><strong>Pagination Mode:</strong> 🔄 Interna (HypeAuditor)</div>
+                      <div><strong>Total Pages Available:</strong> {Math.ceil(limitedInfluencers.length / size)}</div>
+                    </div>
+                    
+                    <div className="bg-white p-2 rounded border">
+                      <div className="font-semibold text-gray-600 mb-1">🔧 FILTROS ACTIVOS</div>
+                      <div><strong>Platform:</strong> {platform}</div>
+                      <div><strong>Search:</strong> {searchQuery || 'N/A'}</div>
+                      <div><strong>Location:</strong> {location}</div>
+                      <div><strong>Min Followers:</strong> {minFollowers?.toLocaleString()}</div>
+                      <div><strong>Max Followers:</strong> {maxFollowers?.toLocaleString()}</div>
+                      <div><strong>Min Engagement:</strong> {minEngagement}%</div>
+                      <div><strong>Max Engagement:</strong> {maxEngagement}%</div>
+                    </div>
 
-                 {!selectMode ? (
+                    {limitedInfluencers.length > 0 && (
+                      <div className="bg-white p-2 rounded border">
+                        <div className="font-semibold text-gray-600 mb-1">📋 PRIMER INFLUENCER</div>
+                        <div><strong>ID:</strong> {limitedInfluencers[0].id || limitedInfluencers[0].creatorId}</div>
+                        <div><strong>Name:</strong> {limitedInfluencers[0].name}</div>
+                        <div><strong>PlatformInfo:</strong> {limitedInfluencers[0].platformInfo ? Object.keys(limitedInfluencers[0].platformInfo).join(', ') : 'none'}</div>
+                        <div><strong>SocialPlatforms:</strong> {limitedInfluencers[0].socialPlatforms?.length || 0}</div>
+                        <div><strong>Followers:</strong> {limitedInfluencers[0].followersCount?.toLocaleString()}</div>
+                        <div><strong>Engagement:</strong> {limitedInfluencers[0].averageEngagementRate ? `${(limitedInfluencers[0].averageEngagementRate * 100).toFixed(2)}%` : 'N/A'}</div>
+                      </div>
+                    )}
+                  </div>
+                </details>
+
+                {!selectMode ? (
                    <button
                      onClick={handleToggleSelectMode}
                      disabled={!hasEverSearched || (!loadingInfluencers && limitedInfluencers.length === 0)}
@@ -1894,7 +1800,7 @@ export default function Explorer() {
                           type="checkbox"
                           className="sr-only"
                           checked={(() => {
-                            const dataToShow = limitedInfluencers.slice(0, size);
+                            const dataToShow = limitedInfluencers.slice((page - 1) * size, page * size);
                             const visibleIds = dataToShow.map(inf => inf.creatorId);
                             return visibleIds.length > 0 && visibleIds.every(id => selectedInfluencers.includes(id));
                           })()}
@@ -1902,7 +1808,7 @@ export default function Explorer() {
                         />
                         <div className={`w-5 h-5 rounded border-2 transition-all duration-200 flex items-center justify-center ${
                           (() => {
-                            const dataToShow = limitedInfluencers.slice(0, size);
+                            const dataToShow = limitedInfluencers.slice((page - 1) * size, page * size);
                             const visibleIds = dataToShow.map(inf => inf.creatorId);
                             const allSelected = visibleIds.length > 0 && visibleIds.every(id => selectedInfluencers.includes(id));
                             return allSelected
@@ -1911,7 +1817,7 @@ export default function Explorer() {
                           })()
                         }`}>
                           {(() => {
-                            const dataToShow = limitedInfluencers.slice(0, size);
+                            const dataToShow = limitedInfluencers.slice((page - 1) * size, page * size);
                             const visibleIds = dataToShow.map(inf => inf.creatorId);
                             const allSelected = visibleIds.length > 0 && visibleIds.every(id => selectedInfluencers.includes(id));
                             return allSelected && (
@@ -1977,7 +1883,7 @@ export default function Explorer() {
                   }
 
                   // 🎯 CAMBIO: Una vez que se haya buscado, siempre mostrar datos o mensaje de "no encontrados"
-                  const dataToShow = limitedInfluencers.slice(0, size); // Máximo 6
+                  const dataToShow = limitedInfluencers.slice((page - 1) * size, page * size); // Paginación interna
                   
                   return (
                     <>
@@ -2165,14 +2071,14 @@ export default function Explorer() {
                 ←
               </Button>
               <span className="text-sm font-medium text-gray-700">
-                {loadingInfluencers ? `Cargando página ${page}...` : `Página ${page}`}
+                {loadingInfluencers ? `Cargando página ${page}...` : `Página ${page} de ${Math.ceil(limitedInfluencers.length / size)}`}
               </span>
               <Button
                 variant="outline"
                 size="sm"
                 className="h-8 w-8 p-0 shadow-sm"
                 onClick={() => handlePageChange(page + 1)}
-                disabled={loadingInfluencers}
+                disabled={loadingInfluencers || (page * size >= limitedInfluencers.length)}
               >
                 →
               </Button>
