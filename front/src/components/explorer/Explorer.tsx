@@ -1703,25 +1703,25 @@ export default function Explorer() {
                         {selectMode && (
                           <th className="py-3 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center"></th>
                         )}
-                        <th className="text-left py-1 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="text-left py-5 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Creator
                         </th>
-                        <th className="text-center py-1 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="text-center py-5 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Plataformas
                         </th>
-                        <th className="text-center py-1 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                        <th className="text-center py-5 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
                           Idioma
                         </th>
-                        <th className="text-center py-1 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                        <th className="text-center py-5 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
                           País
                         </th>
-                        <th className="text-center py-1 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="text-center py-5 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Seguidores
                         </th>
-                        <th className="text-center py-1 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="text-center py-5 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Engagement
                         </th>
-                        <th className="text-center py-1 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="text-center py-5 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Acciones
                         </th>
                       </tr>
@@ -1885,18 +1885,18 @@ export default function Explorer() {
                             </label>
                           </td>
                         )}
-                        <td className="py-1 px-2">
-                          <div className="flex items-center justify-center gap-1">
+                        <td className="py-7 px-2">
+                          <div className="flex items-center gap-1">
                             <LazyInfluencerAvatar influencer={influencer} />
-                            <div className="text-center">
-                              <div className="text-xs font-medium text-gray-900 flex items-center justify-center gap-2">
+                            <div>
+                              <div className="text-xs font-medium text-gray-900 flex items-center gap-2">
                                 <span>
                                   {influencer.name === 'Sin nombre' || /\d/.test(influencer.name) 
                                     ? influencer.creatorId 
                                     : influencer.name}
                                 </span>
                               </div>
-                              <div className="text-xs text-gray-500 flex items-center justify-center gap-2">
+                              <div className="text-xs text-gray-500 flex items-center gap-2">
                                 {influencer.verified && (
                                   <Badge variant="secondary" className="text-xs px-1 py-0 h-4">
                                     <svg className="h-1.5 w-1.5" viewBox="0 0 20 20" fill="currentColor">
@@ -1909,7 +1909,7 @@ export default function Explorer() {
                             </div>
                           </div>
                         </td>
-                        <td className="py-1 px-2 text-center">
+                        <td className="py-7 px-2 text-center">
                           <div className="flex justify-center gap-1">
                             {/* Mostrar TODAS las plataformas donde tiene cuenta */}
                             {(() => {
@@ -1932,44 +1932,44 @@ export default function Explorer() {
                             })()}
                           </div>
                         </td>
-                        <td className="py-1 px-2 text-center hidden md:table-cell">
+                        <td className="py-7 px-2 text-center hidden md:table-cell">
                           <span className="text-xs font-medium">
                             {getLanguageName(influencer.language)}
                           </span>
                         </td>
-                        <td className="py-1 px-2 text-center hidden lg:table-cell">
+                        <td className="py-7 px-2 text-center hidden lg:table-cell">
                           <span className="text-xs font-medium">{influencer.location || '-'}</span>
                         </td>
-                        <td className="py-1 px-2 text-center">
+                        <td className="py-7 px-2 text-center">
                           <span className="text-xs font-medium">{formatNumber(influencer.followersCount)}</span>
                         </td>
-                        <td className="py-1 px-2 text-center">
+                        <td className="py-7 px-2 text-center">
                           <span className="text-xs font-medium">
                             {influencer.averageEngagementRate > 0 ? `${(influencer.averageEngagementRate * 100).toFixed(1)}%` : '-'}
                           </span>
                         </td>
-                        <td className="py-1 px-2">
+                        <td className="py-7 px-2">
                           <div className="flex justify-center gap-1">
                             <Button
                               variant="outline"
                               size="sm"
                               className={cn(
-                                "h-5 w-5 p-0",
+                                "h-7 w-7 p-0",
                                 savedInfluencers.includes(influencer.id)
                                   ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
                                   : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
                               )}
                               onClick={() => toggleSaved(influencer.id)}
                             >
-                              <BookmarkIcon className="h-2.5 w-2.5" />
+                              <BookmarkIcon className="h-3.5 w-3.5" />
                             </Button>
                             <Button
                               variant="outline"
                               size="sm"
-                              className="h-5 w-5 p-0 hover:bg-gray-50"
+                              className="h-7 w-7 p-0 hover:bg-gray-50"
                               onClick={() => openInfluencerPanel(influencer)}
                             >
-                              <ExternalLink className="h-2.5 w-2.5" />
+                              <ExternalLink className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </td>

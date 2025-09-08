@@ -37,7 +37,7 @@ const generateFallbackAvatar = (displayName: string) => {
 
 export const LazyInfluencerAvatar = ({ 
   influencer, 
-  className = "h-6 w-6 ring-1 ring-gray-100" 
+  className = "h-10 w-10 ring-1 ring-gray-100" 
 }: LazyInfluencerAvatarProps) => {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
