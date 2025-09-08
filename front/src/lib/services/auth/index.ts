@@ -102,7 +102,7 @@ export class AuthService {
       if (process.env.NODE_ENV === 'production') {
         baseURL = "https://catch-influencer-back.vercel.app/api/auth";
       } else {
-        baseURL = "http://localhost:5000/api/auth";
+        baseURL = "http://localhost:5001/api/auth";
       }
       
       console.log('🔐 Iniciando Google OAuth desde:', currentOrigin);

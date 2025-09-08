@@ -9,7 +9,7 @@ const fetch = require("node-fetch").default || require("node-fetch");
 
 async function getTopNiches() {
 
-  const API_BASE = "http://localhost:5000/api";
+  const API_BASE = "http://localhost:5001/api";
   const platforms = ["instagram", "youtube", "tiktok"];
   const allNiches = [];
 

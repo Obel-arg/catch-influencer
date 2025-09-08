@@ -27,7 +27,7 @@ function getBackendUrl(): string {
     return 'https://catch-influencer-back.vercel.app';
   } else {
     // Desarrollo local
-    return 'http://localhost:5000';
+    return 'http://localhost:5001';
   }
 }
 
@@ -37,7 +37,7 @@ function getBackendUrl(): string {
 export const config = {
   // Servidor
   nodeEnv: process.env.NODE_ENV || 'development',
-  port: process.env.PORT || 5000,
+  port: process.env.PORT || 5001,
   
   // URLs y endpoints
   apiPrefix: process.env.API_PREFIX || '/api',
@@ -54,9 +54,9 @@ export const config = {
   corsOrigins: [
     "https://catch-influencer.vercel.app",
     "http://localhost:3000",
-    "http://localhost:5000",
+    "http://localhost:5001",
     "http://127.0.0.1:3000",
-    "http://127.0.0.1:5000",
+    "http://127.0.0.1:5001",
     ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : [])
   ],
   

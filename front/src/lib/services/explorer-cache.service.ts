@@ -66,7 +66,7 @@ export class ExplorerCacheService {
         }),
       });
 
-      const result = response.data;
+      const result = response.data as any;
       
       // El backend ya maneja el cache automáticamente
       return {
@@ -101,7 +101,7 @@ export class ExplorerCacheService {
           ...withContext('ExplorerCacheService', 'checkCacheAvailability').headers
         }),
       });
-      return response.data.cached ? response.data.cacheInfo : null;
+      return (response.data as any).cached ? (response.data as any).cacheInfo : null;
     } catch (error) {
       console.error('Error verificando disponibilidad de cache:', error);
       return null;
@@ -165,7 +165,12 @@ export class ExplorerCacheService {
         }),
       });
 
-      return response.data;
+      return response.data as {
+        totalSearches: number;
+        totalPagesStored: number;
+        totalTokensUsed: number;
+        estimatedCostSaved: number;
+      };
     } catch (error) {
       console.error('Error obteniendo estadísticas de cache:', error);
       return {
@@ -189,7 +194,7 @@ export class ExplorerCacheService {
         }),
       });
 
-      return response.data;
+      return response.data as { deletedSearches: number; deletedPages: number };
     } catch (error) {
       console.error('Error limpiando cache expirado:', error);
       return { deletedSearches: 0, deletedPages: 0 };
@@ -209,7 +214,7 @@ export class ExplorerCacheService {
         }),
       });
 
-      return response.data.data || [];
+      return (response.data as any).data || [];
     } catch (error) {
       console.error('Error obteniendo búsquedas populares:', error);
       return [];
@@ -217,4 +222,4 @@ export class ExplorerCacheService {
   }
 }
 
-export const explorerCacheService = ExplorerCacheService.getInstance(); 
+export const explorerCacheService = ExplorerCacheService.getInstance();

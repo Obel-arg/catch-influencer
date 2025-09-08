@@ -8,7 +8,7 @@ export async function POST(
     const { campaignId } = params;
     
     // URL del backend
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
     const targetUrl = `${backendUrl}/campaign-insights/${campaignId}`;
     
     

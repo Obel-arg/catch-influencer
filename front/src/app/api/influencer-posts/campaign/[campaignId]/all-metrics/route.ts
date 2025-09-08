@@ -12,7 +12,7 @@ export async function GET(
     const token = authHeader?.replace('Bearer ', '');
     
     // Hacer la llamada al backend
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
     const response = await fetch(`${backendUrl}/influencer-posts/campaign/${campaignId}/all-metrics`, {
       headers: {
         'Authorization': `Bearer ${token}`,

@@ -295,7 +295,7 @@ export const brandService = {
     }
     
     // Convertir URL externa a URL del proxy
-    const baseUrl = "http://localhost:5000/api";
+    const baseUrl = "http://localhost:5001/api";
     const encodedUrl = encodeURIComponent(externalUrl);
     return `${baseUrl}/proxy/image?url=${encodedUrl}`;
   },

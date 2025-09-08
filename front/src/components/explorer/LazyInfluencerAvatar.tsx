@@ -37,7 +37,7 @@ const generateFallbackAvatar = (displayName: string) => {
 
 export const LazyInfluencerAvatar = ({ 
   influencer, 
-  className = "h-12 w-12 ring-2 ring-gray-100" 
+  className = "h-6 w-6 ring-1 ring-gray-100" 
 }: LazyInfluencerAvatarProps) => {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -70,19 +70,7 @@ export const LazyInfluencerAvatar = ({
       return;
     }
 
-    // 🚨 DETECTAR URLs DE INSTAGRAM CDN (HypeAuditor) y usar fallback directo
-    const isInstagramCDN = originalSrc.includes('cdninstagram.com') || 
-                           originalSrc.includes('scontent-') ||
-                           originalSrc.includes('fbcdn.net');
-    
-    if (isInstagramCDN) {
-      console.warn(`⚠️ [LAZY AVATAR] URL de Instagram CDN detectada para ${displayName}, usando fallback para evitar 403`);
-      setImageSrc(generateFallbackAvatar(displayName));
-      setIsLoading(false);
-      return;
-    }
-
-    // 🎯 Usar IntersectionObserver para lazy loading (solo para URLs no-Instagram)
+    // 🎯 Usar IntersectionObserver para lazy loading
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -118,20 +106,8 @@ export const LazyInfluencerAvatar = ({
       setIsLoading(true);
       setHasError(false);
 
-      // ✅ DETECTAR SI ES URL DE HYPEAUDITOR (Instagram directo)
-      const isHypeAuditorUrl = originalSrc.includes('cdninstagram.com') || 
-                               originalSrc.includes('scontent-') ||
-                               originalSrc.startsWith('https://scontent');
-      
-      let processedUrl;
-      if (isHypeAuditorUrl) {
-        // Para HypeAuditor, usar URL directamente (ya está optimizada)
-        processedUrl = originalSrc;
-        console.log('🎯 [LAZY AVATAR] Usando URL directa de HypeAuditor:', processedUrl);
-      } else {
-        // Para otros casos, usar función de optimización
-        processedUrl = getOptimizedAvatarUrl(originalSrc, influencer.name || '');
-      }
+      // ✅ USAR FUNCIÓN OPTIMIZADA para procesar avatares (igual que SmartAvatar)
+      const processedUrl = getOptimizedAvatarUrl(originalSrc, influencer.name || '');
             
       setImageSrc(processedUrl);
       setHasError(false);
@@ -146,7 +122,7 @@ export const LazyInfluencerAvatar = ({
   };
 
   const handleImageError = () => {
-    console.warn(`⚠️ [LAZY AVATAR] Error cargando imagen para ${displayName} (probablemente 403 de Instagram CDN), usando fallback`);
+    console.warn(`⚠️ [LAZY AVATAR] Error cargando imagen para ${displayName}, usando fallback`);
     setHasError(true);
     setImageSrc(generateFallbackAvatar(displayName));
   };

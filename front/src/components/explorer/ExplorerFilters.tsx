@@ -1,8 +1,6 @@
 "use client";
 
-import { Dispatch, SetStateAction, useState, useEffect } from "react";
-import { hypeAuditorDiscoveryService, HypeAuditorTaxonomyCategory } from "@/lib/services/hypeauditor-discovery.service";
-import { getCategoriesForPlatform, getPlatformDisplayName, HypeAuditorCategory } from "@/constants/hypeauditor-categories";
+import { Dispatch, SetStateAction, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -51,24 +49,11 @@ import {
   Play,
   Film,
   Plane,
-  Calendar,
-  Globe,
-  MonitorPlay,
-  ChefHat,
-  Coffee,
-  Utensils,
-  Shield,
-  Activity,
-  Palette,
-  HelpCircle,
-  Stethoscope,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Slider } from "@/components/ui/slider";
-import HypeAuditorFilters from "./HypeAuditorFilters";
 
 // Interfaz para los filtros activos
 interface ActiveFilter {
@@ -77,7 +62,6 @@ interface ActiveFilter {
   icon: string | null;
   iconColor?: string;
   type: string;
-  data?: string;
 }
 
 // Función para formatear números
@@ -92,7 +76,8 @@ interface ExplorerFiltersProps {
   setPlatform: Dispatch<SetStateAction<string>>;
   topics: string[];
   setTopics: Dispatch<SetStateAction<string[]>>;
-
+  niches: string[];
+  setNiches: Dispatch<SetStateAction<string[]>>;
   location: string;
   setLocation: Dispatch<SetStateAction<string>>;
   minFollowers: number;
@@ -103,11 +88,15 @@ interface ExplorerFiltersProps {
   setMinEngagement: Dispatch<SetStateAction<number>>;
   maxEngagement: number;
   setMaxEngagement: Dispatch<SetStateAction<number>>;
-
+  selectedGrowthRate: { min: number; max: number } | null;
+  setSelectedGrowthRate: Dispatch<
+    SetStateAction<{ min: number; max: number } | null>
+  >;
 
   searchQuery: string;
   setSearchQuery: Dispatch<SetStateAction<string>>;
-
+  hashtags: string;
+  setHashtags: Dispatch<SetStateAction<string>>;
   selectedCategories: string[];
   setSelectedCategories: Dispatch<SetStateAction<string[]>>;
   categories: string[];
@@ -116,18 +105,6 @@ interface ExplorerFiltersProps {
   handleClearFilters: () => void;
   showFilters: boolean;
   setShowFilters: Dispatch<SetStateAction<boolean>>;
-  
-  // Filtros de audiencia para HypeAuditor
-  audienceGender: { gender: 'male' | 'female' | 'any'; percentage: number };
-  setAudienceGender: Dispatch<SetStateAction<{ gender: 'male' | 'female' | 'any'; percentage: number }>>;
-  audienceAge: { minAge: number; maxAge: number; percentage: number };
-  setAudienceAge: Dispatch<SetStateAction<{ minAge: number; maxAge: number; percentage: number }>>;
-  audienceGeo: { countries: { [key: string]: number }; cities: { [key: string]: number } };
-  setAudienceGeo: Dispatch<SetStateAction<{ countries: { [key: string]: number }; cities: { [key: string]: number } }>>;
-
-  // ✨ NUEVO: Categorías del taxonomy de HypeAuditor
-  taxonomyCategories: { include: string[]; exclude: string[] };
-  setTaxonomyCategories: Dispatch<SetStateAction<{ include: string[]; exclude: string[] }>>;
 }
 
 const followerRanges = [
@@ -145,7 +122,14 @@ const engagementRanges = [
   { label: "Muy alto (>10%)", min: 10, max: 100 },
 ];
 
-
+const growthRateRanges = [
+  { label: "Decrecimiento (<0%)", min: 0, max: 0 },
+  { label: "Estable (0-1%)", min: 0, max: 0.01 },
+  { label: "Crecimiento bajo (1-3%)", min: 0.01, max: 0.03 },
+  { label: "Crecimiento medio (3-7%)", min: 0.03, max: 0.07 },
+  { label: "Crecimiento alto (7-15%)", min: 0.07, max: 0.15 },
+  { label: "Crecimiento explosivo (>15%)", min: 0.15, max: 1 },
+];
 
 const countryList = [
   { code: "UAE", name: "Arab Emirates" },
@@ -189,7 +173,14 @@ const countryList = [
   { code: "VEN", name: "Venezuela" },
 ].sort((a, b) => a.name.localeCompare(b.name));
 
-
+// 🎯 CATEGORÍAS ESPECÍFICAS DE FACEBOOK
+const facebookCategories = [
+  "Page · Athlete",
+  "Page · Kitchen/cooking", 
+  "Page · Broadcasting & media production company",
+  "Page · Food & beverage company",
+  "Page · Artist"
+];
 
 // 🎯 CATEGORÍAS ESPECÍFICAS DE YOUTUBE (mainCategory)
 const youtubeCategories = [
@@ -315,21 +306,331 @@ const categoryList = [
 ].sort((a, b) => a.name.localeCompare(b.name));
 */
 
+// ✅ NICHOS DE INSTAGRAM: Top nichos temáticos basados en CreatorDB (ordenados por popularidad)
+const nichesList = [
+  // 🔥 MEGA TIER (más de 300K canales)
+  {
+    code: "love",
+    name: "Love",
+    icon: "❤️",
+    category: "General",
+    channels: "515K",
+  },
+  {
+    code: "viral",
+    name: "Viral",
+    icon: "🚀",
+    category: "General",
+    channels: "408K",
+  },
+  {
+    code: "fyp",
+    name: "FYP",
+    icon: "📱",
+    category: "General",
+    channels: "372K",
+  },
+  {
+    code: "instagram",
+    name: "Instagram",
+    icon: "📸",
+    category: "General",
+    channels: "362K",
+  },
+  {
+    code: "explore",
+    name: "Explore",
+    icon: "🔍",
+    category: "General",
+    channels: "307K",
+  },
 
+  // ⚡ ALTO TIER (200K - 300K canales)
+  {
+    code: "travel",
+    name: "Travel",
+    icon: "✈️",
+    category: "Viajes",
+    channels: "288K",
+  },
+  {
+    code: "trending",
+    name: "Trending",
+    icon: "📈",
+    category: "General",
+    channels: "281K",
+  },
+  {
+    code: "music",
+    name: "Music",
+    icon: "🎵",
+    category: "Entretenimiento",
+    channels: "274K",
+  },
+  {
+    code: "fashion",
+    name: "Fashion",
+    icon: "👗",
+    category: "Moda",
+    channels: "273K",
+  },
+  {
+    code: "family",
+    name: "Family",
+    icon: "👨‍👩‍👧‍👦",
+    category: "Familia",
+    channels: "270K",
+  },
+  { code: "art", name: "Art", icon: "🎨", category: "Arte", channels: "256K" },
+  {
+    code: "nature",
+    name: "Nature",
+    icon: "🌿",
+    category: "Naturaleza",
+    channels: "240K",
+  },
+  {
+    code: "photography",
+    name: "Photography",
+    icon: "📷",
+    category: "Arte",
+    channels: "233K",
+  },
 
+  // 📈 MEDIO TIER (100K - 200K canales)
+  {
+    code: "motivation",
+    name: "Motivation",
+    icon: "💪",
+    category: "Inspiración",
+    channels: "187K",
+  },
+  {
+    code: "beauty",
+    name: "Beauty",
+    icon: "💄",
+    category: "Belleza",
+    channels: "144K",
+  },
+  {
+    code: "life",
+    name: "Life",
+    icon: "🌟",
+    category: "Lifestyle",
+    channels: "141K",
+  },
+  {
+    code: "funny",
+    name: "Funny",
+    icon: "😄",
+    category: "Entretenimiento",
+    channels: "123K",
+  },
+  {
+    code: "food",
+    name: "Food",
+    icon: "🍕",
+    category: "Gastronomía",
+    channels: "116K",
+  },
+  {
+    code: "style",
+    name: "Style",
+    icon: "✨",
+    category: "Moda",
+    channels: "114K",
+  },
+  {
+    code: "fitness",
+    name: "Fitness",
+    icon: "💪",
+    category: "Deporte",
+    channels: "113K",
+  },
+  {
+    code: "sunset",
+    name: "Sunset",
+    icon: "🌅",
+    category: "Naturaleza",
+    channels: "111K",
+  },
+  {
+    code: "vacation",
+    name: "Vacation",
+    icon: "🏖️",
+    category: "Viajes",
+    channels: "110K",
+  },
+  {
+    code: "makeup",
+    name: "Makeup",
+    icon: "💄",
+    category: "Belleza",
+    channels: "108K",
+  },
+  {
+    code: "comedy",
+    name: "Comedy",
+    icon: "😂",
+    category: "Entretenimiento",
+    channels: "101K",
+  },
+  {
+    code: "dance",
+    name: "Dance",
+    icon: "💃",
+    category: "Entretenimiento",
+    channels: "100K",
+  },
 
-// 🎯 NUEVAS INTERFACES PARA FILTROS DE HYPEAUDITOR DISCOVERY
-interface AudienceGenderFilter {
-  gender: 'male' | 'female' | 'any';
-  percentage: number;
-}
+  // 💫 MODERADO TIER (menos de 100K canales)
+  {
+    code: "beach",
+    name: "Beach",
+    icon: "🏖️",
+    category: "Naturaleza",
+    channels: "98K",
+  },
+  {
+    code: "winter",
+    name: "Winter",
+    icon: "❄️",
+    category: "Estacional",
+    channels: "93K",
+  },
+  {
+    code: "wedding",
+    name: "Wedding",
+    icon: "💍",
+    category: "Eventos",
+    channels: "91K",
+  },
+  {
+    code: "lifestyle",
+    name: "Lifestyle",
+    icon: "✨",
+    category: "Lifestyle",
+    channels: "89K",
+  },
+  {
+    code: "birthday",
+    name: "Birthday",
+    icon: "🎂",
+    category: "Eventos",
+    channels: "87K",
+  },
+  {
+    code: "inspiration",
+    name: "Inspiration",
+    icon: "✨",
+    category: "Inspiración",
+    channels: "86K",
+  },
+  {
+    code: "dog",
+    name: "Dog",
+    icon: "🐕",
+    category: "Mascotas",
+    channels: "79K",
+  },
+  {
+    code: "cute",
+    name: "Cute",
+    icon: "🥰",
+    category: "General",
+    channels: "72K",
+  },
+  {
+    code: "football",
+    name: "Football",
+    icon: "⚽",
+    category: "Deporte",
+    channels: "70K",
+  },
+  {
+    code: "sport",
+    name: "Sport",
+    icon: "🏃",
+    category: "Deporte",
+    channels: "67K",
+  },
 
-
-
-interface AudienceGeoFilter {
-  countries: string[];
-  cities: string[];
-}
+  // 🎯 NICHOS ESPECÍFICOS
+  {
+    code: "design",
+    name: "Design",
+    icon: "🎨",
+    category: "Arte",
+    channels: "67K",
+  },
+  {
+    code: "home",
+    name: "Home",
+    icon: "🏠",
+    category: "Hogar",
+    channels: "35K",
+  },
+  {
+    code: "baby",
+    name: "Baby",
+    icon: "👶",
+    category: "Familia",
+    channels: "40K",
+  },
+  {
+    code: "flowers",
+    name: "Flowers",
+    icon: "🌸",
+    category: "Naturaleza",
+    channels: "30K",
+  },
+  {
+    code: "party",
+    name: "Party",
+    icon: "🎉",
+    category: "Eventos",
+    channels: "41K",
+  },
+  {
+    code: "success",
+    name: "Success",
+    icon: "🏆",
+    category: "Inspiración",
+    channels: "38K",
+  },
+  {
+    code: "education",
+    name: "Education",
+    icon: "📚",
+    category: "Educación",
+    channels: "32K",
+  },
+  {
+    code: "cat",
+    name: "Cat",
+    icon: "🐱",
+    category: "Mascotas",
+    channels: "81K",
+  },
+  {
+    code: "game",
+    name: "Game",
+    icon: "🎮",
+    category: "Gaming",
+    channels: "12K",
+  },
+  {
+    code: "basketball",
+    name: "Basketball",
+    icon: "🏀",
+    category: "Deporte",
+    channels: "12K",
+  },
+].sort(
+  (a, b) =>
+    parseInt(b.channels.replace("K", "")) -
+    parseInt(a.channels.replace("K", ""))
+);
 
 export default function ExplorerFilters(props: ExplorerFiltersProps) {
   const {
@@ -337,7 +638,8 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
     setPlatform,
     topics,
     setTopics,
-
+    niches,
+    setNiches,
     location,
     setLocation,
     minFollowers,
@@ -348,10 +650,12 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
     setMinEngagement,
     maxEngagement,
     setMaxEngagement,
-
+    selectedGrowthRate,
+    setSelectedGrowthRate,
     searchQuery,
     setSearchQuery,
-
+    hashtags,
+    setHashtags,
     selectedCategories,
     setSelectedCategories,
     categories,
@@ -360,40 +664,36 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
     handleClearFilters,
     showFilters,
     setShowFilters,
-    
-    // Filtros de audiencia para HypeAuditor
-    audienceGender,
-    setAudienceGender,
-    audienceAge,
-    setAudienceAge,
-    audienceGeo,
-    setAudienceGeo,
-    
-    // ✨ NUEVO: Props para categorías del taxonomy
-    taxonomyCategories,
-    setTaxonomyCategories,
   } = props;
 
   const [countrySearch, setCountrySearch] = useState("");
   const [topicsSearch, setTopicsSearch] = useState(""); // ✨ NUEVO: Estado para búsqueda de tópicos
-  const [selectedCountryForEdit, setSelectedCountryForEdit] = useState<string | null>(null); // País seleccionado para editar porcentaje
-
+  const [nichesSearch, setNichesSearch] = useState(""); // ✨ NUEVO: Estado para búsqueda de nichos
   const [activeTab, setActiveTab] = useState("basicos");
-
-  // 🎯 NUEVOS ESTADOS PARA FILTROS DE HYPEAUDITOR DISCOVERY
-  // audienceGender, audienceAge y audienceGeo se pasan como props desde Explorer.tsx
-  const [accountType, setAccountType] = useState<'brand' | 'human' | 'any'>('any');
-  const [verified, setVerified] = useState<boolean | null>(null);
-  const [hasContacts, setHasContacts] = useState<boolean | null>(null);
-  const [hasLaunchedAdvertising, setHasLaunchedAdvertising] = useState<boolean | null>(null);
-  const [aqsRange, setAqsRange] = useState<{ min: number; max: number }>({ min: 0, max: 100 });
-  const [cqsRange, setCqsRange] = useState<{ min: number; max: number }>({ min: 0, max: 100 });
 
   // 🎯 NUEVO: Funciones para verificar compatibilidad de filtros por plataforma
   const isFilterDisabled = (filterType: string): boolean => {
+    if (platform === "Facebook" || platform === "Threads") {
+      const disabledFilters = {
+        location: true, // Facebook y Threads no tienen country
+        engagement: platform === "Threads", // Threads no tiene engagement rate
+        niches: true, // Facebook y Threads no tienen nichos
+        hashtags: platform === "Facebook", // Facebook no tiene hashtags
+        categories: platform === "Threads", // Threads no tiene categorías
+      };
+      return disabledFilters[filterType as keyof typeof disabledFilters] || false;
+    }
+    
     if (platform === "TikTok") {
       const disabledFilters = {
-        categories: true, // TikTok no tiene categorías en el taxonomy actual
+        categories: true, // TikTok no tiene categorías
+      };
+      return disabledFilters[filterType as keyof typeof disabledFilters] || false;
+    }
+
+    if (platform === "YouTube") {
+      const disabledFilters = {
+        hashtags: true, // YouTube no soporta filtros de hashtags
       };
       return disabledFilters[filterType as keyof typeof disabledFilters] || false;
     }
@@ -401,11 +701,28 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
     return false;
   };
 
+  const getDisabledMessage = (filterType: string): string => {
+    const platformName = platform === "Facebook" ? "Facebook" : "Threads";
+    const messages = {
+      location: `${platformName} actualmente no soporta filtrado por país`,
+      engagement: `${platformName} actualmente no soporta filtrado por engagement rate`,
+      niches: `${platformName} actualmente no soporta filtrado por nichos`,
+      hashtags: "", // No mostrar mensaje explícito para hashtags en Facebook
+      categories: `${platformName} actualmente no soporta filtrado por categorías`,
+    };
+    return messages[filterType as keyof typeof messages] || "";
+  };
+
   const getTikTokDisabledMessage = (filterType: string): string => {
     const messages = {
-      categories: "TikTok actualmente no soporta filtrado por categorías en el taxonomy",
-      location: "Este filtro no está disponible para esta plataforma",
-      engagement: "Este filtro no está disponible para esta plataforma",
+      categories: "TikTok actualmente no soporta filtrado por categorías",
+    };
+    return messages[filterType as keyof typeof messages] || "";
+  };
+
+  const getYouTubeDisabledMessage = (filterType: string): string => {
+    const messages = {
+      hashtags: "YouTube actualmente no soporta filtrado por hashtags",
     };
     return messages[filterType as keyof typeof messages] || "";
   };
@@ -421,7 +738,13 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
   //   category.description.toLowerCase().includes(topicsSearch.toLowerCase())
   // );
 
-
+  // ✨ NUEVA FUNCIÓN: Filtrar nichos por búsqueda
+  const filteredNiches = nichesList.filter(
+    (niche) =>
+      niche.name.toLowerCase().includes(nichesSearch.toLowerCase()) ||
+      niche.code.toLowerCase().includes(nichesSearch.toLowerCase()) ||
+      niche.category.toLowerCase().includes(nichesSearch.toLowerCase())
+  );
 
   const getSelectedCountryName = () => {
     if (location === "all") return "Todos los países";
@@ -429,84 +752,43 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
     return country ? country.name : location;
   };
 
-  // ✨ FUNCIÓN: Obtener texto de categorías seleccionadas
+  // ⚠️ FUNCIÓN TEMPORALMENTE DESHABILITADA - Obtener texto de categorías seleccionadas
   const getSelectedCategoriesText = () => {
-    if (selectedCategories.length === 0) {
-      return "Seleccionar categorías";
-    }
+    if (selectedCategories.length === 0) return "Seleccionar categorías";
     if (selectedCategories.length === 1) return formatCategoryName(selectedCategories[0]);
     return `${selectedCategories.length} categorías seleccionadas`;
   };
 
-  // ✨ NUEVA FUNCIÓN: Obtener texto del audience gender seleccionado
-  const getSelectedAudienceGenderText = () => {
-    if (audienceGender.gender === 'any') return "Any gender";
-    const genderText = audienceGender.gender === 'male' ? 'Male' : 'Female';
-    return `${genderText} >${audienceGender.percentage}%`;
-  };
-
-  // ✨ NUEVA FUNCIÓN: Obtener texto del audience age seleccionado
-  const getSelectedAudienceAgeText = () => {
-    if (audienceAge.minAge === 18 && audienceAge.maxAge === 54 && audienceAge.percentage === 10) {
-      return "Any age";
-    }
-    return `${audienceAge.minAge}-${audienceAge.maxAge} years >${audienceAge.percentage}%`;
-  };
-
-  // ✨ NUEVA FUNCIÓN: Obtener texto del audience geo seleccionado
-  const getSelectedAudienceGeoText = () => {
-    const countriesCount = Object.keys(audienceGeo.countries).length;
-    const citiesCount = Object.keys(audienceGeo.cities).length;
-    const totalSelected = countriesCount + citiesCount;
-    
-    if (totalSelected === 0) return "Any location";
-    if (totalSelected === 1) {
-      if (countriesCount > 0) {
-        const countryCode = Object.keys(audienceGeo.countries)[0];
-        const country = countryList.find(c => c.code === countryCode);
-        const locationName = country ? country.name : countryCode;
-        return `${locationName} >${audienceGeo.countries[countryCode]}%`;
-      } else {
-        const cityName = Object.keys(audienceGeo.cities)[0];
-        return `${cityName} >${audienceGeo.cities[cityName]}%`;
-      }
-    }
-    return `${totalSelected} locations selected`;
-  };
-
-  // ✨ FUNCIÓN: Toggle categoría del taxonomy de HypeAuditor
+  // ✨ NUEVA FUNCIÓN: Toggle categoría seleccionada
   const toggleCategory = (categoryCode: string) => {
-    const categoryId = getTaxonomyCategoryId(categoryCode);
-    if (!categoryId || !setTaxonomyCategories) return;
-
-    // Actualizar taxonomyCategories (para el backend)
-    setTaxonomyCategories((prev: { include: string[]; exclude: string[] }) => {
-      const isCurrentlyIncluded = prev.include.includes(categoryId);
-      
-      if (isCurrentlyIncluded) {
-        // Remover de include
-        return {
-          ...prev,
-          include: prev.include.filter((id: string) => id !== categoryId)
-        };
-      } else {
-        // Agregar a include
-        return {
-          ...prev,
-          include: [...prev.include, categoryId]
-        };
-      }
-    });
-    
-    // Actualizar selectedCategories (para la UI)
     if (selectedCategories.includes(categoryCode)) {
-      setSelectedCategories(selectedCategories.filter((c) => c !== categoryCode));
+      setSelectedCategories(
+        selectedCategories.filter((c) => c !== categoryCode)
+      );
     } else {
       setSelectedCategories([...selectedCategories, categoryCode]);
     }
   };
 
+  // ✨ NUEVA FUNCIÓN: Obtener texto de nichos seleccionados
+  const getSelectedNichesText = () => {
+    if (niches.length === 0) return "Todos los nichos";
+    if (niches.length === 1) {
+      const niche = nichesList.find((n) => n.code === niches[0]);
+      return niche ? niche.name : niches[0];
+    }
+    return `${niches.length} nichos seleccionados`;
+  };
 
+  // ✨ NUEVA FUNCIÓN: Obtener texto del growth rate seleccionado
+  const getSelectedGrowthRateText = () => {
+    if (!selectedGrowthRate) return "Todos los rangos de crecimiento";
+    const growthRange = growthRateRanges.find(
+      (r) =>
+        r.min === selectedGrowthRate.min && r.max === selectedGrowthRate.max
+    );
+    return growthRange ? growthRange.label : "Rango personalizado";
+  };
 
   // ✨ NUEVA FUNCIÓN: Limpiar búsqueda cuando se selecciona un filtro
   const clearSearchOnFilterChange = () => {
@@ -515,14 +797,58 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
     }
   };
 
-    // 🎯 NUEVA FUNCIÓN: Limpiar filtros incompatibles cuando se cambia de plataforma
+  // 🎯 NUEVA FUNCIÓN: Limpiar filtros incompatibles cuando se cambia de plataforma
   const clearIncompatibleFilters = (newPlatform: string) => {
-    // Solo TikTok tiene filtros deshabilitados actualmente
-    if (newPlatform === "TikTok") {
-      // TikTok no tiene categorías en el taxonomy, limpiar categorías seleccionadas
-      if (selectedCategories.length > 0) {
-        setSelectedCategories([]);
+    // Crear un objeto temporal para verificar incompatibilidades
+    const tempPlatform = newPlatform;
+    
+    // Función auxiliar para verificar si un filtro está deshabilitado en la nueva plataforma
+    const isFilterDisabledForPlatform = (filterType: string, platform: string): boolean => {
+      if (platform === "Facebook" || platform === "Threads") {
+        const disabledFilters = {
+          location: true, // Facebook y Threads no tienen country
+          engagement: platform === "Threads", // Threads no tiene engagement rate
+          niches: true, // Facebook y Threads no tienen nichos
+          hashtags: platform === "Facebook", // Facebook no tiene hashtags
+          categories: platform === "Threads", // Threads no tiene categorías
+        };
+        return disabledFilters[filterType as keyof typeof disabledFilters] || false;
       }
+      
+      if (platform === "TikTok") {
+        const disabledFilters = {
+          categories: true, // TikTok no tiene categorías
+        };
+        return disabledFilters[filterType as keyof typeof disabledFilters] || false;
+      }
+      
+      return false;
+    };
+
+    // Limpiar location si no es compatible
+    if (isFilterDisabledForPlatform("location", tempPlatform) && location !== "all") {
+      setLocation("all");
+    }
+
+    // Limpiar engagement si no es compatible
+    if (isFilterDisabledForPlatform("engagement", tempPlatform) && (minEngagement !== 0 || maxEngagement !== 100)) {
+      setMinEngagement(0);
+      setMaxEngagement(100);
+    }
+
+    // Limpiar nichos si no es compatible
+    if (isFilterDisabledForPlatform("niches", tempPlatform) && niches.length > 0) {
+      setNiches([]);
+    }
+
+    // Limpiar hashtags si no es compatible
+    if (isFilterDisabledForPlatform("hashtags", tempPlatform) && hashtags.trim()) {
+      setHashtags("");
+    }
+
+    // Limpiar categorías si no es compatible
+    if (isFilterDisabledForPlatform("categories", tempPlatform) && selectedCategories.length > 0) {
+      setSelectedCategories([]);
     }
   };
 
@@ -535,85 +861,30 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
   //   }
   // };
 
- 
-
-  // 🎯 FUNCIÓN: Obtener categorías del taxonomy de HypeAuditor según la plataforma
-  const getAvailableCategories = (): string[] => {
-    // Si la plataforma es "all" (por defecto), usar las categorías del taxonomy de Instagram
-    if (platform === "all") {
-      const instagramTaxonomyCategories = getCategoriesForPlatform("Instagram");
-      return instagramTaxonomyCategories.map(cat => cat.name);
+  // ✨ NUEVA FUNCIÓN: Toggle nicho seleccionado
+  const toggleNiche = (nicheCode: string) => {
+    if (niches.includes(nicheCode)) {
+      setNiches(niches.filter((n) => n !== nicheCode));
+    } else {
+      setNiches([...niches, nicheCode]);
     }
-    
-    const taxonomyCategories = getCategoriesForPlatform(platform);
-    return taxonomyCategories.map(cat => cat.name);
   };
 
-  // 🎯 FUNCIÓN: Obtener el ID de la categoría del taxonomy
-  const getTaxonomyCategoryId = (categoryName: string): string | null => {
-    // Si la plataforma es "all", usar Instagram por defecto para los IDs
-    const platformForId = platform === "all" ? "Instagram" : platform;
-    const taxonomyCategories = getCategoriesForPlatform(platformForId);
-    const found = taxonomyCategories.find(cat => cat.name === categoryName);
-    return found ? found.id : null;
+  // 🎯 NUEVA FUNCIÓN: Obtener categorías según la plataforma seleccionada
+  const getAvailableCategories = (): string[] => {
+    if (platform === "Facebook") {
+      return facebookCategories;
+    }
+    if (platform === "YouTube") {
+      return youtubeCategories;
+    }
+    // Para Instagram y TikTok, usar las categorías generales
+    return instagramGeneralCategories;
   };
 
   // 🎯 FUNCIÓN PARA OBTENER EL ICONO DE LA CATEGORÍA
   const getCategoryIcon = (cat: string) => {
     switch (cat) {
-      // ✨ CATEGORÍAS DEL TAXONOMY DE INSTAGRAM (cuando platform === "all")
-      case "Beauty":
-        return "Heart";
-      case "Fashion":
-        return "Camera";
-      case "Fitness & Gym":
-        return "Trophy";
-      case "Food & Cooking":
-        return "ChefHat";
-      case "Gaming":
-        return "Gamepad2";
-      case "Music":
-        return "Music";
-      case "Travel":
-        return "Plane";
-      case "Lifestyle":
-        return "Heart";
-      case "Modeling":
-        return "Camera";
-      case "Art/Artists":
-        return "Mic";
-      case "Photography":
-        return "Camera";
-      case "Sports with a ball":
-        return "Trophy";
-      case "Education":
-        return "GraduationCap";
-      case "Business & Careers":
-        return "Building2";
-      case "Health & Medicine":
-        return "Heart";
-      case "Accessories & Jewellery":
-        return "Award";
-      case "Cinema & Actors/actresses":
-        return "Film";
-      case "Clothing & Outfits":
-        return "Scissors";
-      case "Computers & Gadgets":
-        return "Zap";
-      case "Family":
-        return "Baby";
-      case "Finance & Economics":
-        return "Building2";
-      case "Nature & landscapes":
-        return "PawPrint";
-      case "Trainers & Coaches":
-        return "Award";
-      case "Crypto":
-        return "Zap";
-      case "NFT":
-        return "Zap";
-        
-      // 🎯 CATEGORÍAS GENERALES PARA INSTAGRAM Y TIKTOK (legacy)
       case "Artist":
         return "Mic";
       case "Brand":
@@ -626,55 +897,29 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
         return "Camera";
       case "Media/news company":
         return "Newspaper";
-      case "Entertainment website":
-        return "MonitorPlay";
-      case "Sports team":
-        return "Shield";
-      case "Comedian":
+      case "SPORTS_TEAM":
+        return "Users";
+      case "COMEDIAN":
         return "Laugh";
       case "Sportsperson":
         return "Award";
       case "Sports":
         return "Trophy";
+      case "Education":
+        return "GraduationCap";
       case "Politician":
         return "Vote";
-        
-      // ✨ CATEGORÍAS ESPECÍFICAS DEL TAXONOMY DE YOUTUBE
-      case "Fitness":
+      // 🎯 CATEGORÍAS ESPECÍFICAS DE FACEBOOK
+      case "Page · Athlete":
         return "Trophy";
-      case "Food & Drinks":
-        return "Coffee";
-      case "Music & Dance":
-        return "Music";
-      case "Video games":
-        return "Gamepad2";
-      case "Animals & Pets":
-        return "PawPrint";
-      case "Animation":
-        return "Video";
-      case "ASMR":
-        return "Activity";
-      case "Daily vlogs":
-        return "Camera";
-      case "Design/art":
-        return "Palette";
-      case "DIY & Life Hacks":
-        return "Scissors";
-      case "Family & Parenting":
-        return "Baby";
-      case "Health & Self Help":
-        return "Stethoscope";
-      case "Humor":
-        return "Laugh";
-      case "Movies":
-        return "Film";
-      case "Mystery":
-        return "HelpCircle";
-      case "Show":
-        return "Tv";
-      case "Toys":
-        return "Baby";
-
+      case "Page · Kitchen/cooking":
+        return "Trophy"; // Using Trophy as placeholder for Utensils
+      case "Page · Broadcasting & media production company":
+        return "Newspaper"; // Using Newspaper as placeholder for Radio
+      case "Page · Food & beverage company":
+        return "Trophy"; // Using Trophy as placeholder for Coffee
+      case "Page · Artist":
+        return "Mic";
       // 🎯 CATEGORÍAS ESPECÍFICAS DE YOUTUBE
       case "Anime/Animation":
         return "Video";
@@ -724,57 +969,6 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
   // 🎯 FUNCIÓN PARA OBTENER EL COLOR DEL ICONO
   const getCategoryIconColor = (cat: string) => {
     switch (cat) {
-      // ✨ COLORES PARA CATEGORÍAS DEL TAXONOMY DE INSTAGRAM (cuando platform === "all")
-      case "Beauty":
-        return "text-pink-500";
-      case "Fashion":
-        return "text-purple-500";
-      case "Fitness & Gym":
-        return "text-red-500";
-      case "Food & Cooking":
-        return "text-orange-500";
-      case "Gaming":
-        return "text-blue-500";
-      case "Music":
-        return "text-green-500";
-      case "Travel":
-        return "text-cyan-500";
-      case "Lifestyle":
-        return "text-pink-400";
-      case "Modeling":
-        return "text-purple-400";
-      case "Art/Artists":
-        return "text-purple-600";
-      case "Photography":
-        return "text-indigo-500";
-      case "Sports with a ball":
-        return "text-red-600";
-      case "Business & Careers":
-        return "text-blue-600";
-      case "Health & Medicine":
-        return "text-green-600";
-      case "Accessories & Jewellery":
-        return "text-amber-500";
-      case "Cinema & Actors/actresses":
-        return "text-orange-600";
-      case "Clothing & Outfits":
-        return "text-indigo-400";
-      case "Computers & Gadgets":
-        return "text-blue-700";
-      case "Family":
-        return "text-pink-600";
-      case "Finance & Economics":
-        return "text-green-700";
-      case "Nature & landscapes":
-        return "text-emerald-500";
-      case "Trainers & Coaches":
-        return "text-yellow-600";
-      case "Crypto":
-        return "text-yellow-500";
-      case "NFT":
-        return "text-purple-700";
-        
-      // 🎯 COLORES PARA CATEGORÍAS GENERALES (legacy)
       case "Artist":
         return "text-purple-500";
       case "Brand":
@@ -787,11 +981,9 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
         return "text-pink-500";
       case "Media/news company":
         return "text-orange-500";
-      case "Entertainment website":
-        return "text-purple-600";
-      case "Sports team":
+      case "SPORTS_TEAM":
         return "text-indigo-500";
-      case "Comedian":
+      case "COMEDIAN":
         return "text-purple-500";
       case "Sportsperson":
         return "text-red-500";
@@ -801,43 +993,17 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
         return "text-teal-500";
       case "Politician":
         return "text-gray-600";
-        
-      // ✨ COLORES PARA CATEGORÍAS ESPECÍFICAS DEL TAXONOMY DE YOUTUBE
-      case "Fitness":
-        return "text-red-500";
-      case "Food & Drinks":
-        return "text-amber-600";
-      case "Music & Dance":
-        return "text-green-600";
-      case "Video games":
-        return "text-blue-600";
-      case "Animals & Pets":
-        return "text-amber-600";
-      case "Animation":
-        return "text-purple-600";
-      case "ASMR":
-        return "text-indigo-600";
-      case "Daily vlogs":
-        return "text-pink-600";
-      case "Design/art":
-        return "text-purple-700";
-      case "DIY & Life Hacks":
-        return "text-orange-700";
-      case "Family & Parenting":
-        return "text-pink-700";
-      case "Health & Self Help":
-        return "text-green-700";
-      case "Humor":
-        return "text-yellow-600";
-      case "Movies":
-        return "text-orange-800";
-      case "Mystery":
-        return "text-gray-700";
-      case "Show":
-        return "text-purple-800";
-      case "Toys":
-        return "text-pink-800";
-
+      // 🎯 COLORES PARA CATEGORÍAS DE FACEBOOK
+      case "Page · Athlete":
+        return "text-yellow-500";
+      case "Page · Kitchen/cooking":
+        return "text-orange-500";
+      case "Page · Broadcasting & media production company":
+        return "text-blue-500";
+      case "Page · Food & beverage company":
+        return "text-green-500";
+      case "Page · Artist":
+        return "text-purple-500";
       // 🎯 COLORES PARA CATEGORÍAS DE YOUTUBE
       case "Anime/Animation":
         return "text-purple-500";
@@ -886,6 +1052,15 @@ export default function ExplorerFilters(props: ExplorerFiltersProps) {
 
   // 🎯 FUNCIÓN PARA FORMATEAR EL NOMBRE DE LA CATEGORÍA
 const formatCategoryName = (category: string): string => {
+  // Para categorías de Facebook, remover el prefijo "Page ·"
+  if (category.startsWith("Page · ")) {
+    const withoutPrefix = category.replace("Page · ", "");
+    // Caso especial para "Broadcasting & media production company"
+    if (withoutPrefix === "Broadcasting & media production company") {
+      return "media company";
+    }
+    return withoutPrefix;
+  }
   return category;
   };
 
@@ -905,6 +1080,10 @@ const formatCategoryName = (category: string): string => {
             ? "/icons/instagram.svg"
             : platform === "TikTok"
             ? "/icons/tiktok.svg"
+            : platform === "Facebook"
+            ? "/icons/facebook.svg"
+            : platform === "Threads"
+            ? "/icons/threads.svg"
             : null,
         type: "platform",
       });
@@ -972,11 +1151,46 @@ const formatCategoryName = (category: string): string => {
       }
     }
 
+    // Filtro de growth rate
+    if (selectedGrowthRate) {
+      const growthRange = growthRateRanges.find(
+        (r) =>
+          r.min === selectedGrowthRate.min && r.max === selectedGrowthRate.max
+      );
+      if (growthRange) {
+        filters.push({
+          id: "growthRate",
+          label: growthRange.label,
+          icon: null,
+          type: "growthRate",
+        });
+      }
+    }
 
+    // Filtro de nichos
+    if (niches.length > 0) {
+      niches.forEach((nicheCode) => {
+        const niche = nichesList.find((n) => n.code === nicheCode);
+        if (niche) {
+          filters.push({
+            id: `niche-${nicheCode}`,
+            label: niche.name,
+            icon: niche.icon,
+            type: "niche",
+          });
+        }
+      });
+    }
 
-    
-
-
+    // Filtro de hashtags
+    if (hashtags.trim()) {
+      filters.push({
+        id: "hashtags",
+        label: hashtags,
+        icon: "#",
+        type: "hashtags",
+      });
+    }
 
     // Filtro de categorías
     if (selectedCategories.length > 0) {
@@ -991,55 +1205,12 @@ const formatCategoryName = (category: string): string => {
       });
     }
 
-    // Filtro de audience gender
-    if (audienceGender.gender !== 'any') {
-          filters.push({
-        id: "audienceGender",
-        label: `${audienceGender.gender === 'male' ? 'Male' : 'Female'} >${audienceGender.percentage}%`,
-        icon: audienceGender.gender === 'male' ? '👨' : '👩',
-        type: "audienceGender",
-      });
-    }
-
-    // Filtro de audience age
-    if (audienceAge.minAge !== 18 || audienceAge.maxAge !== 54 || audienceAge.percentage !== 10) {
-      filters.push({
-        id: "audienceAge",
-        label: `${audienceAge.minAge}-${audienceAge.maxAge} years >${audienceAge.percentage}%`,
-        icon: '🎂',
-        type: "audienceAge",
-      });
-    }
-
-    // Filtros de audience geo - un chip por cada país/ciudad
-    Object.entries(audienceGeo.countries).forEach(([countryCode, percentage]) => {
-      const country = countryList.find(c => c.code === countryCode);
-      const countryName = country ? country.name : countryCode;
-      filters.push({
-        id: `audienceGeo-country-${countryCode}`,
-        label: `${countryName} >${percentage}%`,
-        icon: '🌍',
-        type: "audienceGeoCountry",
-        data: countryCode,
-      });
-    });
-    
-    Object.entries(audienceGeo.cities).forEach(([cityName, percentage]) => {
-        filters.push({
-        id: `audienceGeo-city-${cityName}`,
-        label: `${cityName} >${percentage}%`,
-        icon: '🏙️',
-        type: "audienceGeoCity", 
-        data: cityName,
-        });
-      });
-
     return filters;
   };
 
   // ✨ NUEVA FUNCIÓN: Eliminar filtro específico
-  const removeFilter = (filter: ActiveFilter) => {
-    switch (filter.type) {
+  const removeFilter = (filterId: string, filterType: string) => {
+    switch (filterType) {
       case "platform":
         setPlatform("all");
         break;
@@ -1054,32 +1225,19 @@ const formatCategoryName = (category: string): string => {
         setMinEngagement(0);
         setMaxEngagement(100);
         break;
-
-
-
+      case "growthRate":
+        setSelectedGrowthRate(null);
+        break;
+      case "niche":
+        const nicheCode = filterId.replace("niche-", "");
+        setNiches(niches.filter((n) => n !== nicheCode));
+        break;
+      case "hashtags":
+        setHashtags("");
+        break;
       case "category":
-        const category = filter.id.replace("category-", "");
+        const category = filterId.replace("category-", "");
         setSelectedCategories(selectedCategories.filter((c) => c !== category));
-        break;
-      case "audienceGender":
-        setAudienceGender({ gender: 'any', percentage: 50 });
-        break;
-      case "audienceAge":
-        setAudienceAge({ minAge: 18, maxAge: 54, percentage: 10 });
-        break;
-      case "audienceGeoCountry":
-        if (filter.data) {
-          const newCountries = { ...audienceGeo.countries };
-          delete newCountries[filter.data];
-          setAudienceGeo({ ...audienceGeo, countries: newCountries });
-        }
-        break;
-      case "audienceGeoCity":
-        if (filter.data) {
-          const newCities = { ...audienceGeo.cities };
-          delete newCities[filter.data];
-          setAudienceGeo({ ...audienceGeo, cities: newCities });
-        }
         break;
     }
   };
@@ -1088,6 +1246,7 @@ const formatCategoryName = (category: string): string => {
     <Card
       className={cn(
         "sticky top-4 bg-white border-0 shadow-xl rounded-xl overflow-hidden transition-all duration-200",
+        "lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto",
         showFilters ? "opacity-100" : "opacity-0 pointer-events-none"
       )}
     >
@@ -1112,14 +1271,14 @@ const formatCategoryName = (category: string): string => {
 
         {/* ✨ NUEVA SECCIÓN: Píldoras de filtros activos */}
         {getActiveFilters().length > 0 && (
-          <div className="px-6 py-3 bg-white border-b">
-            <div className="flex flex-wrap gap-2">
+          <div className="px-6 py-2 bg-white border-b">
+            <div className="grid grid-cols-2 gap-2">
               {getActiveFilters().map((filter) => (
                 <Badge
                   key={filter.id}
                   variant="secondary"
-                  className="flex items-center gap-2 px-3 py-1.5 bg-gray-200 hover:bg-gray-100 cursor-pointer shadow-md whitespace-nowrap"
-                  onClick={() => removeFilter(filter)}
+                  className="flex items-center justify-center gap-2 px-3 py-1 bg-gray-200 hover:bg-gray-100 cursor-pointer shadow-md"
+                  onClick={() => removeFilter(filter.id, filter.type)}
                 >
                   {filter.icon && typeof filter.icon === "string" && filter.icon.startsWith("/") ? (
                     <img
@@ -1148,12 +1307,6 @@ const formatCategoryName = (category: string): string => {
                       {filter.icon === "Newspaper" && (
                         <Newspaper className="h-3 w-3" />
                       )}
-                      {filter.icon === "MonitorPlay" && (
-                        <MonitorPlay className="h-3 w-3" />
-                      )}
-                      {filter.icon === "Shield" && (
-                        <Shield className="h-3 w-3" />
-                      )}
                       {filter.icon === "Users" && <Users className="h-3 w-3" />}
                       {filter.icon === "Laugh" && <Laugh className="h-3 w-3" />}
                       {filter.icon === "Award" && <Award className="h-3 w-3" />}
@@ -1161,63 +1314,11 @@ const formatCategoryName = (category: string): string => {
                         <GraduationCap className="h-3 w-3" />
                       )}
                       {filter.icon === "Vote" && <Vote className="h-3 w-3" />}
-                      {filter.icon === "ChefHat" && (
-                        <ChefHat className="h-3 w-3" />
-                      )}
-                      {filter.icon === "Coffee" && (
-                        <Coffee className="h-3 w-3" />
-                      )}
-                      {filter.icon === "Tv" && <Tv className="h-3 w-3" />}
-                      {filter.icon === "Gamepad2" && (
-                        <Gamepad2 className="h-3 w-3" />
-                      )}
-                      {filter.icon === "Video" && (
-                        <Video className="h-3 w-3" />
-                      )}
-                      {filter.icon === "Car" && (
-                        <Car className="h-3 w-3" />
-                      )}
-                      {filter.icon === "Baby" && (
-                        <Baby className="h-3 w-3" />
-                      )}
-                      {filter.icon === "Scissors" && (
-                        <Scissors className="h-3 w-3" />
-                      )}
-                      {filter.icon === "Heart" && (
-                        <Heart className="h-3 w-3" />
-                      )}
-                      {filter.icon === "PawPrint" && (
-                        <PawPrint className="h-3 w-3" />
-                      )}
-                      {filter.icon === "Zap" && (
-                        <Zap className="h-3 w-3" />
-                      )}
-                      {filter.icon === "Play" && (
-                        <Play className="h-3 w-3" />
-                      )}
-                      {filter.icon === "Film" && (
-                        <Film className="h-3 w-3" />
-                      )}
-                      {filter.icon === "Plane" && (
-                        <Plane className="h-3 w-3" />
-                      )}
-                      {filter.icon === "Activity" && (
-                        <Activity className="h-3 w-3" />
-                      )}
-                      {filter.icon === "Palette" && (
-                        <Palette className="h-3 w-3" />
-                      )}
-                      {filter.icon === "HelpCircle" && (
-                        <HelpCircle className="h-3 w-3" />
-                      )}
-                      {filter.icon === "Stethoscope" && (
-                        <Stethoscope className="h-3 w-3" />
-                      )}
                     </div>
                   ) : filter.icon && typeof filter.icon === "string" ? (
                     <span className="text-xs">{filter.icon}</span>
                   ) : null}
-                  <span className="text-xs font-medium text-gray-700">
+                  <span className="text-xs font-medium text-gray-700 truncate">
                     {filter.label}
                   </span>
                   <X className="h-3 w-3 ml-1 hover:text-red-600 text-gray-500" />
@@ -1293,6 +1394,26 @@ const formatCategoryName = (category: string): string => {
                             className="h-5 w-5"
                           />
                           <span>TikTok</span>
+                        </>
+                      )}
+                      {platform === "Facebook" && (
+                        <>
+                          <img
+                            src="/icons/facebook.svg"
+                            alt="Facebook"
+                            className="h-5 w-5"
+                          />
+                          <span>Facebook</span>
+                        </>
+                      )}
+                      {platform === "Threads" && (
+                        <>
+                          <img
+                            src="/icons/threads.svg"
+                            alt="Threads"
+                            className="h-5 w-5"
+                          />
+                          <span>Threads</span>
                         </>
                       )}
                     </div>
@@ -1379,13 +1500,53 @@ const formatCategoryName = (category: string): string => {
                     />
                     <span className="font-medium">TikTok</span>
                   </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      clearIncompatibleFilters("Facebook");
+                      setPlatform("Facebook");
+                      clearSearchOnFilterChange();
+                    }}
+                    className={cn(
+                      "flex items-center gap-3 py-2 px-2 rounded-md cursor-pointer",
+                      platform === "Facebook"
+                        ? "bg-blue-50 text-blue-700"
+                        : "hover:bg-gray-50"
+                    )}
+                  >
+                    <img
+                      src="/icons/facebook.svg"
+                      alt="Facebook"
+                      className="h-5 w-5"
+                    />
+                    <span className="font-medium">Facebook</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      clearIncompatibleFilters("Threads");
+                      setPlatform("Threads");
+                      clearSearchOnFilterChange();
+                    }}
+                    className={cn(
+                      "flex items-center gap-3 py-2 px-2 rounded-md cursor-pointer",
+                      platform === "Threads"
+                        ? "bg-blue-50 text-blue-700"
+                        : "hover:bg-gray-50"
+                    )}
+                  >
+                    <img
+                      src="/icons/threads.svg"
+                      alt="Threads"
+                      className="h-5 w-5"
+                    />
+                    <span className="font-medium">Threads</span>
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
 
             {/* Location Dropdown */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Account location</label>
+              <label className="text-sm font-medium text-gray-700">País</label>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -1429,7 +1590,7 @@ const formatCategoryName = (category: string): string => {
                     className="w-[300px] bg-white p-3"
                   >
                     <div className="text-sm text-gray-600 text-center">
-                      {getTikTokDisabledMessage("location")}
+                      {platform === "TikTok" ? getTikTokDisabledMessage("location") : getDisabledMessage("location")}
                     </div>
                   </DropdownMenuContent>
                 ) : (
@@ -1642,7 +1803,7 @@ const formatCategoryName = (category: string): string => {
                     className="w-[300px] bg-white p-3"
                   >
                     <div className="text-sm text-gray-600 text-center">
-                      {getTikTokDisabledMessage("engagement")}
+                      {platform === "TikTok" ? getTikTokDisabledMessage("engagement") : getDisabledMessage("engagement")}
                     </div>
                   </DropdownMenuContent>
                 ) : (
@@ -1753,393 +1914,228 @@ const formatCategoryName = (category: string): string => {
               </div>
              */}
 
-            {/* ✨ AUDIENCE GENDER - Dropdown con filtro de género de audiencia */}
+            {/* ✨ NICHOS - Dropdown con selección múltiple */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">
-                Audience gender
+                Nichos (Keywords)
               </label>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
-                    className="w-full justify-between bg-white border-gray-200 hover:bg-gray-50"
+                    disabled={isFilterDisabled("niches")}
+                    className={cn(
+                      "w-full justify-between bg-white border-gray-200",
+                      isFilterDisabled("niches") 
+                        ? "opacity-50 cursor-not-allowed bg-gray-100" 
+                        : "hover:bg-gray-50"
+                    )}
                   >
                     <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-600">
-                        {getSelectedAudienceGenderText()}
+                      <Hash className="h-4 w-4 text-gray-500" />
+                      <span className="text-gray-600 truncate">
+                        {isFilterDisabled("niches")
+                          ? "No disponible"
+                          : getSelectedNichesText()
+                        }
                       </span>
                     </div>
                     <ChevronDown className="h-4 w-4 text-gray-500" />
                   </Button>
                 </DropdownMenuTrigger>
+                {isFilterDisabled("niches") ? (
                   <DropdownMenuContent
                     align="start"
-                  className="w-[280px] bg-white p-3"
+                    className="w-[350px] bg-white p-3"
+                  >
+                    <div className="text-sm text-gray-600 text-center">
+                      {platform === "TikTok" ? getTikTokDisabledMessage("niches") : getDisabledMessage("niches")}
+                    </div>
+                  </DropdownMenuContent>
+                ) : (
+                <DropdownMenuContent
+                  align="start"
+                  className="w-[350px] bg-white"
                 >
-                  <div className="space-y-3">
-                    {/* Radio buttons para seleccionar género */}
-                    <div className="space-y-2">
-                      {[
-                        { value: 'any', label: 'Any', icon: '👥' },
-                        { value: 'male', label: 'Male', icon: '👨' },
-                        { value: 'female', label: 'Female', icon: '👩' }
-                      ].map((option) => (
+                  <div className="p-2">
+                    <div className="relative mb-2">
+                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
+                      <Input
+                        placeholder="Buscar nicho..."
+                        value={nichesSearch}
+                        onChange={(e) => setNichesSearch(e.target.value)}
+                        className="w-full pl-8 bg-white border-gray-200 h-9"
+                      />
+                    </div>
                     <Button
-                          key={option.value}
-                          variant="ghost"
-                          className={cn(
-                            "w-full justify-start h-9 px-2 rounded-md text-left text-sm",
-                            audienceGender.gender === option.value
-                              ? "bg-blue-50 text-blue-700 border-blue-200"
-                              : "hover:bg-gray-50"
-                          )}
-                          onClick={() => setAudienceGender({ ...audienceGender, gender: option.value as 'male' | 'female' | 'any' })}
-                        >
-                          <div className="flex items-center gap-2 w-full">
-                            <span className="text-sm">{option.icon}</span>
-                            <span className="flex-1 text-left font-medium">
-                              {option.label}
-                            </span>
-                            {audienceGender.gender === option.value && (
-                              <Check className="h-3 w-3 text-blue-600" />
-                            )}
-                          </div>
-                        </Button>
-                      ))}
-                        </div>
-                    
-                    {/* Slider para porcentaje - solo se muestra si no es 'any' */}
-                    {audienceGender.gender !== 'any' && (
-                      <div className="mt-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
-                        <div className="text-center mb-3">
-                          <span className="text-xs font-medium text-gray-700">
-                            More than {audienceGender.percentage}% of audience
-                          </span>
-                    </div>
-                        
-                        <div className="relative px-2 py-1">
-                          <Slider
-                            value={[audienceGender.percentage]}
-                            onValueChange={(value) => setAudienceGender({ ...audienceGender, percentage: value[0] })}
-                            max={100}
-                            min={0}
-                            step={5}
-                            className="w-full [&>span:first-child]:bg-gray-300 [&>span:first-child]:h-1.5 [&>span:first-child]:rounded-full [&>span:last-child]:bg-blue-600 [&>span:last-child]:h-1.5 [&>span:last-child]:rounded-full [&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-blue-600 [&_[role=slider]]:h-4 [&_[role=slider]]:w-4 [&_[role=slider]]:shadow-md [&_[role=slider]]:transition-all [&_[role=slider]]:duration-200 [&_[role=slider]:hover]:scale-110 [&_[role=slider]:focus]:scale-110 [&_[role=slider]:focus]:ring-2 [&_[role=slider]:focus]:ring-blue-200 [&_[role=slider]]:translate-y-[-6px]"
-                          />
-                  </div>
-                        
-                        <div className="flex justify-between text-xs text-gray-500 mt-2 px-0.5">
-                          <span className="font-medium">0%</span>
-                          <span className="font-medium">50%</span>
-                          <span className="font-medium">100%</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-
-            {/* ✨ AUDIENCE AGE - Dropdown con filtro de edad de audiencia */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Audience age
-              </label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-between bg-white border-gray-200 hover:bg-gray-50"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-600">
-                        {getSelectedAudienceAgeText()}
-                      </span>
-                    </div>
-                    <ChevronDown className="h-4 w-4 text-gray-500" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="start"
-                  className="w-[300px] bg-white p-3"
-                >
-                  <div className="space-y-4">
-                    {/* Inputs numéricos para rango de edad */}
-                    <div className="space-y-3">
-                      <div className="text-sm font-medium text-gray-700 text-center">
-                        Age Range
-                      </div>
-                      
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1">
-                          <label className="text-xs text-gray-500 mb-1 block">From</label>
-                <Input
-                            type="number"
-                            min={13}
-                            max={80}
-                            value={audienceAge.minAge}
-                            onChange={(e) => setAudienceAge({ ...audienceAge, minAge: parseInt(e.target.value) || 13 })}
-                            className="text-center h-9"
-                          />
-                  </div>
-                        
-                        <div className="mt-5 text-gray-400">-</div>
-                        
-                        <div className="flex-1">
-                          <label className="text-xs text-gray-500 mb-1 block">To</label>
-                          <Input
-                            type="number"
-                            min={13}
-                            max={80}
-                            value={audienceAge.maxAge}
-                            onChange={(e) => setAudienceAge({ ...audienceAge, maxAge: parseInt(e.target.value) || 54 })}
-                            className="text-center h-9"
-                          />
-                        </div>
-              </div>
-            </div>
-
-                    {/* Slider para porcentaje */}
-                    <div className="p-3 bg-gray-50 rounded-xl border border-gray-200">
-                      <div className="text-center mb-3">
-                        <span className="text-xs font-medium text-gray-700">
-                          More than {audienceAge.percentage}% of audience
-                        </span>
-                      </div>
-                      
-                      <div className="relative px-2 py-1">
-                        <Slider
-                          value={[audienceAge.percentage]}
-                          onValueChange={(value) => setAudienceAge({ ...audienceAge, percentage: value[0] })}
-                          max={100}
-                          min={0}
-                          step={5}
-                          className="w-full [&>span:first-child]:bg-gray-300 [&>span:first-child]:h-1.5 [&>span:first-child]:rounded-full [&>span:last-child]:bg-blue-600 [&>span:last-child]:h-1.5 [&>span:last-child]:rounded-full [&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-blue-600 [&_[role=slider]]:h-4 [&_[role=slider]]:w-4 [&_[role=slider]]:shadow-md [&_[role=slider]]:transition-all [&_[role=slider]]:duration-200 [&_[role=slider]:hover]:scale-110 [&_[role=slider]:focus]:scale-110 [&_[role=slider]:focus]:ring-2 [&_[role=slider]:focus]:ring-blue-200 [&_[role=slider]]:translate-y-[-6px]"
-                        />
-                      </div>
-                      
-                      <div className="flex justify-between text-xs text-gray-500 mt-2 px-0.5">
-                        <span className="font-medium">0%</span>
-                        <span className="font-medium">50%</span>
-                        <span className="font-medium">100%</span>
-                      </div>
-                    </div>
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-
-            {/* ✨ AUDIENCE GEO - Dropdown con filtro de ubicación de audiencia */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Audience location
-              </label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-between bg-white border-gray-200 hover:bg-gray-50"
-                  >
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-600">
-                        {getSelectedAudienceGeoText()}
-                      </span>
-                    </div>
-                    <ChevronDown className="h-4 w-4 text-gray-500" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="start"
-                  side="bottom"
-                  className="w-[320px] bg-white p-3"
-                >
-                  <div className="space-y-4">
-                    {/* Búsqueda de países */}
-                    <div className="space-y-3">
-                      <div className="text-sm font-medium text-gray-700">
-                        Countries
-                      </div>
-                      
-                      <div className="relative">
-                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-                        <Input
-                          placeholder="Search countries..."
-                          value={countrySearch}
-                          onChange={(e) => setCountrySearch(e.target.value)}
-                          className="w-full pl-8 bg-white border-gray-200 h-9"
-                        />
-                        </div>
-
-                      <div className="max-h-32 overflow-y-auto space-y-1">
-                        {countryList
-                          .filter(country => 
-                            countrySearch === "" || 
-                            country.name.toLowerCase().includes(countrySearch.toLowerCase())
-                          )
-                          .slice(0, 10)
-                          .map((country) => (
+                      variant="ghost"
+                      className="w-full justify-start h-9 px-2 mb-1 rounded-md hover:bg-gray-50 text-left"
+                      onClick={() => {
+                        setNiches([]);
+                        clearSearchOnFilterChange();
+                      }}
+                    >
+                      <Hash className="h-4 w-4 mr-2 text-gray-500" />
+                      Limpiar nichos
+                    </Button>
+                    <DropdownMenuSeparator />
+                    <div className="max-h-[200px] overflow-y-auto">
+                      {filteredNiches.map((niche) => (
                         <Button
-                            key={country.code}
+                          key={niche.code}
                           variant="ghost"
                           className={cn(
-                              "w-full justify-start h-8 px-2 text-sm",
-                              country.code in audienceGeo.countries
+                            "w-full justify-start h-9 px-2 mb-1 rounded-md text-left",
+                            niches.includes(niche.code)
                               ? "bg-blue-50 text-blue-700"
                               : "hover:bg-gray-50"
                           )}
                           onClick={() => {
-                              const newCountries = { ...audienceGeo.countries };
-                              if (country.code in newCountries) {
-                                delete newCountries[country.code];
-                                if (selectedCountryForEdit === country.code) {
-                                  setSelectedCountryForEdit(null);
-                                }
-                              } else {
-                                newCountries[country.code] = 30; // Porcentaje por defecto
-                                setSelectedCountryForEdit(country.code); // Auto-seleccionar para editar
-                              }
-                              setAudienceGeo({ ...audienceGeo, countries: newCountries });
-                            }}
-                          >
-                            <div className="flex items-center gap-2 w-full">
-                              <img
-                                src={`/banderas/${country.name}.png`}
-                                alt={country.name}
-                                className="h-3 w-5 object-cover"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display = 'none';
-                                }}
-                              />
-                              <span className="flex-1 text-left">{country.name}</span>
-                              {country.code in audienceGeo.countries && (
-                                <Check className="h-3 w-3 text-blue-600" />
+                            toggleNiche(niche.code);
+                            clearSearchOnFilterChange();
+                          }}
+                        >
+                          <div className="flex items-center gap-2 w-full">
+                            <span>{niche.icon}</span>
+                            <span className="flex-1 text-left">
+                              {niche.name}
+                            </span>
+                            <Badge variant="outline" className="text-xs">
+                              {niche.category}
+                            </Badge>
+                            {niches.includes(niche.code) && (
+                              <Check className="h-4 w-4 text-blue-600" />
+                            )}
+                          </div>
+                        </Button>
+                      ))}
+                      {filteredNiches.length === 0 && (
+                        <div className="text-sm text-gray-500 text-center py-2">
+                          No se encontraron nichos
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </DropdownMenuContent>
+                )}
+              </DropdownMenu>
+            </div>
+
+            {/* ✨ HASHTAGS - Input para escribir hashtags */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Hashtags
+              </label>
+              <div className="relative">
+                <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder={isFilterDisabled("hashtags") ? "No disponible" : "Ej: #fitness, #travel, #food..."}
+                  value={hashtags}
+                  onChange={(e) => setHashtags(e.target.value)}
+                  disabled={isFilterDisabled("hashtags")}
+                  className={cn(
+                    "pl-10 h-12 text-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500",
+                    isFilterDisabled("hashtags") 
+                      ? "opacity-50 cursor-not-allowed bg-gray-100" 
+                      : ""
+                  )}
+                  onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+                />
+                {isFilterDisabled("hashtags") && (
+                  <div className="mt-1 text-xs text-gray-500">
+                    {platform === "TikTok" ? getTikTokDisabledMessage("hashtags") : 
+                     platform === "YouTube" ? getYouTubeDisabledMessage("hashtags") :
+                     getDisabledMessage("hashtags")}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ✨ GROWTH RATE - Dropdown con rangos de crecimiento */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Growth Rate de Followers (30 días)
+              </label>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between bg-white border-gray-200 hover:bg-gray-50"
+                  >
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-gray-500" />
+                      <span className="text-gray-600">
+                        {getSelectedGrowthRateText()}
+                      </span>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-gray-500" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  className="w-[300px] bg-white p-2"
+                >
+                  <div className="space-y-2">
+                    <div className="space-y-1">
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start h-9 px-2 rounded-md text-left hover:bg-gray-50"
+                        onClick={() => {
+                          setSelectedGrowthRate(null);
+                          clearSearchOnFilterChange();
+                        }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Check
+                            className={cn(
+                              "h-4 w-4",
+                              !selectedGrowthRate ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          <span className="text-sm">
+                            Todos los rangos de crecimiento
+                          </span>
+                        </div>
+                      </Button>
+                      {growthRateRanges.map((range) => (
+                        <Button
+                          key={range.label}
+                          variant="ghost"
+                          className={cn(
+                            "w-full justify-start h-9 px-2 rounded-md text-left",
+                            selectedGrowthRate &&
+                              selectedGrowthRate.min === range.min &&
+                              selectedGrowthRate.max === range.max
+                              ? "bg-blue-50 text-blue-700"
+                              : "hover:bg-gray-50"
+                          )}
+                          onClick={() => {
+                            setSelectedGrowthRate(range);
+                            clearSearchOnFilterChange();
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Check
+                              className={cn(
+                                "h-4 w-4",
+                                selectedGrowthRate &&
+                                  selectedGrowthRate.min === range.min &&
+                                  selectedGrowthRate.max === range.max
+                                  ? "opacity-100"
+                                  : "opacity-0"
                               )}
+                            />
+                            <span className="text-sm">{range.label}</span>
                           </div>
                         </Button>
                       ))}
                     </div>
-                    </div>
-
-                    {/* Mostrar países seleccionados como chips clickeables */}
-                    {Object.keys(audienceGeo.countries).length > 0 && (
-                      <div className="space-y-3">
-                        <div className="text-xs font-medium text-gray-600">
-                          Selected Countries: 
-                          {!selectedCountryForEdit && (
-                            <span className="text-blue-600 ml-1">(click to edit %)</span>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {Object.entries(audienceGeo.countries).map(([countryCode, percentage]) => {
-                            const country = countryList.find(c => c.code === countryCode);
-                            if (!country) return null;
-                            
-                            return (
-                              <Badge 
-                                key={countryCode} 
-                                variant="secondary"
-                                className={cn(
-                                  "flex items-center gap-1.5 px-3 py-1.5 cursor-pointer transition-all duration-200 border-2",
-                                  selectedCountryForEdit === countryCode 
-                                    ? "bg-blue-50 text-blue-900 border-blue-500 hover:bg-blue-100 shadow-md" 
-                                    : "bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200"
-                                )}
-                                onClick={() => setSelectedCountryForEdit(
-                                  selectedCountryForEdit === countryCode ? null : countryCode
-                                )}
-                              >
-                                <img
-                                  src={`/banderas/${country.name}.png`}
-                                  alt={country.name}
-                                  className={cn(
-                                    "h-3 w-4 object-cover rounded-sm",
-                                    selectedCountryForEdit === countryCode ? "ring-1 ring-blue-400" : ""
-                                  )}
-                                  onError={(e) => {
-                                    (e.target as HTMLImageElement).style.display = 'none';
-                                  }}
-                                />
-                                <span className={cn(
-                                  "text-xs font-medium",
-                                  selectedCountryForEdit === countryCode ? "text-blue-900" : "text-gray-700"
-                                )}>
-                                  {country.name}
-                                </span>
-                                <span className={cn(
-                                  "text-xs font-semibold",
-                                  selectedCountryForEdit === countryCode ? "text-blue-700" : "text-gray-600"
-                                )}>
-                                  &gt;{percentage}%
-                                </span>
-                                <X 
-                                  className={cn(
-                                    "h-3 w-3 cursor-pointer transition-colors",
-                                    selectedCountryForEdit === countryCode 
-                                      ? "text-blue-600 hover:text-red-500" 
-                                      : "text-gray-500 hover:text-red-500"
-                                  )}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const newCountries = { ...audienceGeo.countries };
-                                    delete newCountries[countryCode];
-                                    setAudienceGeo({ ...audienceGeo, countries: newCountries });
-                                    if (selectedCountryForEdit === countryCode) {
-                                      setSelectedCountryForEdit(null);
-                                    }
-                                  }}
-                                />
-                              </Badge>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Slider único para el país seleccionado */}
-                    {selectedCountryForEdit && audienceGeo.countries[selectedCountryForEdit] && (
-                      <div className="p-3 bg-blue-50 rounded-xl border border-blue-200">
-                        <div className="text-center mb-3">
-                          <span className="text-sm font-medium text-blue-700">
-                            {(() => {
-                              const country = countryList.find(c => c.code === selectedCountryForEdit);
-                              return `More than ${audienceGeo.countries[selectedCountryForEdit]}% of audience from ${country?.name || selectedCountryForEdit}`;
-                            })()}
-                          </span>
-                        </div>
-                        
-                        <div className="relative px-2 py-1">
-                          <Slider
-                            value={[audienceGeo.countries[selectedCountryForEdit]]}
-                            onValueChange={(value) => {
-                              const newCountries = { ...audienceGeo.countries };
-                              newCountries[selectedCountryForEdit] = value[0];
-                              setAudienceGeo({ ...audienceGeo, countries: newCountries });
-                            }}
-                            max={100}
-                            min={0}
-                            step={5}
-                            className="w-full [&>span:first-child]:bg-blue-200 [&>span:first-child]:h-1.5 [&>span:first-child]:rounded-full [&>span:last-child]:bg-blue-600 [&>span:last-child]:h-1.5 [&>span:last-child]:rounded-full [&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-blue-600 [&_[role=slider]]:h-4 [&_[role=slider]]:w-4 [&_[role=slider]]:shadow-md [&_[role=slider]]:transition-all [&_[role=slider]]:duration-200 [&_[role=slider]:hover]:scale-110 [&_[role=slider]:focus]:scale-110 [&_[role=slider]:focus]:ring-2 [&_[role=slider]:focus]:ring-blue-200 [&_[role=slider]]:translate-y-[-6px]"
-                          />
-                        </div>
-                        
-                        <div className="flex justify-between text-xs text-blue-600 mt-2 px-0.5">
-                          <span className="font-medium">0%</span>
-                          <span className="font-medium">50%</span>
-                          <span className="font-medium">100%</span>
-                        </div>
-                      </div>
-                    )}
-
-
                   </div>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
 
-            {/* ✨ CATEGORÍAS - Dropdown con categorías del taxonomy */}
+            {/* ✨ CATEGORÍAS - Dropdown con categorías de CreatorDB */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">
                 Categorías
@@ -2174,7 +2170,7 @@ const formatCategoryName = (category: string): string => {
                     className="w-[300px] bg-white p-3"
                   >
                     <div className="text-sm text-gray-600 text-center">
-                      {getTikTokDisabledMessage("categories")}
+                      {platform === "TikTok" ? getTikTokDisabledMessage("categories") : getDisabledMessage("categories")}
                     </div>
                   </DropdownMenuContent>
                 ) : (
@@ -2218,15 +2214,11 @@ const formatCategoryName = (category: string): string => {
                              {getCategoryIcon(category) === "Music" && <Music className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Camera" && <Camera className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Newspaper" && <Newspaper className="h-4 w-4" />}
-                             {getCategoryIcon(category) === "MonitorPlay" && <MonitorPlay className="h-4 w-4" />}
-                             {getCategoryIcon(category) === "Shield" && <Shield className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Users" && <Users className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Laugh" && <Laugh className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Award" && <Award className="h-4 w-4" />}
                              {getCategoryIcon(category) === "GraduationCap" && <GraduationCap className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Vote" && <Vote className="h-4 w-4" />}
-                             {getCategoryIcon(category) === "ChefHat" && <ChefHat className="h-4 w-4" />}
-                             {getCategoryIcon(category) === "Coffee" && <Coffee className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Tv" && <Tv className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Gamepad2" && <Gamepad2 className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Video" && <Video className="h-4 w-4" />}
@@ -2239,10 +2231,6 @@ const formatCategoryName = (category: string): string => {
                              {getCategoryIcon(category) === "Play" && <Play className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Film" && <Film className="h-4 w-4" />}
                              {getCategoryIcon(category) === "Plane" && <Plane className="h-4 w-4" />}
-                             {getCategoryIcon(category) === "Activity" && <Activity className="h-4 w-4" />}
-                             {getCategoryIcon(category) === "Palette" && <Palette className="h-4 w-4" />}
-                             {getCategoryIcon(category) === "HelpCircle" && <HelpCircle className="h-4 w-4" />}
-                             {getCategoryIcon(category) === "Stethoscope" && <Stethoscope className="h-4 w-4" />}
                            </div>
                           <span className="text-sm">{formatCategoryName(category)}</span>
                         </div>
