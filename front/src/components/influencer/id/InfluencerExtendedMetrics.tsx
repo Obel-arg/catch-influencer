@@ -79,14 +79,7 @@ export default function InfluencerExtendedMetrics({
     const hasExtendedData =
       summary?.hasExtendedData || realExtendedData?.youtube_basic || false;
 
-    // 🎯 DEBUG: Log de datos disponibles
-    console.log("🔍 [DEBUG] Datos del influencer:", {
-      hasExtendedData,
-      youtube_basic: realExtendedData?.youtube_basic,
-      instagram_basic: realExtendedData?.instagram_basic,
-      tiktok_basic: realExtendedData?.tiktok_basic,
-      platform_info: influencer.platform_info,
-    });
+    
 
     // YouTube - usar la misma lógica que en youtubeData
     const basicYt =
@@ -99,11 +92,7 @@ export default function InfluencerExtendedMetrics({
         ? realExtendedData.youtube_basic.data?.basicYoutube?.subscribers || 0
         : basicYt?.subscribers || 0;
 
-    console.log("🔍 [DEBUG] YouTube:", {
-      youtubeFollowers,
-      basicYt,
-      recentVideos: basicYt?.recentVideos?.length,
-    });
+
 
     if (
       youtubeFollowers > 0 ||
@@ -129,11 +118,7 @@ export default function InfluencerExtendedMetrics({
         ? realExtendedData.instagram_basic.data?.basicInstagram?.followers || 0
         : basicIg?.followers || basicIg?.followersCount || 0;
 
-    console.log("🔍 [DEBUG] Instagram:", {
-      instagramFollowers,
-      basicIg,
-      recentPosts: basicIg?.recentPosts?.length,
-    });
+    
 
     if (
       instagramFollowers > 0 ||
@@ -159,11 +144,7 @@ export default function InfluencerExtendedMetrics({
         ? realExtendedData.tiktok_basic.data?.basicTikTok?.followers || 0
         : basicTk?.followers || basicTk?.followersCount || 0;
 
-    console.log("🔍 [DEBUG] TikTok:", {
-      tiktokFollowers,
-      basicTk,
-      recentVideos: basicTk?.recentVideos?.length,
-    });
+    
 
     if (
       tiktokFollowers > 0 ||
@@ -181,7 +162,6 @@ export default function InfluencerExtendedMetrics({
     // Extraer solo los nombres de las plataformas en el orden correcto
     const result = platformsWithFollowers.map((p) => p.platform);
     
-    console.log("🔍 [DEBUG] Plataformas disponibles:", result);
     
     return result;
   }, [influencer, realExtendedData, summary]);

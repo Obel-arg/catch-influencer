@@ -115,29 +115,17 @@ export default function InviteCallbackForm() {
           urlParams.get("refresh_token") || hashParams.get("refresh_token");
         let type = urlParams.get("type") || hashParams.get("type");
 
-        // Debug: Mostrar todos los parámetros encontrados
-        console.log('🔍 Parámetros encontrados:');
-        console.log('URL params:', Object.fromEntries(urlParams.entries()));
-        console.log('Hash params:', Object.fromEntries(hashParams.entries()));
-        console.log('Access token length:', accessToken?.length);
-        console.log('Refresh token length:', refreshToken?.length);
+
 
         // Si no hay type, asumir que es una invitación
         if (!type) {
           type = "invite";
         }
 
-        console.log('🔍 Procesando callback de invitación...');
-        console.log('URL params:', window.location.search);
-        console.log('Hash params:', window.location.hash);
-        console.log('Access token encontrado:', !!accessToken);
-        console.log('Refresh token encontrado:', !!refreshToken);
-        console.log('Type:', type);
+
 
         if (accessToken && refreshToken) {
-          console.log('✅ Tokens encontrados, estableciendo sesión...');
-          console.log('Access token (primeros 50 chars):', accessToken.substring(0, 50) + '...');
-          console.log('Refresh token:', refreshToken);
+          
           
           // Establecer la sesión en Supabase
           const { data, error } = await supabase.auth.setSession({
@@ -150,9 +138,7 @@ export default function InviteCallbackForm() {
             throw error;
           }
 
-          console.log('✅ Sesión establecida correctamente');
-          console.log('Usuario:', data.user?.email);
-          console.log('Metadatos:', data.user?.user_metadata);
+          
 
           if (data.user) {
             const userData = {
@@ -179,10 +165,7 @@ export default function InviteCallbackForm() {
             setLoadingDetails(false);
           }
         } else {
-          console.error("Tokens no encontrados en la URL");
-          console.log("URL completa:", window.location.href);
-          console.log("Parámetros de búsqueda:", window.location.search);
-          console.log("Hash:", window.location.hash);
+
 
           // Verificar si hay errores específicos en el hash
           if (window.location.hash.includes("error")) {
@@ -297,7 +280,7 @@ export default function InviteCallbackForm() {
             if (profileError) {
               console.warn('Error actualizando perfil:', profileError);
             } else {
-              console.log('✅ Perfil actualizado con rol:', userInfo?.role);
+               
             }
           } else {
             // Crear nuevo perfil
@@ -316,7 +299,6 @@ export default function InviteCallbackForm() {
             if (profileError) {
               console.warn('Error creando perfil:', profileError);
             } else {
-              console.log('✅ Perfil creado con rol:', userInfo?.role);
             }
           }
           
@@ -328,7 +310,7 @@ export default function InviteCallbackForm() {
               organizationName: userInfo?.organization_name || '',
               permissions: []
             });
-            console.log('✅ Caché de roles actualizado');
+            
           } catch (error) {
             console.warn('Error actualizando caché de roles:', error);
           }
@@ -378,7 +360,7 @@ export default function InviteCallbackForm() {
               );
 
               if (addResponse.ok) {
-                console.log("✅ Usuario agregado exitosamente a la organización");
+                
               } else {
                 const errorText = await addResponse.text();
                 console.error(
@@ -403,14 +385,13 @@ export default function InviteCallbackForm() {
                   if (dbError) {
                     console.error('❌ Error agregando a organización directamente:', dbError);
                   } else {
-                    console.log('✅ Usuario agregado a organización directamente');
+                    
                   }
                 } catch (dbError) {
                   console.error('❌ Error en fallback de organización:', dbError);
                 }
               }
             } else {
-              console.log("Usuario ya es miembro de la organización");
             }
           } else {
             const errorText = await checkResponse.text();
@@ -436,7 +417,7 @@ export default function InviteCallbackForm() {
               if (dbError) {
                 console.error('❌ Error agregando a organización directamente:', dbError);
               } else {
-                console.log('✅ Usuario agregado a organización directamente (fallback)');
+                
               }
             } catch (dbError) {
               console.error('❌ Error en fallback de organización:', dbError);
@@ -454,7 +435,7 @@ export default function InviteCallbackForm() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
-          console.log('✅ Sesión verificada, redirigiendo al explorer');
+
           router.push("/explorer");
         } else {
           console.error('❌ No se pudo verificar la sesión');

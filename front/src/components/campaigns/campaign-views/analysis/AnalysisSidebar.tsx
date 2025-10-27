@@ -63,10 +63,8 @@ export const AnalysisSidebar: React.FC<AnalysisSidebarProps> = React.memo(({
   
   // ✅ NUEVO: Función para refrescar métricas cuando se guardan métricas manuales
   const handleMetricsSaved = useCallback(async () => {
-    console.log('📸 [ANALYSIS-SIDEBAR] Refrescando posts después de guardar métricas...');
     try {
       await refetch();
-      console.log('✅ [ANALYSIS-SIDEBAR] Posts refrescados exitosamente');
     } catch (error) {
       console.error('❌ [ANALYSIS-SIDEBAR] Error refrescando posts:', error);
     }

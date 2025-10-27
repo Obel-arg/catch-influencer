@@ -68,6 +68,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
+import { NumberDisplay } from "@/components/ui/NumberDisplay";
 import HypeAuditorFilters from "./HypeAuditorFilters";
 
 // Interfaz para los filtros activos
@@ -80,11 +81,15 @@ interface ActiveFilter {
   data?: string;
 }
 
-// Función para formatear números
+// Función para formatear números - Evita problemas de hidratación
 const formatNumber = (num: number) => {
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
   if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-  return num.toString();
+  // Para números pequeños, usar formato consistente
+  return num.toLocaleString('es-ES', { 
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0 
+  });
 };
 
 interface ExplorerFiltersProps {
@@ -1521,9 +1526,11 @@ const formatCategoryName = (category: string): string => {
                       <span className="text-gray-600">
                         {minFollowers === 0 && maxFollowers === 100000000
                           ? "Todos los rangos"
-                          : `${formatNumber(minFollowers)} - ${formatNumber(
-                              maxFollowers
-                            )}`}
+                          : (
+                              <>
+                                <NumberDisplay value={minFollowers} format="short" /> - <NumberDisplay value={maxFollowers} format="short" />
+                              </>
+                            )}
                       </span>
                     </div>
                     <ChevronDown className="h-4 w-4 text-gray-500" />

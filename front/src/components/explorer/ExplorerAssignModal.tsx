@@ -292,7 +292,7 @@ export default function ExplorerAssignModal({
                                          <div key={influencer.id || index} className="bg-white rounded-md p-3 pr-10 shadow-sm border border-gray-200 relative">
                        {/* Botón X en la esquina superior derecha - SIEMPRE VISIBLE */}
                                                <button
-                          onClick={() => onRemoveInfluencer ? onRemoveInfluencer(influencer.creatorId || influencer.id) : console.log('Remover influencer:', influencer.creatorId || influencer.id)}
+                          onClick={() => onRemoveInfluencer ? onRemoveInfluencer(influencer.creatorId || influencer.id) : null}
                           className="absolute top-1.5 right-1.5 w-5 h-5 bg-gray-400 hover:bg-gray-500 text-white rounded-full flex items-center justify-center transition-all duration-200 shadow-md hover:shadow-lg z-50"
                           title="Remover influencer"
                         >
@@ -338,7 +338,7 @@ export default function ExplorerAssignModal({
                                          <div key={id} className="bg-white rounded-md p-3 pr-10 shadow-sm border border-gray-200 relative">
                        {/* Botón X en la esquina superior derecha - SIEMPRE VISIBLE */}
                        <button
-                         onClick={() => onRemoveInfluencer ? onRemoveInfluencer(id) : console.log('Remover influencer:', id)}
+                         onClick={() => onRemoveInfluencer ? onRemoveInfluencer(id) : null}
                          className="absolute top-1.5 right-1.5 w-5 h-5 bg-gray-400 hover:bg-gray-500 text-white rounded-full flex items-center justify-center transition-all duration-200 shadow-md hover:shadow-lg z-50"
                          title="Remover influencer"
                        >

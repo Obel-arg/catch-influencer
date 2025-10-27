@@ -172,9 +172,7 @@ export function CreateCampaignModal({
 
     setLoading(true);
     try {
-      console.log("🚀 [CreateCampaignModal] Iniciando creación de campaña...", campaignData);
-      const result = await createCampaign(campaignData);
-      console.log("✅ [CreateCampaignModal] Campaña creada exitosamente:", result);
+      const result = await createCampaign(campaignData);  
       
       toast.success("Campaña creada exitosamente");
       setForm({
@@ -187,12 +185,10 @@ export function CreateCampaignModal({
         status: "draft"
       });
       
-      console.log("🔄 [CreateCampaignModal] Llamando onCreated callback...");
       onCreated();
       onOpenChange(false);
     } catch (error) {
-      toast.error("Error al crear la campaña");
-      console.error("❌ [CreateCampaignModal] Error al crear campaña:", error);
+      toast.error("Error al crear la campaña"); 
     } finally {
       setLoading(false);
     }

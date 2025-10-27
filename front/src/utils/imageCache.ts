@@ -137,7 +137,7 @@ export const ImageCacheManager = {
     InstagramImageCache.getInstance().clear();
     TikTokImageCache.getInstance().clear();
     YouTubeImageCache.getInstance().clear();
-    console.log('✅ [CACHE] Todos los caches han sido limpiados');
+    
   },
 
   // Obtener estadísticas de todos los caches
@@ -159,8 +159,8 @@ export const ImageCacheManager = {
     ];
 
     caches.forEach(cache => {
-      const stats = cache.getStats();
-      console.log(`🔄 [CACHE] Limpiando cache ${stats.cacheKey} con ${stats.size} entradas`);
+      const stats = cache.getStats();   
+      
     });
   }
 };

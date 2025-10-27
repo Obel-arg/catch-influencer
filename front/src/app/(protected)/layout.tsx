@@ -122,41 +122,21 @@ function ProtectedLayoutContent({ children }: ProtectedLayoutProps) {
       const token = localStorage.getItem("token");
       const userData = localStorage.getItem("userData");
 
-      console.log("🔍 Protected Layout - Verificando autenticación:", {
-        hasToken: !!token,
-        hasUserData: !!userData,
-        user: !!user,
-        isInitialized,
-        authLoading,
-      });
+
 
       if (!token || !user) {
-        console.log("❌ No hay token o usuario, redirigiendo a login...");
         router.push("/auth/login");
         return;
       }
 
       if (isTokenExpired(token)) {
-        console.log("🚨 Token expirado, mostrando modal...");
         showSessionExpiredModal();
         return;
       }
 
-      console.log("✅ Usuario autenticado correctamente");
     }
   }, [isInitialized, authLoading]); // Removido 'user' y 'router' de las dependencias
 
-  // // Mostrar loading solo durante la inicialización de autenticación
-  // if (authLoading) {
-  //   return (
-  //     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center">
-  //       <div className="text-center">
-  //         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-  //         <p className="text-gray-600">Inicializando...</p>
-  //       </div>
-  //     </div>
-  //   );
-  // }
   return (
     <RoleProvider>
       <InfluencersProvider>

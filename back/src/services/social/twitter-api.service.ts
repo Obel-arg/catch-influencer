@@ -167,10 +167,8 @@ export class TwitterApiService {
    */
   private static async generateScreenshotUrlWithFallback(url: string): Promise<string | null> {
     // Esperar forzosamente 5 segundos antes de tomar la captura
-    console.log('⏱️ Esperando 5 segundos forzosamente para que la página cargue...');
     await new Promise(resolve => setTimeout(resolve, 5000));
-    console.log('✅ Tiempo de espera completado');
-    
+
     const screenshotServices = [
       // Servicio 1: Microlink (más confiable, gratuito con límites)
       `https://api.microlink.io/screenshot?url=${encodeURIComponent(url)}&viewport.width=600&viewport.height=800&type=png&element=article&wait_for=3000`,
@@ -190,7 +188,7 @@ export class TwitterApiService {
       const serviceName = ['Microlink', 'ScreenshotAPI', 'HTML-CSS-to-Image', 'Screenshot.guru'][i];
       
       try {
-        console.log(`🔄 Probando servicio ${serviceName}...`);
+        
         
         // Hacer una petición GET en lugar de HEAD para verificar mejor
         const response = await axios.get(serviceUrl, { 
@@ -200,24 +198,24 @@ export class TwitterApiService {
         });
         
         if (response.status < 500) {
-          console.log(`✅ Servicio ${serviceName} funcionando:`, serviceUrl);
+          
           return serviceUrl;
         }
       } catch (error: any) {
-        console.warn(`⚠️ Servicio ${serviceName} falló:`, error.message);
+        
         
         // Si es el último servicio, intentar con una configuración más simple
         if (i === screenshotServices.length - 1) {
           try {
-            console.log('🔄 Intentando configuración simple con Screenshot.guru...');
+            
             const simpleUrl = `https://screenshot.guru/api/screenshot?url=${encodeURIComponent(url)}&width=600&height=800&format=png&fullpage=false`;
             const simpleResponse = await axios.get(simpleUrl, { timeout: 10000 });
             if (simpleResponse.status < 500) {
-              console.log('✅ Configuración simple funcionando');
+              
               return simpleUrl;
             }
           } catch (simpleError: any) {
-            console.warn('⚠️ Configuración simple también falló:', simpleError.message);
+            
           }
         }
         
@@ -233,46 +231,41 @@ export class TwitterApiService {
    */
   private static async extractImageFromMicrolink(url: string): Promise<string | null> {
     try {
-      console.log('🔄 Iniciando extracción de imagen de Microlink...');
+      
       
       // Esperar forzosamente 5 segundos antes de tomar la captura
-      console.log('⏱️ Esperando 5 segundos forzosamente para que la página cargue...');
+      
       await new Promise(resolve => setTimeout(resolve, 5000));
-      console.log('✅ Tiempo de espera completado');
+      
       
       // Usar Microlink para obtener información del tweet con tiempo de espera extendido
       const microlinkUrl = `https://api.microlink.io?url=${encodeURIComponent(url)}&meta=true&embed=screenshot.url&screenshot=true&viewport.width=600&viewport.height=800&screenshot.type=png&screenshot.wait_for=8000&screenshot.delay=3000&screenshot.element=article`;
       
-      console.log('📡 Llamando a Microlink:', microlinkUrl);
+      
       
       const response = await axios.get(microlinkUrl, { 
         timeout: 30000, // Aumentar timeout a 30 segundos
         validateStatus: (status: number) => status < 500
       });
       
-      console.log('📥 Respuesta de Microlink recibida, status:', response.status);
+      
       
       // Verificar si la respuesta es una imagen directa
       const contentType = response.headers['content-type'];
       if (contentType && contentType.includes('image/')) {
-        console.log('✅ Microlink devolvió una imagen directamente');
+        
         // Devolver la URL de Microlink que genera la imagen
         return microlinkUrl;
       }
       
       // Si no es imagen, intentar parsear como JSON
       try {
-        console.log('📄 Intentando parsear respuesta como JSON...');
+        
         const jsonData = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
         
         if (jsonData && jsonData.status === 'success') {
           const data = jsonData.data;
-          console.log('📊 Datos de Microlink:', {
-            hasImage: !!data.image,
-            hasScreenshot: !!data.screenshot,
-            imageUrl: data.image?.url,
-            screenshotUrl: data.screenshot?.url
-          });
+
           
           // Si hay una imagen de video/media (que no sea del perfil), usarla
           if (data.image && data.image.url) {
@@ -281,38 +274,33 @@ export class TwitterApiService {
                                  (data.image.width <= 400 || data.image.height <= 400) &&
                                  data.image.url.includes('profile_images');
             
-            console.log('🔍 Verificando imagen:', {
-              width: data.image.width,
-              height: data.image.height,
-              url: data.image.url,
-              isProfileImage
-            });
+            
             
             if (!isProfileImage) {
-              console.log('✅ Imagen de video/media extraída de Microlink:', data.image.url);
+              
               return data.image.url;
             } else {
-              console.log('⚠️ Imagen de perfil detectada en Microlink, buscando captura de pantalla...');
+              
             }
           }
           
           // Si hay una captura de pantalla, usarla
           if (data.screenshot && data.screenshot.url) {
-            console.log('✅ Captura de pantalla extraída de Microlink:', data.screenshot.url);
+            
             return data.screenshot.url;
           }
           
-          console.log('❌ No se encontró imagen ni screenshot en Microlink');
+          
         } else {
-          console.log('❌ Microlink no devolvió status success:', jsonData?.status);
+          
         }
       } catch (jsonError: any) {
-        console.log('❌ Error parseando JSON de Microlink:', jsonError.message);
+        
       }
       
       return null;
     } catch (error: any) {
-      console.warn('⚠️ Error extrayendo imagen de Microlink:', error.message);
+      
       return null;
     }
   }
@@ -323,9 +311,9 @@ export class TwitterApiService {
   private static async generateReliableScreenshot(url: string): Promise<string | null> {
     try {
       // Esperar forzosamente 5 segundos antes de tomar la captura
-      console.log('⏱️ Esperando 5 segundos forzosamente para que la página cargue...');
+      
       await new Promise(resolve => setTimeout(resolve, 5000));
-      console.log('✅ Tiempo de espera completado');
+      
       
       // Usar servicios que devuelven imágenes directamente con tiempos de espera extendidos
       const reliableServices = [
@@ -347,7 +335,7 @@ export class TwitterApiService {
         const serviceName = ['ScreenshotAPI', 'HTML-CSS-to-Image', 'Screenshot.guru', 'Microlink'][i];
         
         try {
-          console.log(`🔄 Probando servicio ${serviceName}...`);
+          
           
           // Verificar que el servicio devuelva una imagen
           const response = await axios.get(serviceUrl, { 
@@ -361,19 +349,19 @@ export class TwitterApiService {
             // Verificar que el content-type sea de imagen
             const contentType = response.headers['content-type'];
             if (contentType && (contentType.includes('image/') || contentType.includes('application/octet-stream'))) {
-              console.log(`✅ Servicio ${serviceName} funcionando y devuelve imagen:`, serviceUrl);
+              
               return serviceUrl;
             } else {
-              console.log(`⚠️ Servicio ${serviceName} devuelve ${contentType}, no es imagen`);
+              
             }
           }
         } catch (error: any) {
-          console.warn(`⚠️ Servicio ${serviceName} falló:`, error.message);
+
           
           // Si es el último servicio, intentar con una configuración más simple
           if (i === reliableServices.length - 1) {
             try {
-              console.log('🔄 Intentando configuración simple con Screenshot.guru...');
+              
               const simpleUrl = `https://screenshot.guru/api/screenshot?url=${encodeURIComponent(url)}&width=600&height=800&format=png&fullpage=false`;
               const simpleResponse = await axios.get(simpleUrl, { 
                 timeout: 10000,
@@ -382,12 +370,12 @@ export class TwitterApiService {
               if (simpleResponse.status < 500) {
                 const contentType = simpleResponse.headers['content-type'];
                 if (contentType && (contentType.includes('image/') || contentType.includes('application/octet-stream'))) {
-                  console.log('✅ Configuración simple funcionando');
+                  
                   return simpleUrl;
                 }
               }
             } catch (simpleError: any) {
-              console.warn('⚠️ Configuración simple también falló:', simpleError.message);
+              
             }
           }
           
@@ -397,7 +385,7 @@ export class TwitterApiService {
 
       return null;
     } catch (error) {
-      console.error('❌ Error generando captura confiable:', error);
+      
       return null;
     }
   }
@@ -407,7 +395,7 @@ export class TwitterApiService {
    */
   private static async generateScreenshotOneScreenshot(url: string): Promise<string | null> {
     try {
-      console.log('🔄 Generando captura con ScreenshotOne API...');
+      
       
       // Parámetros corregidos según la documentación de ScreenshotOne
       const params = new URLSearchParams({
@@ -433,8 +421,7 @@ export class TwitterApiService {
       
       const screenshotUrl = `${this.SCREENSHOT_ONE_BASE_URL}?${params.toString()}`;
       
-      console.log('📡 Llamando a ScreenshotOne API...');
-      console.log('🔗 URL generada:', screenshotUrl);
+      
       
       // Verificar que la URL es válida antes de hacer la petición
       const testResponse = await axios.head(screenshotUrl, { 
@@ -443,19 +430,19 @@ export class TwitterApiService {
       });
       
       if (testResponse.status < 500) {
-        console.log('✅ ScreenshotOne API funcionando correctamente');
+        
         return screenshotUrl;
       } else {
-        console.warn('⚠️ ScreenshotOne API devolvió status:', testResponse.status);
+        
         return null;
       }
       
     } catch (error: any) {
-      console.warn('⚠️ Error con ScreenshotOne API:', error.message);
+      
       
       // Intentar con configuración más simple como fallback
       try {
-        console.log('🔄 Intentando configuración simple con ScreenshotOne...');
+        
         const simpleParams = new URLSearchParams({
           access_key: this.SCREENSHOT_ONE_API_KEY,
           url: url,
@@ -468,11 +455,11 @@ export class TwitterApiService {
         const simpleResponse = await axios.head(simpleUrl, { timeout: 10000 });
         
         if (simpleResponse.status < 500) {
-          console.log('✅ Configuración simple de ScreenshotOne funcionando');
+          
           return simpleUrl;
         }
       } catch (simpleError: any) {
-        console.warn('⚠️ Configuración simple de ScreenshotOne también falló:', simpleError.message);
+        
       }
       
       return null;
@@ -539,7 +526,7 @@ export class TwitterApiService {
       return result;
 
     } catch (error) {
-      console.error('❌ Error obteniendo información del tweet:', error);
+
       return null;
     }
   }
@@ -549,7 +536,7 @@ export class TwitterApiService {
    */
   public static async generateAndStoreThumbnail(postUrl: string): Promise<string | null> {
     try {
-      console.log('🔄 Generando y guardando miniatura de Twitter en blob storage...');
+      
       
       // Extraer información básica del tweet
       const tweetId = this.extractTweetId(postUrl);
@@ -563,30 +550,30 @@ export class TwitterApiService {
       try {
         const screenshotOneUrl = await this.generateScreenshotOneScreenshot(postUrl);
         if (screenshotOneUrl) {
-          console.log('✅ Captura con ScreenshotOne API generada, guardando en blob...');
+          
           
           // Guardar la imagen en blob storage
           const blobUrl = await BlobStorageService.uploadImageFromUrl(screenshotOneUrl, `twitter-screenshots/${tweetId}-${Date.now()}.png`);
-          console.log('✅ Miniatura guardada en blob storage:', blobUrl);
+          
           return blobUrl;
         }
       } catch (error: any) {
-        console.warn('⚠️ Error con ScreenshotOne API:', error.message);
+        
       }
       
       // MÉTODO 2: Extraer imagen del JSON de Microlink (fallback gratuito)
       try {
         const extractedImage = await this.extractImageFromMicrolink(postUrl);
         if (extractedImage) {
-          console.log('✅ Imagen extraída de Microlink, guardando en blob...');
+          
           
           // Guardar la imagen en blob storage
           const blobUrl = await BlobStorageService.uploadImageFromUrl(extractedImage, `twitter-images/${tweetId}-${Date.now()}.png`);
-          console.log('✅ Miniatura guardada en blob storage:', blobUrl);
+          
           return blobUrl;
         }
       } catch (error: any) {
-        console.warn('⚠️ Error extrayendo imagen de Microlink:', error.message);
+        
       }
       
       // MÉTODO 3: Generar captura real del contenido del tweet (otros servicios gratuitos)
@@ -594,29 +581,29 @@ export class TwitterApiService {
         const screenshotUrl = await this.generateReliableScreenshot(postUrl);
         
         if (screenshotUrl) {
-          console.log('✅ Captura real de Twitter generada, guardando en blob...');
+          
           
           // Guardar la imagen en blob storage
           const blobUrl = await BlobStorageService.uploadImageFromUrl(screenshotUrl, `twitter-screenshots/${tweetId}-${Date.now()}.png`);
-          console.log('✅ Miniatura guardada en blob storage:', blobUrl);
+          
           return blobUrl;
         }
       } catch (screenshotError) {
-        console.warn('⚠️ Error generando captura real de Twitter:', screenshotError);
+        
         
         // Intentar con el método de fallback si el principal falla
         try {
           const fallbackUrl = await this.generateScreenshotUrlWithFallback(postUrl);
           if (fallbackUrl) {
-            console.log('✅ Captura de fallback generada, guardando en blob...');
+            
             
             // Guardar la imagen en blob storage
             const blobUrl = await BlobStorageService.uploadImageFromUrl(fallbackUrl, `twitter-screenshots/${tweetId}-${Date.now()}.png`);
-            console.log('✅ Miniatura guardada en blob storage:', blobUrl);
+
             return blobUrl;
           }
         } catch (fallbackError) {
-          console.warn('⚠️ Error en método de fallback:', fallbackError);
+          
         }
       }
       
@@ -625,11 +612,11 @@ export class TwitterApiService {
         const oembedData = await this.getTwitterOEmbed(postUrl);
         
         if (oembedData && (oembedData as any).thumbnail_url) {
-          console.log('✅ Thumbnail de oEmbed encontrado, guardando en blob...');
+          
           
           // Guardar la imagen en blob storage
           const blobUrl = await BlobStorageService.uploadImageFromUrl((oembedData as any).thumbnail_url, `twitter-thumbnails/${tweetId}-${Date.now()}.png`);
-          console.log('✅ Miniatura guardada en blob storage:', blobUrl);
+          
           return blobUrl;
         }
         
@@ -643,17 +630,17 @@ export class TwitterApiService {
           for (const img of images) {
             const src = $(img).attr('src');
             if (src && (src.includes('pbs.twimg.com') || src.includes('twimg.com'))) {
-              console.log('✅ Imagen de HTML embebido encontrada, guardando en blob...');
+              
               
               // Guardar la imagen en blob storage
               const blobUrl = await BlobStorageService.uploadImageFromUrl(src, `twitter-images/${tweetId}-${Date.now()}.png`);
-              console.log('✅ Miniatura guardada en blob storage:', blobUrl);
+              
               return blobUrl;
             }
           }
         }
       } catch (error) {
-        console.warn('⚠️ Error obteniendo oEmbed de Twitter:', error);
+        
       }
 
       // MÉTODO 5: Intentar extraer imagen del HTML directo
@@ -662,15 +649,15 @@ export class TwitterApiService {
         const scrapedData = this.extractTwitterDataFromHTML(html);
         
         if (scrapedData.media && scrapedData.media.photos && scrapedData.media.photos.length > 0) {
-          console.log('✅ Imagen del HTML directo encontrada, guardando en blob...');
+          
           
           // Guardar la imagen en blob storage
           const blobUrl = await BlobStorageService.uploadImageFromUrl(scrapedData.media.photos[0], `twitter-images/${tweetId}-${Date.now()}.png`);
-          console.log('✅ Miniatura guardada en blob storage:', blobUrl);
+          
           return blobUrl;
         }
       } catch (error) {
-        console.warn('⚠️ Error extrayendo imagen del HTML de Twitter:', error);
+        
       }
 
       // MÉTODO 6: Generar placeholder mejorado con información del tweet
@@ -681,11 +668,11 @@ export class TwitterApiService {
         const placeholderUrl = `https://dummyimage.com/600x400/1da1f2/ffffff&text=${placeholderText}`;
         const testResponse = await axios.head(placeholderUrl, { timeout: 5000 });
         if (testResponse.status === 200) {
-          console.log('✅ Placeholder generado, guardando en blob...');
+          
           
           // Guardar la imagen en blob storage
           const blobUrl = await BlobStorageService.uploadImageFromUrl(placeholderUrl, `twitter-placeholders/${tweetId}-${Date.now()}.png`);
-          console.log('✅ Placeholder guardado en blob storage:', blobUrl);
+          
           return blobUrl;
         }
       } catch (error) {
@@ -696,21 +683,21 @@ export class TwitterApiService {
         const placeholderUrl = `https://placehold.co/600x400/1da1f2/ffffff/png?text=${placeholderText}`;
         const testResponse = await axios.head(placeholderUrl, { timeout: 5000 });
         if (testResponse.status === 200) {
-          console.log('✅ Placeholder generado, guardando en blob...');
+
           
           // Guardar la imagen en blob storage
           const blobUrl = await BlobStorageService.uploadImageFromUrl(placeholderUrl, `twitter-placeholders/${tweetId}-${Date.now()}.png`);
-          console.log('✅ Placeholder guardado en blob storage:', blobUrl);
+          
           return blobUrl;
         }
       } catch (error) {
       }
       
-      console.log('❌ No se pudo generar ninguna miniatura para el tweet');
+      
       return null;
 
     } catch (error) {
-      console.error('❌ Error generando y guardando miniatura de Twitter:', error);
+      
       return null;
     }
   }
@@ -729,11 +716,11 @@ export class TwitterApiService {
       try {
         const screenshotOneUrl = await this.generateScreenshotOneScreenshot(postUrl);
         if (screenshotOneUrl) {
-          console.log('✅ Captura con ScreenshotOne API generada:', screenshotOneUrl);
+          
           return screenshotOneUrl;
         }
       } catch (error: any) {
-        console.warn('⚠️ Error con ScreenshotOne API:', error.message);
+        
       }
       
       // MÉTODO 2: Extraer imagen del JSON de Microlink (fallback gratuito)
@@ -743,7 +730,7 @@ export class TwitterApiService {
           return extractedImage;
         }
       } catch (error: any) {
-        console.warn('⚠️ Error extrayendo imagen de Microlink:', error.message);
+        
       }
       
       // MÉTODO 3: Generar captura real del contenido del tweet (otros servicios gratuitos)
@@ -751,21 +738,21 @@ export class TwitterApiService {
         const screenshotUrl = await this.generateReliableScreenshot(postUrl);
         
         if (screenshotUrl) {
-          console.log('✅ Captura real de Twitter generada:', screenshotUrl);
+          
           return screenshotUrl;
         }
       } catch (screenshotError) {
-        console.warn('⚠️ Error generando captura real de Twitter:', screenshotError);
+        
         
         // Intentar con el método de fallback si el principal falla
         try {
           const fallbackUrl = await this.generateScreenshotUrlWithFallback(postUrl);
           if (fallbackUrl) {
-            console.log('✅ Captura de fallback generada:', fallbackUrl);
+            
             return fallbackUrl;
           }
         } catch (fallbackError) {
-          console.warn('⚠️ Error en método de fallback:', fallbackError);
+          
         }
       }
       
@@ -792,7 +779,7 @@ export class TwitterApiService {
           }
         }
       } catch (error) {
-        console.warn('⚠️ Error obteniendo oEmbed de Twitter:', error);
+        
       }
 
       // MÉTODO 4: Intentar extraer imagen del HTML directo
@@ -804,7 +791,7 @@ export class TwitterApiService {
           return scrapedData.media.photos[0];
         }
       } catch (error) {
-        console.warn('⚠️ Error extrayendo imagen del HTML de Twitter:', error);
+
       }
 
       // MÉTODO 5: Generar placeholder mejorado con información del tweet
@@ -875,22 +862,21 @@ export class TwitterApiService {
    */
   public static async testScreenshotOneConnection(): Promise<boolean> {
     try {
-      console.log('🧪 Probando conexión con ScreenshotOne API...');
+        
       
       // Usar una URL de prueba simple
       const testUrl = 'https://example.com';
       const screenshotUrl = await this.generateScreenshotOneScreenshot(testUrl);
       
       if (screenshotUrl) {
-        console.log('✅ Conexión con ScreenshotOne API exitosa');
-        console.log('📸 URL de prueba generada:', screenshotUrl);
+        
         return true;
       } else {
-        console.log('❌ No se pudo generar URL con ScreenshotOne API');
+        
         return false;
       }
     } catch (error: any) {
-      console.error('❌ Error probando conexión con ScreenshotOne API:', error.message);
+      
       return false;
     }
   }
@@ -910,14 +896,14 @@ export class TwitterApiService {
       });
       
       if (response.status === 200) {
-        console.log('📊 Información de uso de ScreenshotOne:', response.data);
+        
         return response.data;
       } else {
-        console.warn('⚠️ No se pudo obtener información de uso:', response.status);
+        
         return null;
       }
     } catch (error: any) {
-      console.warn('⚠️ Error obteniendo información de uso de ScreenshotOne:', error.message);
+      
       return null;
     }
   }

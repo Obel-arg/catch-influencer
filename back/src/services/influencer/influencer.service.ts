@@ -54,12 +54,11 @@ export class InfluencerService {
         const hoursSinceUpdate = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60);
         
         if (hoursSinceUpdate < 24) {
-          console.log(`✅ [INFLUENCER SERVICE] Datos encontrados en BD local para ${creatorId}`);
           return this.transformCacheToFullData(localData);
         } 
       }
 
-      console.log(`🔄 [INFLUENCER SERVICE] Obteniendo datos frescos para IDs: ${allIds.join(', ')}${forceRefresh ? ' (FORZADO)' : ''}`);
+
 
       // 2. Si no hay datos locales o están desactualizados, obtener de las APIs
       let basic: YoutubeBasic | InstagramBasic | TiktokBasic | null = null;
@@ -109,7 +108,7 @@ export class InfluencerService {
           const { platform, data, error } = result.value;
           
           if (data && !error) {
-            console.log(`✅ [INFLUENCER SERVICE] Datos obtenidos de ${platform}`);
+            
             
             if (platform === 'instagram') {
               instagram = data;
@@ -438,7 +437,7 @@ export class InfluencerService {
     
     if (allIds.length === 0) return null;
 
-    console.log(`🔄 [BASIC PLATFORM DATA] Obteniendo datos básicos para IDs: ${allIds.join(', ')}`);
+
 
     // 🎯 NUEVA LÓGICA: Hacer peticiones a TODAS las plataformas disponibles
     const promises: Promise<{ platform: string; data?: any; error?: any }>[] = [];
@@ -485,14 +484,14 @@ export class InfluencerService {
         const { platform, data, error } = result.value;
         
         if (data && !error) {
-          console.log(`✅ [BASIC PLATFORM DATA] Datos obtenidos de ${platform}`);
+          
           // Estructurar datos correctamente según la plataforma
           platformData[platform] = data;
         } else {
-          console.warn(`⚠️ [BASIC PLATFORM DATA] Error obteniendo datos de ${platform}:`, error);
+
         }
       } else {
-        console.error(`❌ [BASIC PLATFORM DATA] Error en petición:`, result.reason);
+        
       }
     });
 
@@ -672,7 +671,6 @@ export class InfluencerService {
    */
   async refreshInfluencerData(influencerId: string): Promise<any> {
     try {
-      console.log(`🔄 [REFRESH] Iniciando refresh para influencer ID: ${influencerId}`);
 
       // 1. Buscar el influencer en la base de datos
       const { data: influencer, error: fetchError } = await supabase
@@ -686,7 +684,6 @@ export class InfluencerService {
         throw new Error(`Influencer no encontrado: ${influencerId}`);
       }
 
-      console.log(`📋 [REFRESH] Influencer encontrado: ${influencer.name} (${influencer.creator_id})`);
 
       // 2. Extraer IDs de plataformas desde platform_info y creator_id de manera inteligente
       const platformInfo = influencer.platform_info || {};
@@ -718,7 +715,6 @@ export class InfluencerService {
         }
       }
 
-      console.log(`🔍 [REFRESH] IDs iniciales extraídos:`, { youtubeId, instagramId, tiktokId });
 
       // 3. Obtener datos actualizados SOLO para los IDs guardados (sin búsqueda recursiva)
       const fullData = await this.getBasicPlatformDataForRefresh({ youtubeId, instagramId, tiktokId });
@@ -729,13 +725,11 @@ export class InfluencerService {
 
       // 4. Usar los IDs originales del influencer (no buscar IDs adicionales)
       const originalPlatformIds = { youtubeId, instagramId, tiktokId };
-      console.log(`🔍 [REFRESH] Usando IDs originales del influencer:`, originalPlatformIds);
 
       // 5. Verificar duplicados antes de actualizar (usando IDs originales)
       const existingDuplicate = await this.checkForDuplicateInfluencer(originalPlatformIds);
       
       if (existingDuplicate && existingDuplicate.id !== influencerId) {
-        console.log(`⚠️ [REFRESH] Duplicado detectado. Actualizando influencer existente: ${existingDuplicate.id}`);
         
         // Actualizar el influencer existente en lugar del original
         const updateData = {
@@ -772,10 +766,8 @@ export class InfluencerService {
             .update({ deleted_at: new Date().toISOString() })
             .eq('id', influencerId);
           
-          console.log(`🗑️ [REFRESH] Influencer original eliminado: ${influencerId}`);
         }
 
-        console.log(`✅ [REFRESH] Refresh completado. Influencer actualizado: ${updatedInfluencer.name}`);
         return updatedInfluencer;
       }
 
@@ -807,11 +799,9 @@ export class InfluencerService {
         throw new Error(`Error actualizando influencer: ${updateError.message}`);
       }
 
-      console.log(`✅ [REFRESH] Refresh completado. Influencer actualizado: ${updatedInfluencer.name}`);
       return updatedInfluencer;
 
     } catch (error) {
-      console.error('❌ [REFRESH] Error en refresh:', error);
       throw error;
     }
   }
@@ -826,7 +816,6 @@ export class InfluencerService {
     tiktokId?: string 
   }, visitedIds: Set<string> = new Set(), forceRefresh: boolean = false): Promise<any> {
     try {
-      console.log(`🔄 [RECURSIVE] Buscando datos con IDs:`, params);
       
       // Obtener datos básicos (forzar refresh si es necesario)
       const basicData = await this.getFullInfluencerData(params, forceRefresh);
@@ -837,7 +826,6 @@ export class InfluencerService {
 
       // Extraer nuevos IDs de plataformas de los datos obtenidos
       const newIds = this.extractPlatformIdsFromData(basicData);
-      console.log(`🔍 [RECURSIVE] Nuevos IDs encontrados:`, newIds);
 
       // Filtrar IDs que no hemos visitado aún
       const unvisitedIds = {
@@ -853,7 +841,6 @@ export class InfluencerService {
 
       // Si hay nuevos IDs no visitados, continuar la búsqueda recursiva
       if (unvisitedIds.youtubeId || unvisitedIds.instagramId || unvisitedIds.tiktokId) {
-        console.log(`🔄 [RECURSIVE] Continuando búsqueda con nuevos IDs...`);
         const additionalData = await this.getFullInfluencerDataRecursive(unvisitedIds, visitedIds, forceRefresh);
         
         if (additionalData) {
@@ -965,7 +952,7 @@ export class InfluencerService {
       }
 
     } catch (error) {
-      console.error('❌ [EXTRACT] Error extrayendo IDs:', error);
+      console.error('❌ [EXTRACT] Error extrayendo IDs:', error); 
     }
 
     return ids;
@@ -1032,7 +1019,6 @@ export class InfluencerService {
     tiktokId?: string 
   }): Promise<any> {
     try {
-      console.log(`🔍 [DUPLICATE CHECK] Verificando duplicados para IDs:`, platformIds);
       
       // Verificar creator_id (YouTube ID principal)
       if (platformIds.youtubeId) {
@@ -1044,7 +1030,6 @@ export class InfluencerService {
           .single();
 
         if (existingByCreatorId) {
-          console.log(`⚠️ [DUPLICATE CHECK] Duplicado encontrado por creator_id:`, existingByCreatorId.name);
           return existingByCreatorId;
         }
       }
@@ -1059,7 +1044,6 @@ export class InfluencerService {
           .single();
 
         if (existingByYoutubeId) {
-          console.log(`⚠️ [DUPLICATE CHECK] Duplicado encontrado por youtubeId:`, existingByYoutubeId.name);
           return existingByYoutubeId;
         }
       }
@@ -1073,7 +1057,6 @@ export class InfluencerService {
           .single();
 
         if (existingByInstagramId) {
-          console.log(`⚠️ [DUPLICATE CHECK] Duplicado encontrado por instagramId:`, existingByInstagramId.name);
           return existingByInstagramId;
         }
       }
@@ -1087,12 +1070,10 @@ export class InfluencerService {
           .single();
 
         if (existingByTiktokId) {
-          console.log(`⚠️ [DUPLICATE CHECK] Duplicado encontrado por tiktokId:`, existingByTiktokId.name);
           return existingByTiktokId;
         }
       }
 
-      console.log(`✅ [DUPLICATE CHECK] No se encontraron duplicados`);
       return null;
 
     } catch (error) {
@@ -1106,7 +1087,6 @@ export class InfluencerService {
    */
   async createInfluencer(influencerData: any): Promise<any> {
     try {
-      console.log(`🔄 [CREATE] Iniciando creación de influencer:`, influencerData.name);
 
       // 1. Extraer IDs de plataformas del influencer a crear
       const platformIds = {
@@ -1119,7 +1099,6 @@ export class InfluencerService {
       const existingInfluencer = await this.checkForDuplicateInfluencer(platformIds);
 
       if (existingInfluencer) {
-        console.log(`⚠️ [CREATE] Influencer duplicado detectado. ID existente: ${existingInfluencer.id}`);
         
         // Retornar el influencer existente en lugar de crear uno nuevo
         return {
@@ -1131,7 +1110,6 @@ export class InfluencerService {
       }
 
       // 3. Si no hay duplicados, proceder con la creación normal
-      console.log(`✅ [CREATE] No hay duplicados, procediendo con la creación`);
       
       const { data: newInfluencer, error } = await supabase
         .from('influencers')
@@ -1144,7 +1122,6 @@ export class InfluencerService {
         throw error;
       }
 
-      console.log(`✅ [CREATE] Influencer creado exitosamente: ${newInfluencer.name}`);
       return {
         success: true,
         duplicate: false,
@@ -1168,7 +1145,6 @@ export class InfluencerService {
     tiktokId?: string 
   }): Promise<any> {
     try {
-      console.log(`🔄 [REFRESH DATA] Obteniendo datos básicos para IDs:`, params);
 
       // Crear array de promesas para obtener datos de cada plataforma
       const promises = [];
@@ -1212,10 +1188,8 @@ export class InfluencerService {
           const { platform, data, error } = result.value;
           
           if (data && !error) {
-            console.log(`✅ [REFRESH DATA] Datos obtenidos de ${platform}`);
             platformData[platform] = data;
           } else {
-            console.warn(`⚠️ [REFRESH DATA] Error obteniendo datos de ${platform}:`, error);
           }
         } else {
           console.error(`❌ [REFRESH DATA] Error en petición:`, result.reason);
@@ -1331,7 +1305,7 @@ export class InfluencerService {
         }
       }
 
-      console.log(`✅ [REFRESH DATA] Datos construidos exitosamente`);
+      
       return response;
 
     } catch (error) {

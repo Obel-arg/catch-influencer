@@ -100,13 +100,7 @@ const extractMetricsFromRawResponse = (post: any): { reach: number; engagement: 
       const totalEngagement = likes + comments;
       const engagementRate = alcance > 0 ? (totalEngagement / alcance) * 100 : 0;
       
-      console.log('📸 [DASHBOARD] Story metrics extracted:', {
-        platform,
-        likes,
-        comments,
-        reach: alcance,
-        engagement: engagementRate
-      });
+      
       
       return {
         reach: alcance,

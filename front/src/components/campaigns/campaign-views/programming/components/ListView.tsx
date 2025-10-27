@@ -22,28 +22,27 @@ export const ListView = ({ filteredContent, campaignId }: ListViewProps) => {
   // Cargar métricas para todos los contenidos
   useEffect(() => {
     const loadMetricsForContent = async () => {
-      console.log('🔍 ListView: Iniciando carga de métricas...', { campaignId, filteredContentLength: filteredContent.length })
       
       // Solo cargar métricas para contenidos que tienen post linkeado
       const contentWithLinkedPosts = filteredContent.filter(item => 
         item.content_url && item.content_url.trim() !== ''
       )
       
-      console.log('🔍 ListView: Contenidos con posts linkeados:', contentWithLinkedPosts.length)
+      
       
       const contentIds = contentWithLinkedPosts.map(item => item.id)
       const idsToLoad = contentIds.filter(id => !metricsMap[id] && !loadingMetrics.has(id))
       
-      console.log('🔍 ListView: IDs a cargar:', idsToLoad.length, idsToLoad)
+      
       
       if (idsToLoad.length === 0) return
       
       setLoadingMetrics(prev => new Set([...prev, ...idsToLoad]))
       
       try {
-        console.log('🔍 ListView: Llamando getPostMetricsForSchedules...')
+        
         const metrics = await getPostMetricsForSchedules(idsToLoad)
-        console.log('🔍 ListView: Métricas recibidas:', metrics)
+        
         setMetricsMap(prev => ({ ...prev, ...metrics }))
       } catch (error) {
         console.error('❌ ListView: Error loading metrics for list view:', error)
@@ -65,17 +64,17 @@ export const ListView = ({ filteredContent, campaignId }: ListViewProps) => {
 
   
 
-  const getContentTypeColor = (type: string) => {
-    if (!type) return "bg-gray-600 text-white"
-    const normalizedType = type.toLowerCase().trim()
-    switch (normalizedType) {
-      case "reel": return "bg-purple-600 text-white"
-      case "video": return "bg-red-600 text-white"
-      case "post": case "carrusel": case "short": return "bg-blue-600 text-gray-700"
-      case "stories": return "bg-gray-600 text-white"
-      default: console.log('Tipo de contenido no reconocido:', type, 'normalizado:', normalizedType); return "bg-gray-600 text-white"
+    const getContentTypeColor = (type: string) => {
+      if (!type) return "bg-gray-600 text-white"
+      const normalizedType = type.toLowerCase().trim()
+      switch (normalizedType) {
+        case "reel": return "bg-purple-600 text-white"
+        case "video": return "bg-red-600 text-white"
+        case "post": case "carrusel": case "short": return "bg-blue-600 text-gray-700"
+        case "stories": return "bg-gray-600 text-white"
+        default: return "bg-gray-600 text-white"
+      }
     }
-  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -217,18 +216,12 @@ export const ListView = ({ filteredContent, campaignId }: ListViewProps) => {
   }
 
   const ContentCard = ({ item }: { item: ContentItem }) => {
-    console.log('ContentCard - Tipo de contenido:', item.type, 'Color aplicado:', getContentTypeColor(item.type))
+    
     
     const realMetrics = metricsMap[item.id]
     const isLoadingMetrics = loadingMetrics.has(item.id)
     
-    console.log('🔍 ContentCard:', {
-      itemId: item.id,
-      hasRealMetrics: !!realMetrics,
-      realMetrics,
-      isLoadingMetrics,
-      objectivesCount: item.objectives?.length || 0
-    })
+    
     
     const objectivesWithMetrics = realMetrics ? 
       matchMetricsWithObjectives(item.objectives, realMetrics) : 
@@ -399,11 +392,6 @@ export const ListView = ({ filteredContent, campaignId }: ListViewProps) => {
                               realMetrics.comments_count || 0
                             );
                             
-                            console.log('🔍 [APPROXIMATE REACH] Calculated for Instagram:', {
-                              likes: realMetrics.likes_count,
-                              comments: realMetrics.comments_count,
-                              approximateReach: approximateReach
-                            });
                             
                             // Actualizar las métricas con el alcance aproximado
                             realMetrics.views_count = approximateReach;

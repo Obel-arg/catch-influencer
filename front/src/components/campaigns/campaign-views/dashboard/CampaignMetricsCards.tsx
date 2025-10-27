@@ -56,8 +56,6 @@ export const CampaignMetricsCards = ({ campaign }: CampaignMetricsCardsProps) =>
 
   // Usar el engagement del backend si existe, sino el calculado localmente
   const backendEngagement = campaign.avg_engagement_rate || 0;
-  console.log("🔍 [CampaignMetricsCards] Backend engagement:", backendEngagement);
-  console.log("🔍 [CampaignMetricsCards] Metrics engagement:", metrics?.engagement.average);
 
   // Parse campaign goals from JSON string format
   const parseCampaignGoals = (goals: any): CampaignGoal[] => {
@@ -125,8 +123,7 @@ export const CampaignMetricsCards = ({ campaign }: CampaignMetricsCardsProps) =>
   
   // Calculate engagement value early (needed in both branches)
   const engagementValue = backendEngagement > 0 ? backendEngagement : (metrics?.engagement.average || 0);
-  console.log("🔍 [CampaignMetricsCards] Campaign:", campaign.id, "Final engagement:", engagementValue, "Backend:", backendEngagement, "Calculated:", metrics?.engagement.average);
-  
+    
   // If no posts, show zero values instead of skeleton
   if (hasNoPosts) {
     return (

@@ -73,7 +73,7 @@ export class PostgresQueueService {
         throw error;
       }
 
-      console.log(`✅ [POSTGRES-QUEUE] Job ${jobId} sent to ${queueName} successfully`);
+
       return jobId;
     } catch (error) {
       console.error(`❌ [POSTGRES-QUEUE] Failed to send job to ${queueName}:`, error);
@@ -248,7 +248,7 @@ export class PostgresQueueService {
         attempts: job.attempts + 1
       });
 
-      console.log(`✅ [POSTGRES-QUEUE] Job ${job.id} completed successfully`);
+
 
     } catch (error) {
       console.error(`❌ [POSTGRES-QUEUE] Job ${job.id} failed:`, error);

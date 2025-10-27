@@ -55,11 +55,7 @@ export class ExplorerCacheUtils {
       // Limpiar entradas expiradas para mantener localStorage limpio
       this.cleanExpiredEntries();
       
-      console.log(`💾 [CACHE] Guardado en localStorage:`, {
-        key: cacheKey,
-        itemsCount: searchResult.items?.length || 0,
-        expiresIn: Math.round(CACHE_TTL / (1000 * 60 * 60 * 24)) + ' días'
-      });
+
       
     } catch (error) {
       console.warn('⚠️ [CACHE] Error guardando en localStorage:', error);
@@ -82,16 +78,12 @@ export class ExplorerCacheUtils {
       
       // Verificar si no ha expirado
       if (Date.now() > cacheEntry.expiresAt) {
-        console.log(`⏰ [CACHE] Entrada expirada, eliminando:`, cacheKey);
+        
         localStorage.removeItem(cacheKey);
         return null;
       }
 
-      console.log(`✅ [CACHE] Cache hit desde localStorage:`, {
-        key: cacheKey,
-        itemsCount: cacheEntry.data.items?.length || 0,
-        ageInHours: Math.round((Date.now() - cacheEntry.timestamp) / (1000 * 60 * 60))
-      });
+      
 
       return {
         ...cacheEntry.data,
@@ -144,7 +136,6 @@ export class ExplorerCacheUtils {
       });
       
       if (keysToRemove.length > 0) {
-        console.log(`🧹 [CACHE] Limpiadas ${keysToRemove.length} entradas expiradas`);
       }
       
     } catch (error) {
@@ -222,7 +213,7 @@ export class ExplorerCacheUtils {
         localStorage.removeItem(key);
       });
       
-      console.log(`🗑️ [CACHE] Cache completo limpiado: ${keysToRemove.length} entradas eliminadas`);
+      
       
     } catch (error) {
       console.warn('⚠️ [CACHE] Error limpiando cache:', error);

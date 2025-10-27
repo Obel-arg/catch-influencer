@@ -550,16 +550,12 @@ export const AddPostModal: React.FC<AddPostModalProps> = ({
     if (isTwitterTweetUrl(url) && !formData.image_url) {
       setIsExtractingThumbnail(true);
       try {
-        console.log("🔄 Generando miniatura de Twitter con blob storage...");
 
         // Usar el nuevo servicio que guarda en blob storage
         const result = await twitterService.generateAndStoreThumbnail(url);
 
         if (result.success && result.blobUrl) {
-          console.log(
-            "✅ Miniatura de Twitter generada y guardada en blob:",
-            result.blobUrl
-          );
+          
           updateFormData("image_url", result.blobUrl);
         } else {
           console.warn(
@@ -678,9 +674,7 @@ export const AddPostModal: React.FC<AddPostModalProps> = ({
         }
       } else if (isTwitterTweetUrl(formData.post_url)) {
         try {
-          console.log(
-            "🔄 Generando miniatura de Twitter manualmente con blob storage..."
-          );
+          
 
           // Usar el nuevo servicio que guarda en blob storage
           const result = await twitterService.generateAndStoreThumbnail(
@@ -688,10 +682,7 @@ export const AddPostModal: React.FC<AddPostModalProps> = ({
           );
 
           if (result.success && result.blobUrl) {
-            console.log(
-              "✅ Miniatura de Twitter generada y guardada en blob:",
-              result.blobUrl
-            );
+
             updateFormData("image_url", result.blobUrl);
           } else {
             console.warn(
@@ -788,11 +779,6 @@ export const AddPostModal: React.FC<AddPostModalProps> = ({
       const formData = new FormData();
       formData.append('image', file);
 
-      console.log('📸 [ADD-POST-MODAL] Subiendo imagen a blob storage:', { 
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type
-      });
 
       // Usar fetch para evitar interferencia del httpApiClient con headers
       const token = localStorage.getItem('token');
@@ -813,7 +799,6 @@ export const AddPostModal: React.FC<AddPostModalProps> = ({
       }
 
       if (responseData.success && responseData.data) {
-        console.log('✅ [ADD-POST-MODAL] Imagen subida exitosamente a blob:', responseData.data.imageUrl);
         
         // Usar la URL del blob directamente
         updateFormData("image_url", responseData.data.imageUrl);

@@ -140,7 +140,6 @@ export class OptimizedPostMetricsService {
       }
 
       if (contentId) {
-        console.log(`✅ [CONTENT-ID] Successfully extracted ID: ${contentId} from ${platformLower} URL`);
       } else {
         console.warn(`⚠️ [CONTENT-ID] No ID found in URL: ${url} for platform: ${platformLower}`);
       }

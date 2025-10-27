@@ -90,8 +90,8 @@ export interface HypeAuditorSearchResponse {
 }
 
 export const hypeAuditorConfig = {
-	clientId: '360838',
-	apiToken: '$2y$04$Ai3PO.ApJUZd2tSpIEvrwuJowWPOVY5DwCE4RNnTVTD6ayQHKtZh6',
+	clientId: '2694138',
+	apiToken: '$2y$04$27ZuGEARpPSjtwdBhJnf6OYuZKqTxKFkGi723IpY4MxJefff3Lgsa',
 	baseUrl: 'https://hypeauditor.com/api/method',
 	endpoints: {
 		search: '/auditor.search/',

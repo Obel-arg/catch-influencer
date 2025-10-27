@@ -63,9 +63,9 @@ export class HypeAuditorService {
 				throw new Error('Username es requerido');
 			}
 
-			// Usar credenciales hardcodeadas como el script de test
-			const CLIENT_ID = '360838';
-			const API_TOKEN = process.env.HYPEAUDITOR_API_TOKEN || '';
+		// Usar credenciales de HypeAuditor
+		const CLIENT_ID = '2694138';
+		const API_TOKEN = '$2y$04$27ZuGEARpPSjtwdBhJnf6OYuZKqTxKFkGi723IpY4MxJefff3Lgsa';
 
 			// Usar https directamente como el script de test
 			return new Promise((resolve, reject) => {
@@ -83,8 +83,6 @@ export class HypeAuditorService {
 					}
 				};
 
-				console.log(`🔍 [HYPEAUDITOR] URL completa: https://hypeauditor.com${url}`);
-				console.log(`🔍 [HYPEAUDITOR] Headers:`, options.headers);
 
 				const req = https.request(options, (res) => {
 					let data = '';
@@ -95,16 +93,9 @@ export class HypeAuditorService {
 					res.on('end', () => {
 						try {
 							const response = JSON.parse(data);
-							console.log('📊 [HYPEAUDITOR] Respuesta recibida:', response);
 							
 							if (response.result) {
 								const report = response.result;
-								console.log('📊 [HYPEAUDITOR] Datos reales obtenidos:', {
-									followers: report.subscribers_count?.value,
-									engagement_rate: report.er?.value,
-									location: report.location,
-									social_networks: report.social_networks?.length
-								});
 								
 								const result = {
 									username: report.username || username,
@@ -155,7 +146,6 @@ export class HypeAuditorService {
 
 								// Verificar si los datos están vacíos y usar respaldo para Taylor Swift
 								if (username === 'taylorswift' && result.followers === 0) {
-									console.log('⚠️ [HYPEAUDITOR] Datos vacíos detectados, usando respaldo para Taylor Swift');
 									try {
 										const backupData = this.loadBackupData();
 										resolve(backupData);
@@ -169,7 +159,6 @@ export class HypeAuditorService {
 							} else {
 								// Si no hay resultado, intentar usar respaldo para Taylor Swift
 								if (username === 'taylorswift') {
-									console.log('⚠️ [HYPEAUDITOR] Sin resultado, usando respaldo para Taylor Swift');
 									try {
 										const backupData = this.loadBackupData();
 										resolve(backupData);
@@ -196,13 +185,11 @@ export class HypeAuditorService {
 			});
 		} catch (error: any) {
 			console.error('❌ [HYPEAUDITOR] Error obteniendo reporte:', error.message);
-			console.log('🔄 [HYPEAUDITOR] Intentando usar datos de respaldo...');
 			
 			// Intentar usar datos de respaldo para Taylor Swift
 			if (username === 'taylorswift') {
 				try {
 					const backupData = this.loadBackupData();
-					console.log('✅ [HYPEAUDITOR] Usando datos de respaldo para Taylor Swift');
 					return backupData;
 				} catch (backupError) {
 					console.error('❌ [HYPEAUDITOR] Error cargando datos de respaldo:', backupError);

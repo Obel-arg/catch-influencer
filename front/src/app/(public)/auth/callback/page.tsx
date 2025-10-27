@@ -21,31 +21,21 @@ function AuthCallbackContent() {
   const processCallback = async () => {
     // Evitar múltiples ejecuciones del callback
     if (hasProcessed.current) {
-      console.log("Callback already processed, skipping...");
       return;
     }
 
     try {
       hasProcessed.current = true; // Marcar como procesado al inicio
 
-      console.log("🚀 Auth Callback - Iniciando procesamiento...");
-      console.log("🔍 URL actual:", window.location.href);
 
       // Obtener los parámetros de la URL
       const token = searchParams.get("token");
       const refreshToken = searchParams.get("refreshToken");
       const error = searchParams.get("error");
 
-      console.log("🔍 Auth Callback - Parámetros recibidos:", {
-        hasToken: !!token,
-        hasRefreshToken: !!refreshToken,
-        error,
-        tokenLength: token?.length,
-        refreshTokenLength: refreshToken?.length,
-      });
+      
 
       if (error) {
-        console.error("OAuth error from URL:", error);
         setStatus("error");
         setErrorMessage("Error en la autenticación con Google");
         setTimeout(() => {
@@ -55,10 +45,7 @@ function AuthCallbackContent() {
       }
 
       if (!token || !refreshToken) {
-        console.error("Missing tokens:", {
-          token: !!token,
-          refreshToken: !!refreshToken,
-        });
+        
         setStatus("error");
         setErrorMessage("Tokens de autenticación no encontrados");
         setTimeout(() => {
@@ -71,40 +58,26 @@ function AuthCallbackContent() {
       const decodedToken = decodeURIComponent(token);
       const decodedRefreshToken = decodeURIComponent(refreshToken);
 
-      console.log("🔄 Tokens decodificados:", {
-        hasDecodedToken: !!decodedToken,
-        hasDecodedRefreshToken: !!decodedRefreshToken,
-        decodedTokenLength: decodedToken.length,
-        decodedRefreshTokenLength: decodedRefreshToken.length,
-      });
+      
 
       // Verificar que los tokens parecen válidos (JWT tiene 3 partes separadas por puntos)
       const tokenParts = decodedToken.split(".");
       const refreshTokenParts = decodedRefreshToken.split(".");
 
-      console.log("🔍 Validación de tokens:", {
-        tokenParts: tokenParts.length,
-        refreshTokenParts: refreshTokenParts.length,
-        tokenLooksValid: tokenParts.length === 3,
-        refreshTokenLooksValid: refreshTokenParts.length === 3,
-      });
+      
 
       // Procesar el callback con los tokens
-      console.log("🔄 Procesando callback de Google...");
+      
       const result = await handleGoogleCallback(
         decodedToken,
         decodedRefreshToken
       );
 
-      console.log("✅ Callback procesado exitosamente:", {
-        userId: result.user?.id,
-        userEmail: result.user?.email,
-        hasUser: !!result.user,
-      });
+      
 
       // Actualizar el contexto de autenticación manualmente
       if (result.user) {
-        console.log("🔄 Actualizando AuthContext manualmente...");
+        
 
         // Guardar en localStorage para que el AuthContext lo detecte
         localStorage.setItem("token", decodedToken);
@@ -112,9 +85,9 @@ function AuthCallbackContent() {
         localStorage.setItem("userData", JSON.stringify(result.user));
         localStorage.setItem("userEmail", result.user.email);
 
-        console.log("✅ AuthContext actualizado manualmente");
+
       } else {
-        console.error("❌ No se recibieron datos de usuario del callback");
+        
       }
 
       setStatus("success");
@@ -128,22 +101,12 @@ function AuthCallbackContent() {
 
       // Redirigir después de un breve retraso para mostrar el mensaje de éxito
       setTimeout(() => {
-        console.log("🚀 Redirecting to /explorer");
-
-        // Debug: Mostrar estado actual antes de redirigir
-        console.log("🔍 Estado antes de redirigir:", {
-          localStorage: {
-            token: !!localStorage.getItem("token"),
-            refreshToken: !!localStorage.getItem("refreshToken"),
-            userData: !!localStorage.getItem("userData"),
-            userEmail: !!localStorage.getItem("userEmail"),
-          },
-        });
+        
 
         router.replace("/explorer"); // Usar replace para evitar volver al callback
       }, 1500);
     } catch (error) {
-      console.error("❌ Error procesando callback de Google:", error);
+        
       setStatus("error");
       setErrorMessage("Error al procesar la autenticación");
 

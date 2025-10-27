@@ -59,9 +59,10 @@ export class InstagramApiService {
     ];
     const isStory = patterns.some((p) => p.test(url));
     if (isStory) {
-      console.log(`📸 [IG] URL detectada como historia: ${url}`);
+
+
     } else {
-      console.log(`🖼️ [IG] URL NO es historia: ${url}`);
+
     }
     return isStory;
   }
@@ -264,7 +265,7 @@ export class InstagramApiService {
             secure: true
           }
         ];
-        console.log('🔐 [IG] Agregando cookie sessionid a ScreenshotOne');
+
         params.append('cookies', JSON.stringify(cookies));
       }
 
@@ -340,12 +341,12 @@ export class InstagramApiService {
         validateStatus: (status: number) => status < 500
       });
       if (head.status < 500) {
-        console.log('✅ [IG] ScreenshotOne HEAD ok para historias');
+
         return screenshotUrl;
       }
       return null;
     } catch {
-      console.warn('⚠️ [IG] ScreenshotOne con cookies falló (historias)');
+
       return null;
     }
   }
@@ -420,7 +421,7 @@ export class InstagramApiService {
       const base64Svg = Buffer.from(svg).toString('base64');
       const dataUrl = `data:image/svg+xml;base64,${base64Svg}`;
       
-      console.log('✅ [IG] Tarjeta estética generada para @' + username);
+
       return dataUrl;
     } catch (error) {
       console.error('❌ [IG] Error generando tarjeta estética:', error);
@@ -463,7 +464,7 @@ export class InstagramApiService {
     try {
       // Si es una historia, generar tarjeta estética
       if (this.isInstagramStoryUrl(postUrl)) {
-        console.log('🎨 [IG] Generando tarjeta estética para historia');
+        
         return await this.generateStoryCard(postUrl);
       }
 

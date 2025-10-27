@@ -46,20 +46,14 @@ export async function exportCampaignPostsToExcel(campaign: CampaignData) {
     const workbook = new ExcelJS.Workbook();
     
     // ✅ NUEVO: Obtener análisis de sentimientos para todos los posts en batch
-    console.log('🔍 [EXCEL DEBUG] Obteniendo análisis de sentimientos para', campaign.posts.length, 'posts...');
     const sentimentAnalysis = await SentimentAnalysisService.getSentimentAnalysisByPostIds(
       campaign.posts.map(post => post.id)
     );
-    console.log('📊 [EXCEL DEBUG] Análisis de sentimientos obtenidos:', Object.keys(sentimentAnalysis).length, 'posts analizados');
     
     // Debug: Mostrar resumen de posts con análisis
     const postsWithAnalysis = Object.keys(sentimentAnalysis).length;
     const totalPosts = campaign.posts.length;
-    console.log('📈 [EXCEL DEBUG] Resumen de análisis:', {
-      totalPosts,
-      postsWithAnalysis,
-      coverage: `${((postsWithAnalysis / totalPosts) * 100).toFixed(1)}%`
-    });
+    
     
     // Preparar datos para la hoja de posts
     const postsData = campaign.posts.map(post => {
@@ -68,39 +62,13 @@ export async function exportCampaignPostsToExcel(campaign: CampaignData) {
       let likes = 0;
       let comments = 0;
       
-      // Debug: Log inicial para todos los posts
-      console.log('🔍 [EXCEL DEBUG] Processing post:', {
-          postId: post.id,
-        platform: post.platform,
-          hasPostMetrics: !!post.post_metrics,
-          hasRawResponse: !!post.post_metrics?.raw_response,
-          hasData: !!post.post_metrics?.raw_response?.data,
-        postMetricsKeys: post.post_metrics ? Object.keys(post.post_metrics) : [],
-          rawResponseKeys: post.post_metrics?.raw_response?.data ? Object.keys(post.post_metrics.raw_response.data) : []
-      });
+      
       
       // Debug específico para Twitter - mostrar todas las propiedades de post_metrics
       if (post.platform.toLowerCase() === 'twitter' && post.post_metrics) {
-        console.log('🔍 [EXCEL DEBUG] Twitter post_metrics full structure:', {
-          postId: post.id,
-          postMetrics: post.post_metrics,
-          allKeys: Object.keys(post.post_metrics),
-          likes_count: post.post_metrics.likes_count,
-          comments_count: post.post_metrics.comments_count,
-          views_count: post.post_metrics.views_count,
-          engagement_rate: post.post_metrics.engagement_rate,
-          raw_response: post.post_metrics.raw_response
-        });
         
-        // También mostrar las propiedades del post principal
-        console.log('🔍 [EXCEL DEBUG] Twitter post main properties:', {
-          postId: post.id,
-          postEngagementRate: post.engagement_rate,
-          postLikes: post.likes,
-          postComments: post.comments,
-          postViews: post.views,
-          postKeys: Object.keys(post)
-        });
+        
+        
       }
       
       // Primero intentar con raw_response si existe
@@ -171,23 +139,7 @@ export async function exportCampaignPostsToExcel(campaign: CampaignData) {
           } else if (platform === 'twitter' && rawResponse.data?.basicTwitterPost) {
             const twitterData = rawResponse.data.basicTwitterPost;
             
-            // Debug: Log detallado de los datos de Twitter
-            console.log('🔍 [EXCEL DEBUG] Twitter data structure:', {
-              postId: post.id,
-              platform: platform,
-              twitterData: twitterData,
-              allKeys: Object.keys(twitterData || {}),
-              views: twitterData.views,
-              likes: twitterData.likes,
-              replies: twitterData.replies,
-              retweets: twitterData.retweets,
-              favorite_count: twitterData.favorite_count,
-              reply_count: twitterData.reply_count,
-              impressions: twitterData.impressions,
-              text: twitterData.text,
-              content: twitterData.content,
-              engageRate: twitterData.engageRate
-            });
+          
             
             // Extraer métricas de Twitter - intentar diferentes propiedades posibles
             views = twitterData.views || twitterData.impressions || 0;
@@ -212,17 +164,7 @@ export async function exportCampaignPostsToExcel(campaign: CampaignData) {
       
       // Debug: Log de métricas finales para Twitter
       if (post.platform.toLowerCase() === 'twitter') {
-        console.log('🔍 [EXCEL DEBUG] Twitter final metrics from post_metrics:', {
-          postId: post.id,
-          finalViews: views,
-          finalLikes: likes,
-          finalComments: comments,
-          engagementRate: post.engagement_rate,
-          postMetricsViews: post.post_metrics?.views_count,
-          postMetricsLikes: post.post_metrics?.likes_count,
-          postMetricsComments: post.post_metrics?.comments_count,
-          postMetricsEngagementRate: post.post_metrics?.engagement_rate
-        });
+        
       }
       
       // Fallback final a los valores del modelo si no hay post_metrics
@@ -252,13 +194,7 @@ export async function exportCampaignPostsToExcel(campaign: CampaignData) {
           engagementRate = totalEngagement / manualAlcance; // Ya en decimal
         }
         
-        console.log('📊 [EXCEL DEBUG] Instagram Story engagement calculation:', {
-          postId: post.id,
-          manualLikes,
-          manualComments,
-          manualAlcance,
-          engagementRate: (engagementRate * 100).toFixed(2) + '%'
-        });
+        
       } 
       // ✅ Para el resto de contenido: usar engageRate del rawResponse como en el análisis
       else if (rawResponse?.data) {
@@ -272,11 +208,7 @@ export async function exportCampaignPostsToExcel(campaign: CampaignData) {
           engagementRate = rawResponse.data.basicInstagramPost.engageRate;
         }
         
-        console.log('📊 [EXCEL DEBUG] Platform engagement from rawResponse:', {
-          postId: post.id,
-          platform,
-          engagementRate: (engagementRate * 100).toFixed(2) + '%'
-        });
+
       }
       
       // ✅ Fallback: usar post_metrics.engagement_rate o post.engagement_rate
@@ -287,11 +219,7 @@ export async function exportCampaignPostsToExcel(campaign: CampaignData) {
           engagementRate = post.engagement_rate;
         }
         
-        console.log('📊 [EXCEL DEBUG] Fallback engagement rate:', {
-          postId: post.id,
-          engagementRate: (engagementRate * 100).toFixed(2) + '%',
-          source: post.post_metrics?.engagement_rate ? 'post_metrics' : 'post'
-        });
+        
       }
       
       // Formatear engagement rate con coma como separador decimal
@@ -318,39 +246,17 @@ export async function exportCampaignPostsToExcel(campaign: CampaignData) {
           negativePercentage = (sentimentData.negative_percentage || 0) / 100;
           neutralPercentage = (sentimentData.neutral_percentage || 0) / 100;
           
-          console.log('📊 [EXCEL DEBUG] Sentiment from SentimentAnalysisService:', {
-            postId: post.id,
-            platform: post.platform,
-            positive: (positivePercentage * 100).toFixed(0) + '%',
-            negative: (negativePercentage * 100).toFixed(0) + '%',
-            neutral: (neutralPercentage * 100).toFixed(0) + '%',
-            source: 'sentiment_analysis table',
-            note: 'Converted to decimal for Excel format'
-          });
+          
         } else {
-          console.log('⚠️ [EXCEL DEBUG] No sentiment analysis found for post:', {
-            postId: post.id,
-            platform: post.platform,
-            hasSentimentAnalysis: !!sentimentAnalysis[post.id]
-          });
+          
         }
       } else {
-        console.log('📸 [EXCEL DEBUG] Instagram Story - no sentiment analysis needed:', {
-          postId: post.id,
-          platform: post.platform
-        });
+        
       }
       
       // ✅ DEBUG: Verificar valores finales antes de retornar
       if (positivePercentage > 0 || negativePercentage > 0 || neutralPercentage > 0) {
-        console.log('🔍 [EXCEL DEBUG] Final sentiment values for Excel:', {
-          postId: post.id,
-          platform: post.platform,
-          positive: positivePercentage + ' (will show as ' + (positivePercentage * 100).toFixed(2) + '%)',
-          negative: negativePercentage + ' (will show as ' + (negativePercentage * 100).toFixed(2) + '%)',
-          neutral: neutralPercentage + ' (will show as ' + (neutralPercentage * 100).toFixed(2) + '%)',
-          note: 'Using 0.00% format for proper display'
-        });
+
       }
       
       return {
@@ -525,12 +431,7 @@ export async function exportCampaignPostsToExcel(campaign: CampaignData) {
       post['Positivo (%)'] > 0 || post['Negativo (%)'] > 0 || post['Neutro (%)'] > 0
     ).length;
     
-    console.log('✅ Excel exportado exitosamente:', fileName);
-    console.log('📊 [EXCEL FINAL] Resumen de exportación:', {
-      totalPosts: postsData.length,
-      postsWithSentiment,
-      sentimentCoverage: `${((postsWithSentiment / postsData.length) * 100).toFixed(1)}%`
-    });
+    
     
   } catch (error) {
     console.error('❌ Error exportando a Excel:', error);

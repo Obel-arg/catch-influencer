@@ -43,8 +43,7 @@ export const CampaignInfluencers = ({ campaign }: CampaignInfluencersProps) => {
     try {
       influencers.forEach((ci) => {
         const inf = ci.influencers;
-        // eslint-disable-next-line no-console
-        console.log('[CampaignInfluencers] platform_info for', inf?.name, inf?.platform_info);
+        
       });
     } catch {}
   }, [influencers]);

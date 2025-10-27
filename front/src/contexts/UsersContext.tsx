@@ -236,13 +236,11 @@ export const UsersProvider: React.FC<UsersProviderProps> = ({
         throw new Error("No hay organización seleccionada");
       }
 
-      console.log('🗑️ UsersContext - Iniciando eliminación de usuario:', userId);
       
       try {
         setLoading(true);
         await usersService.removeUser(currentOrganizationId, userId);
         
-        console.log('✅ UsersContext - Usuario eliminado exitosamente');
         
         showToast({
           title: "Éxito",

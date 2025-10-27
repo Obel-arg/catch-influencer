@@ -154,9 +154,7 @@ export class BrandService {
         })
         .eq('id', id);
 
-      console.log('🗑️ [BackendService] Supabase update ejecutado');   
-      console.log('🗑️ [BackendService] Error de Supabase:', error);
-
+      
       if (error) {
         console.error('🗑️ [BackendService] Error detallado de Supabase:', {
           message: error.message,
@@ -167,7 +165,7 @@ export class BrandService {
         throw error;
       }
       
-      console.log('🗑️ [BackendService] Marca marcada como eliminada exitosamente');
+
     } catch (error) {
       console.error('🗑️ [BackendService] Error general:', error);
       throw error;

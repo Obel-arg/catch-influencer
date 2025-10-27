@@ -100,13 +100,7 @@ const applyProgressiveAccumulation = (
         const totalEngagement = likes + comments;
         const engagementRate = alcance > 0 ? (totalEngagement / alcance) * 100 : 0;
         
-      console.log('📸 [BRAND DASHBOARD] Story metrics extracted:', {
-        platform,
-        likes,
-        comments,
-        reach: alcance,
-        engagement: engagementRate
-      });
+      
       
       return {
         reach: alcance,

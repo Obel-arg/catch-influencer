@@ -186,14 +186,10 @@ export class CampaignService {
   }
 
   public async removeInfluencerFromCampaign(campaignId: string, influencerId: string): Promise<void> {
-    console.log('🗑️ [CampaignService Frontend] Iniciando removeInfluencerFromCampaign:', {
-      campaignId,
-      influencerId,
-      timestamp: new Date().toISOString()
-    });
+    
 
     const url = `${this.baseUrl}/${campaignId}/influencers/${influencerId}`;
-    console.log('🌐 [CampaignService Frontend] URL de la petición:', url);
+    
 
     try {
       const response = await httpApiClient.delete(url, {
@@ -203,20 +199,10 @@ export class CampaignService {
       })
     });
 
-      console.log('✅ [CampaignService Frontend] Respuesta del servidor:', {
-        status: response.status,
-        statusText: response.statusText,
-        data: response.data,
-        headers: response.headers
-      });
+        
 
     } catch (error: any) {
-      console.error('❌ [CampaignService Frontend] Error en removeInfluencerFromCampaign:', {
-        error,
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
+      
       throw error;
     }
   }

@@ -117,27 +117,23 @@ const analyzeContentType = (post: any): string => {
   const platform = (post.platform || '').toLowerCase();
   const url = post.post_url || '';
   
-  console.log('🔍 [CHART DEBUG] Analyzing post:', {
-    platform,
-    url,
-    postId: post.id
-  });
+
   
   if (!platform) return "Desconocido";
   
   if (platform === 'youtube') {
     const type = url.includes('/shorts/') ? 'Short' : 'Video';
-    console.log('🔍 [CHART DEBUG] YouTube type:', type);
+    
     return type;
   }
   
   if (platform === 'tiktok') {
-    console.log('🔍 [CHART DEBUG] TikTok type: Video');
+    
     return 'Video';
   }
   
   if (platform === 'twitter') {
-    console.log('🔍 [CHART DEBUG] Twitter type: Post');
+    
     return 'Post';
   }
   
@@ -148,7 +144,7 @@ const analyzeContentType = (post: any): string => {
     } else if (url.includes('/reel/')) {
       type = 'Reel';
     }
-    console.log('🔍 [CHART DEBUG] Instagram type:', type);
+
     return type;
   }
   
@@ -224,11 +220,11 @@ export const CampaignStatsSection = ({
   // Analizar tipos de contenido reales desde los posts
   const contentPerformance = useMemo(() => {
     if (!allPosts || allPosts.length === 0) {
-      console.log('🔍 [CHART DEBUG] No posts available for content analysis');
+      
       return [];
     }
 
-    console.log('🔍 [CHART DEBUG] Analyzing', allPosts.length, 'posts for content types');
+    
 
     // Contar posts por tipo de contenido
     const contentTypeCounts: Record<string, number> = {};
@@ -239,7 +235,7 @@ export const CampaignStatsSection = ({
         (contentTypeCounts[contentType] || 0) + 1;
     });
 
-    console.log('🔍 [CHART DEBUG] Content type counts:', contentTypeCounts);
+    
 
     // Convertir a formato para el gráfico
     const result = Object.keys(contentTypeCounts)
@@ -249,7 +245,7 @@ export const CampaignStatsSection = ({
       }))
       .sort((a, b) => b.count - a.count); // Ordenar por cantidad descendente
 
-    console.log('🔍 [CHART DEBUG] Final content performance:', result);
+    
     return result;
   }, [allPosts]);
 
@@ -297,9 +293,7 @@ export const CampaignStatsSection = ({
         const totalEngagement = likes + comments;
         engagement = alcance > 0 ? (totalEngagement / alcance) : 0;
         
-        console.log('📸 [STATS] Story engagement calculated:', {
-          platform, likes, comments, alcance, engagement
-        });
+          
       }
       // Extraer engagement rate usando la lógica original para otros tipos de posts
       else if (post.post_metrics?.raw_response?.data) {

@@ -1992,11 +1992,10 @@ export class CreatorDBService {
       });
       
       const batchEndTime = Date.now();
-      console.log(`⏱️ [ENRICH] Batch ${batchIndex + 1} completado en ${batchEndTime - batchStartTime}ms`);
+    
     }
 
     const totalTime = Date.now() - startTime;
-    console.log(`✅ [ENRICH] enrichSearchResults completado en ${totalTime}ms - ${allEnrichedResults.length} resultados enriquecidos`);
     
     return allEnrichedResults;
   }
@@ -2006,7 +2005,6 @@ export class CreatorDBService {
    */
   private static deduplicateInfluencers(influencers: any[]): any[] {
     const startTime = Date.now();
-    console.log(`🚀 [DEDUPLICATE] Iniciando deduplicateInfluencers - ${influencers.length} influencers`);
     
     // 🎯 NUEVA LÓGICA: Ser menos estricto con la deduplicación
     const seen = new Map<string, any>();
@@ -2014,7 +2012,6 @@ export class CreatorDBService {
     for (const influencer of influencers) {
       // Verificar que el influencer tenga datos válidos
       if (!influencer) {
-        console.log(`⚠️ [DEDUPLICATE] Influencer null/undefined, saltando`);
         continue;
       }
       
@@ -2028,8 +2025,8 @@ export class CreatorDBService {
       
       // 🎯 CORRECCIÓN: No saltar si el nombre es "sin nombre" pero hay creatorId
       if (!identifier || identifier.length < 2) {
-        console.log(`⚠️ [DEDUPLICATE] Identificador inválido: "${identifier}", saltando`);
-        continue;
+        
+        
       }
       
       // 🎯 NUEVA LÓGICA: Usar creatorId como clave principal si está disponible
@@ -2037,12 +2034,12 @@ export class CreatorDBService {
       
       if (!seen.has(primaryKey)) {
         // Primera vez que vemos este influencer
-        console.log(`✅ [DEDUPLICATE] Agregando influencer: ${identifier} (${primaryKey})`);
+        
         seen.set(primaryKey, influencer);
       } else {
         // Ya existe, mantener el que tenga más datos completos
         const existing = seen.get(primaryKey);
-        console.log(`🔄 [DEDUPLICATE] Duplicado encontrado: ${identifier}, comparando...`);
+        
         
         // Priorizar el que tenga:
         // 1. Más seguidores (datos más actualizados)
@@ -2058,10 +2055,10 @@ export class CreatorDBService {
            (influencer.averageEngagementRate || 0) > (existing.averageEngagementRate || 0));
            
         if (shouldReplace) {
-          console.log(`✅ [DEDUPLICATE] Reemplazando influencer: ${name} (mejor datos)`);
+          
           seen.set(primaryKey, influencer);
         } else {
-          console.log(`⏭️ [DEDUPLICATE] Manteniendo influencer existente: ${name}`);
+          
         }
       }
     }
@@ -2069,7 +2066,7 @@ export class CreatorDBService {
     const deduplicated = Array.from(seen.values());
     
     const totalTime = Date.now() - startTime;
-    console.log(`✅ [DEDUPLICATE] deduplicateInfluencers completado en ${totalTime}ms - ${deduplicated.length} influencers únicos`);
+    
     
     return deduplicated.sort((a, b) => (b.followersCount || 0) - (a.followersCount || 0));
   }
@@ -2078,7 +2075,7 @@ export class CreatorDBService {
    * 🔍 Construir body para búsqueda avanzada de Instagram
    */
   private static buildInstagramSearchBody(filters: Record<string, any>): Record<string, any> {
-    console.log(`🔍 [BUILD BODY] Filtros recibidos:`, JSON.stringify(filters, null, 2));
+    
     
     // 🎯 NUEVO: Siempre pedir 50 resultados para optimizar caché
     const CACHE_BATCH_SIZE = 50;  
@@ -2091,30 +2088,30 @@ export class CreatorDBService {
       filters: [] as any[],
     };
 
-    console.log(`🔍 [BUILD BODY] Body inicial:`, JSON.stringify(body, null, 2));
+    
 
     // Si hay username o query, agregar filtro por nombre de usuario
     if (filters.username) {
-      console.log(`🔍 [BUILD BODY] Agregando username: ${filters.username}`);
+      
       body.filters.push({ filterKey: 'username', op: '=', value: filters.username });
     }
 
     // ✅ FILTRO DE PAÍS - CORREGIDO
     if (filters.country) {
-      console.log(`🔍 [BUILD BODY] Agregando country: ${filters.country}`);
+      
       body.filters.push({ filterKey: 'country', op: '=', value: filters.country });
     }
 
     // ✅ FILTROS DE FOLLOWERS - CORREGIDO: Convertir a números
     if (filters.minFollowers) {
       const minFollowersValue = parseInt(filters.minFollowers.toString(), 10);
-      console.log(`🔍 [BUILD BODY] minFollowers: ${filters.minFollowers} → ${minFollowersValue} (number)`);
+      
       body.filters.push({ filterKey: 'followers', op: '>', value: minFollowersValue });
     }
 
     if (filters.maxFollowers) {
       const maxFollowersValue = parseInt(filters.maxFollowers.toString(), 10);
-      console.log(`🔍 [BUILD BODY] maxFollowers: ${filters.maxFollowers} → ${maxFollowersValue} (number)`);
+      
       body.filters.push({ filterKey: 'followers', op: '<', value: maxFollowersValue });
     }
 
@@ -2127,29 +2124,29 @@ export class CreatorDBService {
     // ✅ FILTROS DE ENGAGEMENT - CORREGIDO: Usar 'engageRate' y convertir porcentaje a decimal
     if (filters.minEngagement) {
       const minEngagementValue = parseFloat(filters.minEngagement.toString()) / 100; // Convertir % a decimal
-      console.log(`📊 [INSTAGRAM] minEngagement: ${filters.minEngagement}% → ${minEngagementValue} (decimal)`);
+
       body.filters.push({ filterKey: 'engageRate', op: '>', value: minEngagementValue });
     }
 
     if (filters.maxEngagement) {
       const maxEngagementValue = parseFloat(filters.maxEngagement.toString()) / 100; // Convertir % a decimal
-      console.log(`📊 [INSTAGRAM] maxEngagement: ${filters.maxEngagement}% → ${maxEngagementValue} (decimal)`);
+      
       body.filters.push({ filterKey: 'engageRate', op: '<', value: maxEngagementValue });
     }
 
     // ✅ FILTRO DE CATEGORÍAS - ACTUALIZADO para manejar array
     if (filters.categories && Array.isArray(filters.categories) && filters.categories.length > 0) {
-      console.log(`🎯 [INSTAGRAM] Agregando filtro de categorías: ${filters.categories.join(', ')}`);
+      
       body.filters.push({ filterKey: 'category', op: 'in', value: filters.categories });
     } else if (filters.category) {
       // Mantener compatibilidad con filtro de categoría única
-      console.log(`🎯 [INSTAGRAM] Agregando filtro de categoría única: ${filters.category}`);
+      
       body.filters.push({ filterKey: 'category', op: '=', value: filters.category });
     }
 
     // ✅ FILTRO DE NICHOS - NUEVO (Instagram usa 'nicheIds')
     if (filters.nicheIds && Array.isArray(filters.nicheIds) && filters.nicheIds.length > 0) {
-      console.log(`🎯 [INSTAGRAM] Agregando filtro de nichos: ${filters.nicheIds.join(', ')}`);
+      
       // Instagram acepta múltiples nichos, los agregamos uno por uno
       filters.nicheIds.forEach((niche: string) => {
         body.filters.push({ filterKey: 'nicheIds', op: '=', value: niche });
@@ -2158,31 +2155,30 @@ export class CreatorDBService {
 
     // ✅ FILTRO DE HASHTAGS - NUEVO
     if (filters.hashtags) {
-      console.log(`🎯 [INSTAGRAM] Agregando filtro de hashtags: ${filters.hashtags}`);
+      
       body.filters.push({ filterKey: 'hashtags', op: '=', value: filters.hashtags });
     }
 
     // ✅ FILTRO DE GROWTH RATE FOLLOWERS - NUEVO (RANGO)
     if (filters.minGRateFollowers || filters.maxGRateFollowers) {
-      console.log(`🔍 [BUILD BODY] Procesando gRateFollowers - min: ${filters.minGRateFollowers}, max: ${filters.maxGRateFollowers}`);
+      
       
       const minValue = filters.minGRateFollowers ? parseFloat(filters.minGRateFollowers.toString()) : 0;
       const maxValue = filters.maxGRateFollowers ? parseFloat(filters.maxGRateFollowers.toString()) : 1;
       
-      console.log(`🔍 [BUILD BODY] Valores convertidos - min: ${minValue} (${typeof minValue}), max: ${maxValue} (${typeof maxValue})`);
       
       if (filters.minGRateFollowers) {
-        console.log(`📈 [INSTAGRAM] Agregando filtro minGRateFollowers: ${minValue} (${typeof minValue})`);
+        
         body.filters.push({ filterKey: 'gRateFollowers', op: '>', value: minValue });
       }
       
       if (filters.maxGRateFollowers && filters.maxGRateFollowers < 1) {
-        console.log(`📈 [INSTAGRAM] Agregando filtro maxGRateFollowers: ${maxValue} (${typeof maxValue})`);
+        
         body.filters.push({ filterKey: 'gRateFollowers', op: '<', value: maxValue });
       }
     }
 
-    console.log(`🔍 [BUILD BODY] Body final:`, JSON.stringify(body, null, 2));
+    
     return body;
   }
 
@@ -2225,7 +2221,7 @@ export class CreatorDBService {
 
     // ✅ FILTRO POR DEFECTO: Si no hay filtros de seguidores, agregar +1M mínimo
     if (!minFollowers && !maxFollowers) {
-      console.log(`🔍 [BUILD BODY] Agregando filtro por defecto: subscribers > 1,000,000`);
+      
       apiFilters.push({ filterKey: 'subscribers', op: '>', value: 1000000 });
     }
     
@@ -2249,7 +2245,7 @@ export class CreatorDBService {
 
     // ✅ FILTRO DE GROWTH RATE SUBSCRIBERS - NUEVO (YouTube usa 'gSubscribers')
     if (filters.minGRateFollowers || filters.maxGRateFollowers) {
-      console.log(`🔍 [BUILD BODY] Procesando gSubscribers - min: ${filters.minGRateFollowers}, max: ${filters.maxGRateFollowers}`);
+
       
       const minValue = filters.minGRateFollowers ? parseFloat(filters.minGRateFollowers.toString()) : 0;
       const maxValue = filters.maxGRateFollowers ? parseFloat(filters.maxGRateFollowers.toString()) : 1;
@@ -2493,7 +2489,7 @@ export class CreatorDBService {
 
     // ⚠️ ADVERTENCIA: Facebook NO soporta filtro de país
     if (filters.country) {
-      console.warn('⚠️ [FACEBOOK SEARCH BODY] Facebook API NO soporta filtro de país. Filtro ignorado:', filters.country);
+     
     }
 
     // ✅ FILTROS DE FOLLOWERS - Estos SÍ funcionan en Facebook
@@ -2515,7 +2511,7 @@ export class CreatorDBService {
 
     // ⚠️ ADVERTENCIA: Facebook NO tiene engagement_rate, usar avgReactions como alternativa
     if (filters.minEngagement || filters.maxEngagement) {
-      console.warn('⚠️ [FACEBOOK SEARCH BODY] Facebook NO soporta engagement_rate. Use avgReactions/avgComments en su lugar.');
+      
       
       // Como alternativa, podríamos usar avgReactions pero es diferente
       // if (filters.minEngagement) {
@@ -2607,7 +2603,7 @@ export class CreatorDBService {
       }
       
       if (!primaryData) {
-        console.warn(`⚠️ [CONVERT] No se encontraron datos principales para ${id}`);
+        
         return null;
       }
       
@@ -2827,19 +2823,19 @@ export class CreatorDBService {
    * probablemente hay más resultados disponibles.
    */
   private static estimateCountForPrefetch(currentCount: number, size: number, page: number): number {
-    console.log(`🤔 [COUNT ESTIMATION] currentCount=${currentCount}, size=${size}, page=${page}`);
+   
     
     // Si obtuvimos exactamente lo que pedimos, probablemente hay más páginas
     if (currentCount === size) {
       // Estimar conservadoramente: al menos una página más
       const estimatedTotal = (page * size) + size;
-      console.log(`📈 [COUNT ESTIMATION] Página completa detectada → estimando ${estimatedTotal} total (permite prefetch)`);
+     
       return estimatedTotal;
     }
     
     // Si obtuvimos menos de lo que pedimos, probablemente es la última página
     const actualTotal = ((page - 1) * size) + currentCount;
-    console.log(`📉 [COUNT ESTIMATION] Página incompleta detectada → total real: ${actualTotal} (no más páginas)`);
+   
     return actualTotal;
   }
 
@@ -2848,14 +2844,14 @@ export class CreatorDBService {
    * Usado cuando searchSummary tiene resultados pero items está vacío
    */
   static async getInfluencersByIds(platformIds: { platform: string, ids: string[] }[]) {
-    console.log('🔧 [FALLBACK] Obteniendo influencers por IDs específicos:', platformIds);
+    
     
     const allResults: any[] = [];
     
     for (const { platform, ids } of platformIds) {
       if (!ids || ids.length === 0) continue;
       
-      console.log(`📋 [FALLBACK] Procesando ${ids.length} IDs de ${platform}`);
+     
       
       // Procesar hasta 5 IDs por plataforma para no sobrecargar
       const limitedIds = ids.slice(0, 5);
@@ -2875,7 +2871,7 @@ export class CreatorDBService {
     // Deduplicar y devolver
     const deduplicatedResults = this.deduplicateInfluencers(allResults);
     
-    console.log(`✅ [FALLBACK] Obtenidos ${deduplicatedResults.length} influencers válidos`);
+   
     
     return {
       items: deduplicatedResults,

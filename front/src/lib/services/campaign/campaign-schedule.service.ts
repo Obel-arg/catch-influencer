@@ -122,7 +122,7 @@ class CampaignScheduleService {
 
   // Obtener todos los contenidos programados de una campaña
   async getSchedulesByCampaign(campaignId: string, filters?: CampaignScheduleFilters): Promise<CampaignSchedule[]> {
-    console.log('🔍 CampaignScheduleService: getSchedulesByCampaign called with campaignId:', campaignId, 'filters:', filters);
+    
     
     const params = new URLSearchParams();
     if (filters) {
@@ -133,27 +133,24 @@ class CampaignScheduleService {
       });
     }
     const url = `/campaign-schedules/campaign/${campaignId}?${params.toString()}`;
-    console.log('🔍 CampaignScheduleService: Making request to:', url);
+    
     const response = await httpApiClient.get<any>(url, {
       headers: new AxiosHeaders({
         "Content-Type": "application/json",
         ...withContext('CampaignScheduleService', `getSchedulesByCampaign(${campaignId})`).headers
       })
     });
-    console.log('🔍 CampaignScheduleService: Response received:', response);
-    console.log('🔍 CampaignScheduleService: Response data:', response.data);
-    console.log('🔍 CampaignScheduleService: Response data type:', typeof response.data);
-    console.log('🔍 CampaignScheduleService: Response data is array:', Array.isArray(response.data));
+    
     
     // Handle the API response format: {success: true, data: Array, count: number}
     if (response.data && typeof response.data === 'object' && 'data' in response.data && Array.isArray(response.data.data)) {
-      console.log('🔍 CampaignScheduleService: Returning response.data.data:', response.data.data);
+
       return response.data.data;
     } else if (Array.isArray(response.data)) {
-      console.log('🔍 CampaignScheduleService: Returning response.data directly:', response.data);
+      
       return response.data;
     } else {
-      console.log('🔍 CampaignScheduleService: No valid data found, returning empty array');
+      
       return [];
     }
   }
@@ -180,8 +177,6 @@ class CampaignScheduleService {
 
   // Actualizar un contenido programado
   async updateSchedule(id: string, data: CampaignScheduleUpdateDTO): Promise<CampaignSchedule> {
-    console.log('🔍 CampaignScheduleService: updateSchedule called with id:', id);
-    console.log('🔍 CampaignScheduleService: updateSchedule data:', data);
     
     const response = await httpApiClient.put<CampaignSchedule>(`/campaign-schedules/${id}`, data, {
       headers: new AxiosHeaders({
@@ -190,16 +185,13 @@ class CampaignScheduleService {
       })
     });
     
-    console.log('🔍 CampaignScheduleService: updateSchedule response:', response);
-    console.log('🔍 CampaignScheduleService: updateSchedule response.data:', response.data);
     
     // Check if response.data has the expected structure
     if (response.data && typeof response.data === 'object' && 'data' in response.data) {
-      console.log('🔍 CampaignScheduleService: Returning response.data.data:', response.data.data);
+      
       return response.data.data as CampaignSchedule;
     } else {
-      console.log('🔍 CampaignScheduleService: Returning response.data directly:', response.data);
-      return response.data as CampaignSchedule;
+      
     }
   }
 

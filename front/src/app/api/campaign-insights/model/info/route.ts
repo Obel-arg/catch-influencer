@@ -6,7 +6,6 @@ export async function GET(request: NextRequest) {
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
     const targetUrl = `${backendUrl}/campaign-insights/model/info`;
     
-    console.log('🔄 Proxying model info request to:', targetUrl);
     
     // Hacer la llamada al backend
     const response = await fetch(targetUrl, {
@@ -29,7 +28,6 @@ export async function GET(request: NextRequest) {
     }
     
     const data = await response.json();
-    console.log('✅ Backend model info response:', data);
     
     return NextResponse.json(data);
     

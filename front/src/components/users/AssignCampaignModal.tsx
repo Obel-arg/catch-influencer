@@ -20,7 +20,6 @@ import { useToast } from "@/hooks/common/useToast";
 // Función para invalidar el cache de campañas globalmente
 const invalidateCampaignCache = () => {
   if (typeof window !== "undefined") {
-    console.log("🔄 [AssignCampaignModal] Invalidando cache de campañas...");
 
     // Invalidar cache del hook useCampaigns
     if ((window as any).invalidateCampaignCache) {
@@ -35,7 +34,7 @@ const invalidateCampaignCache = () => {
     // Disparar evento para notificar a otros componentes
     window.dispatchEvent(new CustomEvent("campaign-cache-invalidated"));
 
-    console.log("✅ [AssignCampaignModal] Cache invalidado y evento disparado");
+    
   }
 };
 
@@ -102,13 +101,13 @@ export function AssignCampaignModal({
     try {
       // Obtener las campañas asignadas al usuario específico
       const assignedData = await campaignService.getUserCampaigns(user.user_id);
-      console.log("Campañas asignadas cargadas:", assignedData);
+      
 
       // Extraer las campañas de la estructura anidada
       const campaigns = assignedData
         .map((item: any) => item.campaigns)
         .filter(Boolean);
-      console.log("Campañas extraídas:", campaigns);
+      
 
       setAssignedCampaigns(campaigns);
     } catch (error: any) {
@@ -166,10 +165,10 @@ export function AssignCampaignModal({
       const newlyAssignedCampaigns = allCampaigns.filter((campaign) =>
         selectedCampaigns.includes(campaign.id)
       );
-      console.log("Campañas recién asignadas:", newlyAssignedCampaigns);
+      
       setAssignedCampaigns((prev) => {
         const updated = [...prev, ...newlyAssignedCampaigns];
-        console.log("Estado actualizado de campañas asignadas:", updated);
+        
         return updated;
       });
 
@@ -197,12 +196,7 @@ export function AssignCampaignModal({
   const handleUnassignSingleCampaign = async (campaignId: string) => {
     if (!user) return;
 
-    console.log(
-      "Desasignando campaña:",
-      campaignId,
-      "para usuario:",
-      user.user_id
-    );
+    
     setUnassigningCampaignId(campaignId);
     setAssignError(null);
 
@@ -211,7 +205,7 @@ export function AssignCampaignModal({
       const result = await campaignService.removeUsersFromCampaign(campaignId, [
         user.user_id,
       ]);
-      console.log("Resultado de desasignación:", result);
+      
 
       toast({
         title: "Éxito",
@@ -227,7 +221,7 @@ export function AssignCampaignModal({
       // Actualizar inmediatamente el estado local
       setAssignedCampaigns((prev) => {
         const updated = prev.filter((campaign) => campaign.id !== campaignId);
-        console.log("Estado actualizado después de desasignar:", updated);
+            
         return updated;
       });
       onSuccess?.();

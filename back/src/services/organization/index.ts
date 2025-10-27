@@ -157,7 +157,6 @@ export class OrganizationService {
       .maybeSingle();
 
     if (selectError) {
-      console.error('Error verificando miembro existente:', selectError);
       throw selectError;
     }
     
@@ -176,14 +175,13 @@ export class OrganizationService {
       }]);
 
     if (error) {
-      console.error('Error insertando miembro:', error);
+
       throw error;
     }
     
   }
 
   async removeMemberFromOrganization(organizationId: string, userId: string): Promise<void> {
-    console.log('🗑️ Iniciando eliminación en cascada para usuario:', userId);
     
     try {
       // 1. Eliminar de organization_members
@@ -194,10 +192,9 @@ export class OrganizationService {
         .eq('user_id', userId);
 
       if (orgError) {
-        console.error('❌ Error eliminando de organization_members:', orgError);
+        
         throw orgError;
       }
-      console.log('✅ Usuario eliminado de organization_members');
 
       // 2. Eliminar de campaign_members (si existe)
       const { error: campaignError } = await supabase
@@ -206,9 +203,8 @@ export class OrganizationService {
         .eq('user_id', userId);
 
       if (campaignError) {
-        console.warn('⚠️ Error eliminando de campaign_members:', campaignError);
+        
       } else {
-        console.log('✅ Usuario eliminado de campaign_members');
       }
 
       // 3. Eliminar de team_members (si existe)
@@ -218,9 +214,8 @@ export class OrganizationService {
         .eq('user_id', userId);
 
       if (teamError) {
-        console.warn('⚠️ Error eliminando de team_members:', teamError);
+        
       } else {
-        console.log('✅ Usuario eliminado de team_members');
       }
 
       // 4. Eliminar de user_profiles
@@ -230,27 +225,24 @@ export class OrganizationService {
         .eq('user_id', userId);
 
       if (profileError) {
-        console.error('❌ Error eliminando de user_profiles:', profileError);
+        
         throw profileError;
       }
-      console.log('✅ Usuario eliminado de user_profiles');
 
-      // 5. Eliminar de auth.users (usando Supabase Admin)
+      // 5. Eliminar de auth.users (usando Supabase Admin)  
       try {
         const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
         if (authError) {
-          console.error('❌ Error eliminando de auth.users:', authError);
+          
           throw authError;
         }
-        console.log('✅ Usuario eliminado de auth.users');
       } catch (authError) {
-        console.error('❌ Error crítico eliminando de auth.users:', authError);
+        
         throw authError;
       }
 
-      console.log('🎉 Eliminación en cascada completada exitosamente');
     } catch (error) {
-      console.error('❌ Error en eliminación en cascada:', error);
+      
       throw error;
     }
   }
@@ -322,7 +314,6 @@ export class OrganizationService {
     const { data: existingUser, error: userError } = await supabaseAdmin.auth.admin.listUsers();
     
     if (userError) {
-      console.error('Error al buscar usuarios existentes:', userError);
       throw new Error('Error al verificar usuarios existentes');
     }
 
@@ -330,22 +321,15 @@ export class OrganizationService {
     
     if (userExists) {
       // El usuario ya existe, agregarlo directamente a la organización
-      console.log('Usuario existente encontrado, agregando a organización:', {
-        userId: userExists.id,
-        organizationId,
-        role
-      });
       
       try {
         await this.addMemberToOrganization(organizationId, userExists.id, role);
-        console.log('Usuario agregado exitosamente a la organización');
         return {
           message: 'Usuario agregado exitosamente a la organización',
           user_id: userExists.id,
           action: 'added_to_organization'
         };
       } catch (addError: any) {
-        console.error('Error agregando usuario existente a organización:', addError);
         if (addError.message.includes('duplicate key') || addError.message.includes('already exists')) {
           throw new Error('Este usuario ya pertenece a la organización');
         }
@@ -377,7 +361,6 @@ export class OrganizationService {
     });
 
     if (error) {
-      console.error('Error detallado de Supabase:', error);
       
       // Manejar errores específicos de Supabase Auth
       if (error.message.includes('already registered') || 

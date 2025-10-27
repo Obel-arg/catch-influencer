@@ -64,14 +64,12 @@ export const AssignCampaignModal: React.FC<AssignCampaignModalProps> = ({
         bc.campaign_id || bc.campaigns?.id || bc.id
       ).filter(Boolean);
       
-      console.log('Campañas asignadas:', assignedCampaignIds);
-      console.log('Todas las campañas:', allCampaigns.length);
-      
+
       const availableCampaigns = allCampaigns.filter(campaign => 
         !assignedCampaignIds.includes(campaign.id)
       );
       
-      console.log('Campañas disponibles:', availableCampaigns.length);
+        
       
       setAvailableCampaigns(availableCampaigns);
     } catch (error) {

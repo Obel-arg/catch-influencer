@@ -54,19 +54,15 @@ export const InfluencerTikTokGallery = ({ influencer }: InfluencerTikTokGalleryP
   useEffect(() => {
     const extractTikTokVideos = () => {
       try {
-        console.log('Influencer data:', influencer); // Debug completo
-        console.log('Platform info:', influencer?.platform_info); // Debug platform_info
-        console.log('TikTok platform info:', influencer?.platform_info?.tiktok); // Debug TikTok específico
         
         const tiktokData = getTiktokData(influencer.platform_info);
-        console.log('TikTok data:', tiktokData); // Debug
+        
         if (tiktokData?.recentVideos) {
-          console.log('TikTok videos found:', tiktokData.recentVideos.length); // Debug
-          console.log('First video:', tiktokData.recentVideos[0]); // Debug primer video
+          
           // Limitar a 4 videos
           setVideos(tiktokData.recentVideos.slice(0, 4));
         } else {
-          console.log('No TikTok videos found in:', influencer.platform_info?.tiktok); // Debug
+          
         }
       } catch (error) {
         console.error('Error extrayendo videos de TikTok:', error);
@@ -101,20 +97,20 @@ export const InfluencerTikTokGallery = ({ influencer }: InfluencerTikTokGalleryP
             // 🎯 VERIFICAR CACHE PRIMERO
             const cachedUrl = tiktokImageCache.get(tiktokUrl);
             if (cachedUrl) {
-              console.log('✅ [TIKTOK] Thumbnail encontrado en cache:', video.videoId);
+              
               thumbnails[video.videoId] = cachedUrl;
               continue;
             }
             
             // Si no está en cache, procesar la imagen
-            console.log('🔄 [TIKTOK] Procesando thumbnail nuevo:', video.videoId);
+            
             const processedThumbnail = await getTikTokThumbnailValidated(tiktokUrl);
             
             // 🎯 GUARDAR EN CACHE
             tiktokImageCache.set(tiktokUrl, processedThumbnail);
             thumbnails[video.videoId] = processedThumbnail;
             
-            console.log('✅ [TIKTOK] Thumbnail procesado y cacheado:', processedThumbnail);
+              
           } else {
             // Si no hay tiktokId, usar la thumbnail original
             thumbnails[video.videoId] = video.cover;

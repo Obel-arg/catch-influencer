@@ -12,7 +12,6 @@ const calculateEngagementLikeCampaignMetricsCards = (backendEngagement: number |
   
   // ⚠️ FORZAR: Siempre usar el valor calculado, ignorar el backend
   const result = calculated;
-  console.log("🔍 [UnifiedEngagement] Backend:", backend, "Calculated:", calculated, "Final:", result, "(backend ignored)");
   return result;
 };
 
@@ -183,7 +182,6 @@ const CampaignRealMetricsComponent = ({
       // 🎯 USAR función unificada - SIEMPRE ignorar backend, usar solo calculado
       const finalEngagement = calculateEngagementLikeCampaignMetricsCards(avgEngagementRate, contextCalculatedEngagement);
       
-      console.log("🔍 [CampaignRealMetrics] Campaign:", campaignId, "Final engagement:", finalEngagement, "Source: pre-calculated with context calc");
       return {
         influencers: influencersCount!,
         posts: postsCount!,

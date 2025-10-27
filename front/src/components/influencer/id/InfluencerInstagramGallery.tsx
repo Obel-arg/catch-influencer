@@ -73,7 +73,6 @@ export const InfluencerInstagramGallery = ({ influencer }: InfluencerInstagramGa
       
       for (const post of posts) {
         try {
-          console.log('🔄 [INSTAGRAM] Procesando imagen para post:', post.shortcode);
           
           // Construir la URL completa del post de Instagram
           const instagramPostUrl = `https://www.instagram.com/p/${post.shortcode}/`;
@@ -81,20 +80,17 @@ export const InfluencerInstagramGallery = ({ influencer }: InfluencerInstagramGa
           // 🎯 VERIFICAR CACHE PRIMERO
           const cachedUrl = imageCache.get(instagramPostUrl);
           if (cachedUrl) {
-            console.log('✅ [INSTAGRAM] Imagen encontrada en cache:', post.shortcode);
             processed[post.shortcode] = cachedUrl;
             continue;
           }
-          
-          // Si no está en cache, procesar la imagen
-          console.log('🔄 [INSTAGRAM] Procesando imagen nueva:', post.shortcode);
+
           const processedUrl = await getInstagramImageAggressive(instagramPostUrl);
           
           // 🎯 GUARDAR EN CACHE
           imageCache.set(instagramPostUrl, processedUrl);
           processed[post.shortcode] = processedUrl;
           
-          console.log('✅ [INSTAGRAM] Imagen procesada y cacheada:', processedUrl);
+          
         } catch (error) {
           console.error('❌ [INSTAGRAM] Error procesando imagen para post:', post.shortcode, error);
           
@@ -105,7 +101,7 @@ export const InfluencerInstagramGallery = ({ influencer }: InfluencerInstagramGa
             // 🎯 VERIFICAR CACHE PARA FALLBACK
             const cachedFallback = imageCache.get(`${instagramPostUrl}_fallback`);
             if (cachedFallback) {
-              console.log('✅ [INSTAGRAM] Fallback encontrado en cache:', post.shortcode);
+              
               processed[post.shortcode] = cachedFallback;
               continue;
             }
@@ -115,7 +111,7 @@ export const InfluencerInstagramGallery = ({ influencer }: InfluencerInstagramGa
             // 🎯 GUARDAR FALLBACK EN CACHE
             imageCache.set(`${instagramPostUrl}_fallback`, fallbackUrl);
             processed[post.shortcode] = fallbackUrl;
-            console.log('✅ [INSTAGRAM] Usando fallback y cacheado:', fallbackUrl);
+            
           } catch (fallbackError) {
             console.error('❌ [INSTAGRAM] Fallback también falló:', fallbackError);
             // Marcar como imagen fallida para mostrar fallback visual
@@ -251,7 +247,7 @@ export const InfluencerInstagramGallery = ({ influencer }: InfluencerInstagramGa
                     
                     // Marcar como imagen fallida para mostrar fallback visual
                     setFailedImages(prev => new Set(prev).add(post.shortcode));
-                    console.log('🔄 [INSTAGRAM] Mostrando fallback visual para post:', post.shortcode);
+                      
                   }}
                 />
               ) : (

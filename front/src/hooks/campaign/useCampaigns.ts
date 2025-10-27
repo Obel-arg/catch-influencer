@@ -368,39 +368,33 @@ export const useCampaigns = () => {
   }, []);
 
   const removeInfluencerFromCampaign = useCallback(async (campaignId: string, influencerId: string): Promise<boolean> => {
-    console.log('🗑️ [useCampaigns] Iniciando removeInfluencerFromCampaign:', {
-      campaignId,
-      influencerId,
-      timestamp: new Date().toISOString()
-    });
+    
 
     try {
       setLoading(true);
       setError(null);
       
-      console.log('📞 [useCampaigns] Llamando a campaignService.removeInfluencerFromCampaign...');
       await campaignService.removeInfluencerFromCampaign(campaignId, influencerId);
-      console.log('✅ [useCampaigns] campaignService.removeInfluencerFromCampaign completado exitosamente');
+      
       
       // 🚀 OPTIMIZACIÓN: Invalidación selectiva después de remover influencer
-      console.log('🗂️ [useCampaigns] Invalidando cache de campaña...');
       campaignCache.invalidate(campaignId);
-      console.log('✅ [useCampaigns] Cache invalidado');
+      
         
-      console.log('✅ [useCampaigns] removeInfluencerFromCampaign completado exitosamente');
+      
       return true;
     } catch (err) {
-      console.error('❌ [useCampaigns] Error en removeInfluencerFromCampaign:', err);
+      
       // Usar la función utility para manejar errores
       if (handleHookError(err, setError, 'Error al remover influencer')) {
-        console.log('⚠️ [useCampaigns] Error manejado por handleHookError, retornando false');
+        
         return false; // Error ignorado (cancelación)
       }
-      console.log('❌ [useCampaigns] Error no manejado, retornando false');
+      
       return false;
     } finally {
       setLoading(false);
-      console.log('🏁 [useCampaigns] removeInfluencerFromCampaign finalizado');
+      
     }
   }, []);
 
@@ -480,7 +474,7 @@ export const useCampaigns = () => {
   // 🚀 LISTENER PARA INVALIDACIÓN DE CACHE
   useEffect(() => {
     const handleCacheInvalidation = () => {
-      console.log("🔄 [useCampaigns] Cache invalidado, recargando campañas...");
+
       getCampaignsWithMetrics(undefined, true); // Force refresh
     };
 

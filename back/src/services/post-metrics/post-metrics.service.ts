@@ -561,16 +561,7 @@ export class PostMetricsService {
     else if (platformLower === 'twitter' && creatorDbData.data?.basicTwitterPost) {
       const twitterData = creatorDbData.data.basicTwitterPost;
       
-      // Debug: Log de los datos de Twitter para verificar la estructura
-      console.log('🔍 [BACKEND DEBUG] Twitter data structure:', {
-        postId,
-        twitterData: twitterData,
-        allKeys: Object.keys(twitterData || {}),
-        views: twitterData.views,
-        likes: twitterData.likes,
-        replies: twitterData.replies,
-        retweets: twitterData.retweets
-      });
+      
       
       baseMetrics.likes_count = twitterData.likes || twitterData.favorite_count || 0;
       baseMetrics.comments_count = twitterData.replies || twitterData.reply_count || 0;
@@ -580,12 +571,7 @@ export class PostMetricsService {
     }
     else {
       console.warn(`⚠️ [CONVERT] No platform-specific data found in response for platform: ${platformLower}`);
-      console.log('🔍 [CONVERT] Available data structure:', {
-        platform: platformLower,
-        hasData: !!creatorDbData.data,
-        dataKeys: creatorDbData.data ? Object.keys(creatorDbData.data) : [],
-        fullResponse: creatorDbData
-      });
+      
     }
 
     return baseMetrics;
@@ -667,7 +653,6 @@ export class PostMetricsService {
       }
 
       if (postId) {
-        console.log(`✅ [URL-EXTRACT] Successfully extracted ID: ${postId} from ${platformLower} URL`);
       } else {
         console.warn(`⚠️ [URL-EXTRACT] Failed to extract ID from URL for platform: ${platformLower} - URL: ${postUrl}`);
       }

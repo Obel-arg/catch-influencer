@@ -29,7 +29,7 @@ export function useCampaignSchedule(campaignId?: string) {
       // Obtener métricas básicas del schedule service (sin raw_response)
       const result = await campaignScheduleService.getPostMetricsForSchedules(scheduleIds);
       
-      console.log('🔍 [BASIC METRICS] Loaded basic metrics for schedules:', Object.keys(result.data || {}));
+      
       
       // Retornar métricas básicas - el alcance aproximado se calculará en el ListView
       return result.data || {};
@@ -42,36 +42,35 @@ export function useCampaignSchedule(campaignId?: string) {
   // Cargar contenidos programados de una campaña
   const loadSchedules = useCallback(async (filters?: CampaignScheduleFilters) => {
     if (!campaignId) {
-      console.log('🔍 loadSchedules: No campaignId provided');
+      
       return;
     }
-    console.log('🔍 loadSchedules: Starting to load schedules for campaignId:', campaignId);
+    
     setLoading(true);
     setError(null);
     try {
       const response = await campaignScheduleService.getSchedulesByCampaign(campaignId, filters);
-      console.log('🔍 loadSchedules: Raw response from service:', response);
-      console.log('🔍 loadSchedules: Response type:', typeof response);
-      console.log('🔍 loadSchedules: Is array:', Array.isArray(response));
+      
+      
+      
       
       // Handle the API response format: {success: true, data: Array, count: number}
       let data;
       if (response && typeof response === 'object' && 'data' in response) {
         // API returns {success, data, count} format
         data = response.data;
-        console.log('🔍 loadSchedules: Extracted data from response.data:', data);
+        
       } else {
         // Direct array response (fallback)
         data = response;
-        console.log('🔍 loadSchedules: Using response directly as data:', data);
+        
       }
       
-      console.log('🔍 loadSchedules: Final data type:', typeof data);
-      console.log('🔍 loadSchedules: Final data is array:', Array.isArray(data));
-      console.log('🔍 loadSchedules: Final data length:', Array.isArray(data) ? data.length : 'N/A');
+      
+      
       
       const processedData = Array.isArray(data) ? data : [];
-      console.log('🔍 loadSchedules: Processed data to set:', processedData);
+      
       
       // Cargar métricas de posts para todos los schedules completados
       if (processedData.length > 0) {
@@ -81,13 +80,13 @@ export function useCampaignSchedule(campaignId?: string) {
           );
           
                      if (completedSchedules.length > 0) {
-             console.log('🔍 loadSchedules: Loading metrics for', completedSchedules.length, 'completed schedules');
+                      
              const scheduleIds = completedSchedules.map(s => s.id);
              const metricsData = await getPostMetricsForSchedules(scheduleIds);
-             console.log('🔍 loadSchedules: Metrics loaded:', metricsData);
+             
              
              // Log detallado de métricas cargadas
-             console.log('🔍 [METRICS LOADED] Detalle de métricas cargadas:', {
+              console.log('🔍 [METRICS LOADED] Detalle de métricas cargadas:', {
                totalSchedules: completedSchedules.length,
                metricsDataKeys: Object.keys(metricsData),
                metricsDataDetails: Object.entries(metricsData).map(([scheduleId, metrics]) => ({
@@ -129,7 +128,6 @@ export function useCampaignSchedule(campaignId?: string) {
                      metricsData[schedule.id].raw_response?.data?.basicInstagramPost) {
                    
                    const instagramData = metricsData[schedule.id].raw_response.data.basicInstagramPost;
-                   console.log('🔍 [INSTAGRAM METRICS] Raw data available:', instagramData);
                    
                    // Buscar alcance en múltiples campos posibles para Instagram (misma lógica que en posts)
                    const reachValue = instagramData.videoViews ?? 
@@ -140,7 +138,7 @@ export function useCampaignSchedule(campaignId?: string) {
                    
                    if (reachValue && reachValue !== 0) {
                      enrichedMetrics.views_count = reachValue;
-                     console.log('🔍 [INSTAGRAM METRICS] Found reach in raw_response:', reachValue);
+                     
                    }
                  }
                  
@@ -198,7 +196,6 @@ export function useCampaignSchedule(campaignId?: string) {
       setSchedules([]);
     } finally {
       setLoading(false);
-      console.log('🔍 loadSchedules: Loading finished');
     }
   }, [campaignId, getPostMetricsForSchedules]);
 
@@ -337,16 +334,9 @@ export function useCampaignSchedule(campaignId?: string) {
             Math.min(100, Math.round((metrics.views_count / parseInt(objective.target.replace(/[^\d]/g, ''))) * 100)) : 
             objective.percentComplete
         }
-        
-        // Console.log para scheduled completed
+
         if (objective.status === 'completed') {
-          console.log('🎯 [COMPLETED SCHEDULE] Alcance/Reach/Vistas:', {
-            title: objective.title,
-            target: objective.target,
-            realValue: metrics.views_count,
-            current: updatedObjective.current,
-            percentComplete: updatedObjective.percentComplete
-          })
+
         }
         
         return updatedObjective
@@ -362,15 +352,8 @@ export function useCampaignSchedule(campaignId?: string) {
             objective.percentComplete
         }
         
-        // Console.log para scheduled completed
         if (objective.status === 'completed') {
-          console.log('🎯 [COMPLETED SCHEDULE] Engagement:', {
-            title: objective.title,
-            target: objective.target,
-            realValue: metrics.engagement_rate,
-            current: updatedObjective.current,
-            percentComplete: updatedObjective.percentComplete
-          })
+
         }
         
         return updatedObjective
@@ -385,15 +368,8 @@ export function useCampaignSchedule(campaignId?: string) {
             objective.percentComplete
         }
         
-        // Console.log para scheduled completed
         if (objective.status === 'completed') {
-          console.log('🎯 [COMPLETED SCHEDULE] Likes:', {
-            title: objective.title,
-            target: objective.target,
-            realValue: metrics.likes_count,
-            current: updatedObjective.current,
-            percentComplete: updatedObjective.percentComplete
-          })
+
         }
         
         return updatedObjective
@@ -408,15 +384,9 @@ export function useCampaignSchedule(campaignId?: string) {
             objective.percentComplete
         }
         
-        // Console.log para scheduled completed
+        
         if (objective.status === 'completed') {
-          console.log('🎯 [COMPLETED SCHEDULE] Comentarios:', {
-            title: objective.title,
-            target: objective.target,
-            realValue: metrics.comments_count,
-            current: updatedObjective.current,
-            percentComplete: updatedObjective.percentComplete
-          })
+     
         }
         
         return updatedObjective
@@ -431,15 +401,8 @@ export function useCampaignSchedule(campaignId?: string) {
             objective.percentComplete
         }
         
-        // Console.log para scheduled completed
         if (objective.status === 'completed') {
-          console.log('🎯 [COMPLETED SCHEDULE] Compartidos:', {
-            title: objective.title,
-            target: objective.target,
-            realValue: metrics.shares_count,
-            current: updatedObjective.current,
-            percentComplete: updatedObjective.percentComplete
-          })
+        
         }
         
         return updatedObjective
@@ -451,25 +414,14 @@ export function useCampaignSchedule(campaignId?: string) {
 
   // Cargar datos iniciales
   useEffect(() => {
-    console.log('🔍 useEffect: campaignId changed to:', campaignId);
     if (campaignId) {
-      console.log('🔍 useEffect: Calling loadSchedules and loadStats');
       loadSchedules();
       loadStats();
     } else {
-      console.log('🔍 useEffect: No campaignId, skipping load');
     }
   }, [campaignId, loadSchedules, loadStats]);
 
-  // Log current state
-  console.log('🔍 useCampaignSchedule state:', {
-    campaignId,
-    schedulesCount: Array.isArray(schedules) ? schedules.length : 'Not array',
-    schedules,
-    loading,
-    error,
-    stats
-  });
+
 
   return {
     schedules,

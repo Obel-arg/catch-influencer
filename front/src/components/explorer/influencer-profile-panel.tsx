@@ -101,11 +101,6 @@ const InfluencerProfileSkeleton = () => (
 
 // 🎯 COMPONENTE PARA MOSTRAR CUANDO NO HAY DATOS EXTENDIDOS
 const NoExtendedDataMessage = ({ influencer }: { influencer: any }) => {
-  // 🚀 DEBUG: Mostrar estructura completa de datos
-  console.log("🔍 [DEBUG] Influencer completo:", influencer);
-  console.log("🔍 [DEBUG] platformInfo:", influencer.platformInfo);
-  console.log("🔍 [DEBUG] socialPlatforms:", influencer.socialPlatforms);
-  console.log("🔍 [DEBUG] _metadata:", influencer._metadata);
   
   return (
     <div className="text-center py-12 space-y-4">
@@ -172,7 +167,7 @@ const NoExtendedDataMessage = ({ influencer }: { influencer: any }) => {
                     <div key={index} className="ml-2 bg-gray-50 p-2 rounded">
                       <div><strong>Plataforma:</strong> {social.platform}</div>
                       <div><strong>Username:</strong> {social.username}</div>
-                      <div><strong>Seguidores:</strong> {social.followers?.toLocaleString() || 'N/A'}</div>
+                      <div><strong>Seguidores:</strong> {social.followers?.toLocaleString('es-ES') || 'N/A'}</div>
                       <div><strong>Engagement:</strong> {social.engagement ? `${social.engagement}%` : 'N/A'}</div>
                     </div>
                   ))}
@@ -201,7 +196,7 @@ const NoExtendedDataMessage = ({ influencer }: { influencer: any }) => {
               <div className="text-xs font-semibold text-gray-600 mb-2">📝 OTROS CAMPOS</div>
               <div className="text-xs space-y-1">
                 <div><strong>Content Niches:</strong> {influencer.contentNiches?.length > 0 ? influencer.contentNiches.join(', ') : 'N/A'}</div>
-                <div><strong>Followers Count:</strong> {influencer.followersCount?.toLocaleString() || 'N/A'}</div>
+                <div><strong>Followers Count:</strong> {influencer.followersCount?.toLocaleString('es-ES') || 'N/A'}</div>
                 <div><strong>Average Engagement Rate:</strong> {influencer.averageEngagementRate ? `${(influencer.averageEngagementRate * 100).toFixed(2)}%` : 'N/A'}</div>
                 <div><strong>Main Social Platform:</strong> {influencer.mainSocialPlatform || 'N/A'}</div>
               </div>
@@ -487,7 +482,6 @@ export function InfluencerProfilePanel({
     const platforms = [];
     
     if (!influencer) {
-      console.log("🔍 No influencer found");
       return platforms;
     }
     
@@ -557,12 +551,7 @@ export function InfluencerProfilePanel({
         }
       });
     }
-    
-    // 🎯 DEBUG: Agregar console.log para ver qué plataformas se detectan
-    console.log("🔍 Detected platforms:", platforms);
-    console.log("🔍 PlatformInfo:", influencer.platformInfo ? Object.keys(influencer.platformInfo) : 'none');
-    console.log("🔍 SocialPlatforms:", influencer.socialPlatforms?.map((s: any) => s.platform) || 'none');
-    
+      
     return platforms;
   }, [influencer]);
 
@@ -636,19 +625,16 @@ export function InfluencerProfilePanel({
       const pdata = getPlatformData(platform);
       
       if (!pdata) {
-        console.log(`❌ No data for ${platform}`);
         return;
       }
       
       // Usar la misma lógica para ambas estructuras
       const followers = pdata.followers || pdata.subscribers || 0;
       
-      console.log(`📊 ${platform}: ${followers} followers`);
       
       totalFollowers += followers;
     });
     
-    console.log(`🎯 Total followers calculated: ${totalFollowers}`);
     return { totalFollowers };
   }, [influencer, availablePlatforms]);
 
@@ -758,7 +744,7 @@ export function InfluencerProfilePanel({
                   <div>
                     <h1 className="text-xl font-bold">{influencer.name}</h1>
                     <div className="text-sm text-gray-500">
-                      {influencer.location || influencer.country} • {formatNumber(aggregatedData.totalFollowers)} Seguidores Totales
+                      {influencer.location || influencer.country} • <NumberDisplay value={aggregatedData.totalFollowers} format="short" /> Seguidores Totales
                     </div>
                     {/* 🎯 MOSTRAR FUENTE DE DATOS */}
                     <div className="text-xs text-blue-600 font-medium mt-1">
@@ -806,7 +792,9 @@ export function InfluencerProfilePanel({
                           <span className="text-sm font-medium text-gray-800 truncate">{platform}</span>
                         </div>
                         <div className="text-left">
-                          <div className="text-2xl font-semibold text-gray-900 leading-none">{formatNumber(followers)}</div>
+                          <div className="text-2xl font-semibold text-gray-900 leading-none">
+                            <NumberDisplay value={followers} format="short" />
+                          </div>
                           <div className="text-[12px] text-gray-500 mt-1">{followersLabel}</div>
                           <div className="text-xs font-medium text-gray-600 mt-2">ER {engagement.toFixed(2)}%</div>
                         </div>

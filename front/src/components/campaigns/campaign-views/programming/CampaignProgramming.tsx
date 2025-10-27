@@ -226,7 +226,7 @@ export function CampaignProgramming({ campaign }: CampaignProgrammingProps) {
   // Content handlers
   const handleCardClick = (item: ContentItem) => {
     // Handle card click - could open a detail modal or navigate to edit
-    console.log("Card clicked:", item)
+    
   }
 
   const handleSaveContent = async (updatedItem: ContentItem) => {

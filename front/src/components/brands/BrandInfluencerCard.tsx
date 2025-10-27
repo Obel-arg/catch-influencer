@@ -35,8 +35,7 @@ export const BrandInfluencerCard = ({
     return null;
   }
   
-  // 🔍 DEBUG - Verificar avatar en componente
-  console.log('🎨 CARD - Influencer:', influencer?.name, 'Avatar:', influencer?.avatar);
+
   
   const performanceScore = calculatePerformanceScore(influencer);
   const isActive = influencer?.status === 'active';

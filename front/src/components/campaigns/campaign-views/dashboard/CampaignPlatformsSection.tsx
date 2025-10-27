@@ -174,13 +174,7 @@ const calculateInfluencerMetrics = (influencerId: string, posts: any[]) => {
         );
         postReach = approximateReach;
         
-        console.log('🔍 [DASHBOARD APPROXIMATE REACH] Calculated for Instagram:', {
-          influencerId,
-          postId: post.id,
-          likes: metrics.likes_count,
-          comments: metrics.comments_count,
-          approximateReach: approximateReach
-        });
+        
       } else if (metrics.raw_response?.data?.basicInstagramPost?.videoPlayCount) {
         // Fallback: usar videoPlayCount si está disponible
         postReach = metrics.raw_response.data.basicInstagramPost.videoPlayCount;
@@ -190,13 +184,7 @@ const calculateInfluencerMetrics = (influencerId: string, posts: any[]) => {
       
       // Engagement rate promedio
       if (metrics.engagement_rate) {
-        console.log('🔍 [DASHBOARD ENGAGEMENT] Post engagement rate:', {
-          influencerId,
-          postId: post.id,
-          engagement_rate: metrics.engagement_rate,
-          engagement_percent: metrics.engagement_rate * 100,
-          type: typeof metrics.engagement_rate
-        });
+        
         
         // Los engagement rates están en formato decimal (0.1006 = 10.06%)
         // Necesito convertirlos a porcentaje antes de sumar
@@ -209,16 +197,7 @@ const calculateInfluencerMetrics = (influencerId: string, posts: any[]) => {
 
   const averageEngagement = postsWithMetrics > 0 ? totalEngagement / postsWithMetrics : 0;
   
-  console.log('🔍 [DASHBOARD ENGAGEMENT CALC] Final calculation:', {
-    influencerId,
-    totalEngagement,
-    postsWithMetrics,
-    averageEngagement,
-    posts: influencerPosts.map(p => ({
-      id: p.id,
-      engagement_rate: p.post_metrics?.engagement_rate
-    }))
-  });
+  
 
   return {
     totalLikes,
@@ -500,19 +479,8 @@ export const CampaignPlatformsSection = ({
 
   // Calcular top influencers
   const topInfluencers = useMemo(() => {
-    console.log('🔍 [DASHBOARD] Posts data for engagement calculation:', posts.map(p => ({
-      id: p.id,
-      influencer_id: p.influencer_id,
-      platform: p.platform,
-      engagement_rate: p.post_metrics?.engagement_rate,
-      raw_response: !!p.post_metrics?.raw_response
-    })));
+
     
-    console.log('🔍 [DASHBOARD] Ordenamiento configurado:', {
-      topInfluencersFilter,
-      orderCriteria,
-      hasMultipleCriteria: orderCriteria.length > 0
-    });
     
     return getTopInfluencers(influencers, postsCountByInfluencer, posts, topInfluencersFilter);
   }, [influencers, postsCountByInfluencer, posts, topInfluencersFilter, orderCriteria]);

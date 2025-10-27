@@ -28,13 +28,11 @@ export class HypeAuditorService {
     features?: string
   ): Promise<HypeAuditorReportResponse> {
     try {
-      console.log('🔍 [HYPEAUDITOR FRONTEND] Obteniendo reporte para:', username);
 
       const response = await httpApiClient.get(
         `/hypeauditor/report?username=${encodeURIComponent(username)}${features ? `&features=${encodeURIComponent(features)}` : ''}`
       );
 
-      console.log('✅ [HYPEAUDITOR FRONTEND] Respuesta recibida:', response.data);
       
       return {
         success: true,

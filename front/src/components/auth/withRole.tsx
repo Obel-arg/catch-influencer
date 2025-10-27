@@ -93,7 +93,7 @@ export function withRole<P extends object>(
 
         // Si no hay caché de rol, no autorizar
         if (!isRoleCached()) {
-          console.log('❌ No hay caché de rol, redirigiendo...');
+          
           setIsAuthorized(false);
           setIsLoading(false);
           return;
@@ -103,7 +103,7 @@ export function withRole<P extends object>(
         
         // Si no hay rol, no autorizar
         if (!userRole) {
-          console.log('❌ No se pudo obtener el rol del usuario, redirigiendo...');
+          
           setIsAuthorized(false);
           setIsLoading(false);
           return;
@@ -111,7 +111,7 @@ export function withRole<P extends object>(
 
         // Si no se especificaron roles permitidos, permitir acceso
         if (allowedRoles.length === 0) {
-          console.log('✅ Sin restricciones de rol, permitiendo acceso');
+          
           setIsAuthorized(true);
           setIsLoading(false);
           return;
@@ -120,11 +120,7 @@ export function withRole<P extends object>(
         // Verificar si el rol del usuario está en la lista de roles permitidos
         const hasPermission = allowedRoles.includes(userRole);
         
-        console.log(`🔍 Verificando autorización:`, {
-          userRole,
-          allowedRoles,
-          hasPermission
-        });
+          
 
         setIsAuthorized(hasPermission);
         setIsLoading(false);

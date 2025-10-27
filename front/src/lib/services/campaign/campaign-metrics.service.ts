@@ -128,13 +128,6 @@ export class CampaignMetricsService {
         const totalEngagement = likes + comments;
         engagement = views > 0 ? (totalEngagement / views) : 0; // Ya en decimal, no multiplicar por 100
         
-        console.log('📸 [METRICS-SERVICE] Story metrics processed:', {
-          platform,
-          likes,
-          comments,
-          reach: views,
-          engagement
-        });
       } else if (post.post_metrics?.raw_response?.data) {
         const rawData = post.post_metrics.raw_response.data;
         

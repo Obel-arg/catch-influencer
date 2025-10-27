@@ -47,25 +47,17 @@ const StoryAnalysis: React.FC<StoryAnalysisProps> = ({ postUrl, platform, postId
     setIsLoading(true);
     try {
       const endpoint = `/influencer-posts/${postId}/metrics`;
-      console.log('📸 [STORY-ANALYSIS] Cargando métricas existentes para:', { postId, endpoint });
       
       const response = await httpApiClient.get(endpoint);
-      console.log('📸 [STORY-ANALYSIS] Response completa:', response);
-      console.log('📸 [STORY-ANALYSIS] Response.data:', response.data);
-      
       const responseData = response.data as { success: boolean; data?: { post: any; metrics: any } };
-      console.log('📸 [STORY-ANALYSIS] Data object:', responseData.data);
-      console.log('📸 [STORY-ANALYSIS] Metrics object:', responseData.data?.metrics);
       
       const metrics = responseData.data?.metrics;
       if (metrics) {
-        console.log('📸 [STORY-ANALYSIS] Metrics encontrados:', metrics);
         
         // Buscar métricas manuales en raw_response.manual_metrics primero
         let existingMetrics = null;
         if (metrics.raw_response?.manual_metrics) {
           existingMetrics = metrics.raw_response.manual_metrics;
-          console.log('✅ [STORY-ANALYSIS] Métricas en raw_response.manual_metrics:', existingMetrics);
         } 
         // Si no están en manual_metrics, usar las columnas principales
         else if (metrics.likes_count !== undefined || metrics.comments_count !== undefined || metrics.views_count !== undefined) {
@@ -74,28 +66,16 @@ const StoryAnalysis: React.FC<StoryAnalysisProps> = ({ postUrl, platform, postId
             comments: metrics.comments_count || 0,
             alcance: metrics.views_count || 0
           };
-          console.log('✅ [STORY-ANALYSIS] Métricas en columnas principales:', existingMetrics);
         }
         
         if (existingMetrics) {
-          console.log('📸 [STORY-ANALYSIS] Métricas extraídas:', {
-            likes: existingMetrics.likes,
-            comments: existingMetrics.comments,
-            alcance: existingMetrics.alcance
-          });
           setMetrics({
             likes: existingMetrics.likes?.toString() || '',
             responses: existingMetrics.comments?.toString() || '',
             alcance: existingMetrics.alcance?.toString() || ''
           });
           setHasExistingMetrics(true);
-          console.log('✅ [STORY-ANALYSIS] Inputs pre-llenados con:', {
-            likes: existingMetrics.likes?.toString() || '',
-            responses: existingMetrics.comments?.toString() || '',
-            alcance: existingMetrics.alcance?.toString() || ''
-          });
         } else {
-          console.log('📸 [STORY-ANALYSIS] No se encontraron métricas válidas');
           setHasExistingMetrics(false);
         }
 
@@ -104,7 +84,6 @@ const StoryAnalysis: React.FC<StoryAnalysisProps> = ({ postUrl, platform, postId
         const uploadedAt = metrics?.raw_response?.screenshot_uploaded_at;
         
         if (screenshotUrl) {
-          console.log('📸 [STORY-ANALYSIS] Screenshot encontrado:', screenshotUrl);
           setScreenshot(prev => ({
             ...prev,
             url: screenshotUrl,
@@ -112,12 +91,9 @@ const StoryAnalysis: React.FC<StoryAnalysisProps> = ({ postUrl, platform, postId
           }));
         }
       } else {
-        console.log('📸 [STORY-ANALYSIS] No hay metrics en la respuesta');
         setHasExistingMetrics(false);
       }
     } catch (error) {
-      console.error('❌ [STORY-ANALYSIS] Error cargando métricas existentes:', error);
-      console.error('❌ [STORY-ANALYSIS] Error completo:', JSON.stringify(error, null, 2));
       setHasExistingMetrics(false);
     } finally {
       setIsLoading(false);
@@ -147,7 +123,6 @@ const StoryAnalysis: React.FC<StoryAnalysisProps> = ({ postUrl, platform, postId
     
     try {
       const action = hasExistingMetrics ? 'Actualizando' : 'Guardando';
-      console.log(`📸 [STORY-ANALYSIS] ${action} story metrics:`, { postId, metrics, hasExistingMetrics });
       
       const response = await httpApiClient.post(`/influencer-posts/${postId}/manual-metrics`, {
         likes: metrics.likes ? parseInt(metrics.likes) : 0,
@@ -159,7 +134,6 @@ const StoryAnalysis: React.FC<StoryAnalysisProps> = ({ postUrl, platform, postId
 
       if (responseData.success) {
         const successAction = hasExistingMetrics ? 'actualizadas' : 'guardadas';
-        console.log(`✅ [STORY-ANALYSIS] Métricas ${successAction} exitosamente`);
         setSaveSuccess(true);
         setHasExistingMetrics(true); // Ahora ya existen métricas
         
@@ -229,13 +203,7 @@ const StoryAnalysis: React.FC<StoryAnalysisProps> = ({ postUrl, platform, postId
       const formData = new FormData();
       formData.append('screenshot', screenshot.file);
 
-      console.log('📸 [STORY-ANALYSIS] Subiendo screenshot:', { 
-        postId, 
-        fileName: screenshot.file.name,
-        fileSize: screenshot.file.size,
-        fileType: screenshot.file.type,
-        formDataEntries: Array.from(formData.entries()).map(([key, value]) => [key, value instanceof File ? `File: ${value.name}` : value])
-      });
+
 
       // Usar fetch para evitar interferencia del httpApiClient con headers
       const token = localStorage.getItem('token');
@@ -258,7 +226,7 @@ const StoryAnalysis: React.FC<StoryAnalysisProps> = ({ postUrl, platform, postId
       }
 
       if (responseData.success && responseData.data) {
-        console.log('✅ [STORY-ANALYSIS] Screenshot subido exitosamente:', responseData.data.screenshotUrl);
+          
         
         setScreenshot(prev => ({
           ...prev,

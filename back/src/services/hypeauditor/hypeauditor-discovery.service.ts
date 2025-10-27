@@ -312,9 +312,9 @@ export class HypeAuditorDiscoveryService {
 	private static instance: HypeAuditorDiscoveryService;
 	private readonly baseUrl = 'https://hypeauditor.com';
 	
-	// Credenciales hardcodeadas (las mismas que funcionan en el script)
-	private readonly CLIENT_ID = '360838';
-	private readonly API_TOKEN = process.env.HYPEAUDITOR_API_TOKEN || '';
+	// Credenciales de HypeAuditor
+	private readonly CLIENT_ID = '2694138';
+	private readonly API_TOKEN = '$2y$04$27ZuGEARpPSjtwdBhJnf6OYuZKqTxKFkGi723IpY4MxJefff3Lgsa';
 
 	private constructor() {}
 
@@ -375,14 +375,13 @@ export class HypeAuditorDiscoveryService {
 	 */
 	async searchDiscovery(request: DiscoverySearchRequest): Promise<DiscoveryResponse> {
 		try {
-			console.log(`🔍 [HYPEAUDITOR DISCOVERY] Iniciando búsqueda para ${request.social_network}`);
-			
+
 			const response = await this.makeHttpsRequest('/api/method/auditor.search', request);
 			
-			console.log(`✅ [HYPEAUDITOR DISCOVERY] Búsqueda completada. Resultados: ${response.result.search_results.length}`);
+			
 			return response;
 		} catch (error: any) {
-			console.error(`❌ [HYPEAUDITOR DISCOVERY] Error en búsqueda:`, error.message);
+			
 			throw new Error(error.message);
 		}
 	}
@@ -392,14 +391,14 @@ export class HypeAuditorDiscoveryService {
 	 */
 	async searchDiscoverySandbox(request: DiscoverySearchRequest): Promise<DiscoveryResponse> {
 		try {
-			console.log(`🔍 [HYPEAUDITOR DISCOVERY SANDBOX] Iniciando búsqueda sandbox para ${request.social_network}`);
+
 			
 			const response = await this.makeHttpsRequest('/api/method/auditor.searchSandbox', request);
 			
-			console.log(`✅ [HYPEAUDITOR DISCOVERY SANDBOX] Búsqueda completada. Resultados: ${response.result.search_results.length}`);
+
 			return response;
 		} catch (error: any) {
-			console.error(`❌ [HYPEAUDITOR DISCOVERY SANDBOX] Error en búsqueda:`, error.message);
+			
 			throw new Error(error.message);
 		}
 	}
@@ -700,8 +699,6 @@ export class HypeAuditorDiscoveryService {
 			}
 		}
 
-		// Debug: Logging para verificar la transformación
-		console.log('🔧 [HYPEAUDITOR SERVICE] Filtros transformados:', JSON.stringify(hypeAuditorRequest, null, 2));
 		
 		return hypeAuditorRequest;
 	}
@@ -711,23 +708,12 @@ export class HypeAuditorDiscoveryService {
 	 */
 	transformHypeAuditorResponseToExplorer(response: DiscoveryResponse): ExplorerSearchResponse {
 		// Debug: Log para ver qué datos devuelve HypeAuditor
-		console.log('🔍 [HYPEAUDITOR SERVICE] Respuesta completa de HypeAuditor:');
-		console.log('- Total resultados:', response.result.search_results.length);
-		if (response.result.search_results.length > 0) {
-			console.log('- Ejemplo del primer resultado:', JSON.stringify(response.result.search_results[0], null, 2));
+		if (response.result.search_results.length > 0) {	
 		}
 
 		const items: ExplorerResult[] = response.result.search_results.map((item, index) => {
 			// Log individual para cada resultado - usando los campos reales
-			console.log(`🎯 [RESULTADO ${index + 1}] Datos disponibles:`, {
-				username: item.basic?.username,
-				title: item.basic?.title,
-				followers: item.metrics?.subscribers_count?.value,
-				realFollowers: item.metrics?.real_subscribers_count?.value,
-				engagement: item.metrics?.er?.value,
-				aqs: item.features?.aqs?.data?.mark,
-				topics: (item.features as any)?.blogger_topics?.data
-			});
+			
 
 			// Extraer seguidores y engagement de los datos reales
 			const followers = item.metrics?.subscribers_count?.value || 0;
@@ -789,20 +775,7 @@ export class HypeAuditorDiscoveryService {
 			};
 		});
 
-		console.log('✅ [HYPEAUDITOR SERVICE] Transformación completada:', {
-			totalTransformed: items.length,
-			itemsWithFollowers: items.filter(i => i.socialPlatforms.some(p => p.followers > 0)).length,
-			itemsWithEngagement: items.filter(i => i.socialPlatforms.some(p => p.engagement > 0)).length,
-			itemsWithNiches: items.filter(i => i.contentNiches && i.contentNiches.length > 0).length,
-			avgFollowers: Math.round(items.reduce((sum, i) => {
-				const maxFollowers = Math.max(...i.socialPlatforms.map(p => p.followers || 0));
-				return sum + maxFollowers;
-			}, 0) / items.length),
-			avgEngagement: (items.reduce((sum, i) => {
-				const avgEngagement = i.socialPlatforms.reduce((s, p) => s + (p.engagement || 0), 0) / i.socialPlatforms.length;
-				return sum + avgEngagement;
-			}, 0) / items.length * 100).toFixed(2) + '%'
-		});
+
 
 		return {
 			success: true,
@@ -889,14 +862,11 @@ export class HypeAuditorDiscoveryService {
 	 */
 	async getTaxonomy(): Promise<any> {
 		try {
-			console.log(`🔍 [HYPEAUDITOR DISCOVERY] Obteniendo taxonomía...`);
 			
 			const response = await this.makeHttpsRequest('/api/method/auditor.taxonomy');
 			
-			console.log(`✅ [HYPEAUDITOR DISCOVERY] Taxonomía obtenida`);
 			return response;
 		} catch (error: any) {
-			console.error(`❌ [HYPEAUDITOR DISCOVERY] Error obteniendo taxonomía:`, error.message);
 			throw new Error(error.message);
 		}
 	}
@@ -906,17 +876,14 @@ export class HypeAuditorDiscoveryService {
 	 */
 	async searchKeywordsPosts(socialNetwork: string, contentIds: string[]): Promise<any> {
 		try {
-			console.log(`🔍 [HYPEAUDITOR DISCOVERY] Buscando posts por keywords para ${socialNetwork}`);
 			
 			const contentIdsString = contentIds.join(',');
 			const endpoint = `/api/method/auditor.searchKeywordsPosts/?socialNetwork=${socialNetwork}&contentIds=${contentIdsString}`;
 			
 			const response = await this.makeHttpsRequest(endpoint);
 			
-			console.log(`✅ [HYPEAUDITOR DISCOVERY] Posts por keywords obtenidos`);
 			return response;
 		} catch (error: any) {
-			console.error(`❌ [HYPEAUDITOR DISCOVERY] Error buscando posts por keywords:`, error.message);
 			throw new Error(error.message);
 		}
 	}

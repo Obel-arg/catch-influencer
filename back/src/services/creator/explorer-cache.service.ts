@@ -40,7 +40,6 @@ interface SearchResult {
 
 // Utilidad para normalizar filtros - OPTIMIZADA
 function normalizeFilters(filters: Record<string, any>): Record<string, any> {
-  console.log(`🔍 [NORMALIZE] Filtros originales:`, JSON.stringify(filters, null, 2));
   const normalized: Record<string, any> = {};
   
  
@@ -90,15 +89,15 @@ function normalizeFilters(filters: Record<string, any>): Record<string, any> {
     } else if (['minGRateFollowers', 'maxGRateFollowers'].includes(newKey)) {
       // Convertir a float para campos de growth rate followers
       normalizedValue = typeof value === 'string' ? parseFloat(value) : Number(value);
-      console.log(`🔍 [NORMALIZE] ${newKey}: ${value} → ${normalizedValue} (${typeof normalizedValue})`);
+
       if (isNaN(normalizedValue) || normalizedValue < 0) {
-        console.log(`🔍 [NORMALIZE] ${newKey}: valor inválido, omitiendo`);
+        
         return;
       }
     }
     
     normalized[newKey] = normalizedValue;
-    console.log(`🔍 [NORMALIZE] Agregando ${newKey}: ${normalizedValue} (${typeof normalizedValue})`);
+
    
   });
   
@@ -112,7 +111,6 @@ function normalizeFilters(filters: Record<string, any>): Record<string, any> {
     sortedNormalized[key] = normalized[key];
   });
   
-  console.log(`🔍 [NORMALIZE] Filtros normalizados:`, JSON.stringify(sortedNormalized, null, 2));
   return sortedNormalized;
 }
 
@@ -130,7 +128,7 @@ export class ExplorerCacheService {
     const startTime = Date.now();
     const { page = 1, size = 5, ...searchFilters } = filters;
     
-    console.log(`🚀 [EXPLORER CACHE] Iniciando searchInfluencersWithCache - página ${page}`);
+    
     
     try {
       // 1. Normalizar filtros antes de buscar en cache
@@ -140,7 +138,7 @@ export class ExplorerCacheService {
       const checkCacheStartTime = Date.now();
       const cacheResult = await this.checkCache(normalizedFilters);
       const checkCacheEndTime = Date.now();
-      console.log(`⏱️ [EXPLORER CACHE] checkCache completado en ${checkCacheEndTime - checkCacheStartTime}ms`);
+     
       
       if (cacheResult && cacheResult.cache_id) {
         
@@ -148,20 +146,20 @@ export class ExplorerCacheService {
         const getCachedResultsStartTime = Date.now();
         const cachedResults = await this.getCachedResults(cacheResult.cache_id, page, size);
         const getCachedResultsEndTime = Date.now();
-        console.log(`⏱️ [EXPLORER CACHE] getCachedResults completado en ${getCachedResultsEndTime - getCachedResultsStartTime}ms`);
+       
         
         // Si no hay resultados para esta página específica, buscar en CreatorDB
         if (cachedResults.items.length === 0) {
           
           // 🎯 LOGGING DETALLADO PARA IDENTIFICAR CUELLO DE BOTELLA
           const creatorDBStartTime = Date.now();
-          console.log(`🔍 [CACHE MISS] Iniciando búsqueda en CreatorDB para página ${page}`);
+         
           
           // 🎯 NUEVA LÓGICA: CreatorDB ahora devuelve 25 IDs y procesa solo los 6 solicitados
           const newPageResult = await CreatorDBService.searchInfluencers({ ...normalizedFilters, page, size });
           
           const creatorDBEndTime = Date.now();
-          console.log(`⏱️ [CACHE MISS] CreatorDB tardó ${creatorDBEndTime - creatorDBStartTime}ms`);
+         
           const newPageCredits = this.estimateTokensUsed(newPageResult.items?.length || 0);
           
           // 🎯 NUEVA LÓGICA: Guardar resultados en caché solo si hay items
@@ -170,17 +168,17 @@ export class ExplorerCacheService {
             const totalIdsAvailable = (newPageResult as any).searchMeta?.totalIdsAvailable || newPageResult.count || 0;
             const hasNextPage = (page * size) < totalIdsAvailable;
             
-            console.log(`📊 [CACHE SAVE] Guardando página ${page}: ${newPageResult.items.length} items, total IDs: ${totalIdsAvailable}, hasNextPage: ${hasNextPage}`);
+           
             
             const saveCachedResultsStartTime = Date.now();
             await this.saveCachedResults(cacheResult.cache_id, page, size, newPageResult.items, hasNextPage, totalIdsAvailable);
             const saveCachedResultsEndTime = Date.now();
-            console.log(`⏱️ [EXPLORER CACHE] saveCachedResults completado en ${saveCachedResultsEndTime - saveCachedResultsStartTime}ms`);
+           
             
             // ✨ PREFETCH DINÁMICO: Precargar siguiente página si hay más IDs disponibles
             if (hasNextPage) {
               const nextPageNumber = page + 1;
-              console.log(`🚀 [PREFETCH] Precargando página ${nextPageNumber} (hay ${totalIdsAvailable - (page * size)} IDs más disponibles)`);
+             
               
               this.prefetchNextPage(normalizedFilters, cacheResult.cache_id, nextPageNumber, size).catch(error => {
                 console.error(`⚠️ [PREFETCH] Error precargando página ${nextPageNumber}:`, error.message);
@@ -215,29 +213,29 @@ export class ExplorerCacheService {
         // ✨ PREFETCH INTELIGENTE DESDE CACHE - Verificar si necesitamos precargar páginas siguientes
         if (cachedResults.hasNextPage) {
           const nextPageNumber = page + 1;
-          console.log(`📊 [PREFETCH CHECK CACHE] Verificando precarga desde cache: página actual=${page}, siguiente=${nextPageNumber}`);
+         
           
           // Verificar si la siguiente página ya está en caché
           const nextPageCachedStartTime = Date.now();
           const nextPageCached = await this.getCachedResults(cacheResult.cache_id, nextPageNumber, size);
           const nextPageCachedEndTime = Date.now();
-          console.log(`⏱️ [EXPLORER CACHE] getCachedResults (nextPage) completado en ${nextPageCachedEndTime - nextPageCachedStartTime}ms`);
+         
           
           if (nextPageCached.items.length === 0) {
             // Solo precargar si la siguiente página no está en caché
-            console.log(`🚀 [PREFETCH DESDE CACHE] Iniciando prefetch de página ${nextPageNumber} para búsqueda cacheada`);
+           
             this.prefetchNextPage(normalizedFilters, cacheResult.cache_id, nextPageNumber, size).catch(error => {
               console.error(`⚠️ [PREFETCH CACHE] Error precargando página ${nextPageNumber}:`, error.message);
             });
           } else {
-            console.log(`✅ [PREFETCH CACHE] Página ${nextPageNumber} ya está en caché, verificando página ${nextPageNumber + 1}`);
+            
             
             // Si la siguiente página ya existe, verificar si hay UNA MÁS ALLÁ que precargar
             const pageAfterNext = nextPageNumber + 1;
             const pageAfterNextCachedStartTime = Date.now();
             const pageAfterNextCached = await this.getCachedResults(cacheResult.cache_id, pageAfterNext, size);
             const pageAfterNextCachedEndTime = Date.now();
-            console.log(`⏱️ [EXPLORER CACHE] getCachedResults (pageAfterNext) completado en ${pageAfterNextCachedEndTime - pageAfterNextCachedStartTime}ms`);
+           
             
             if (pageAfterNextCached.items.length === 0) {
               // Verificar si realmente hay más páginas disponibles consultando la base
@@ -251,36 +249,36 @@ export class ExplorerCacheService {
                 const estimatedTotalPages = Math.ceil(searchInfo.total_results / size);
                 
                 if (pageAfterNext <= estimatedTotalPages) {
-                  console.log(`🚀 [PREFETCH ADELANTADO] Precargando página ${pageAfterNext} (páginas estimadas: ${estimatedTotalPages})`);
+                  
                   this.prefetchNextPage(normalizedFilters, cacheResult.cache_id, pageAfterNext, size).catch(error => {
                     console.error(`⚠️ [PREFETCH ADELANTADO] Error precargando página ${pageAfterNext}:`, error.message);
                   });
                 } else {
-                  console.log(`ℹ️ [PREFETCH] No hay más páginas por precargar. Página solicitada: ${pageAfterNext}, Total estimado: ${estimatedTotalPages}`);
+                  
                 }
               }
             } else {
-              console.log(`✅ [PREFETCH] Páginas ${nextPageNumber} y ${pageAfterNext} ya están en caché`);
+              
             }
           }
         } else {
-          console.log(`ℹ️ [PREFETCH CACHE] No hay páginas siguientes disponibles desde cache para página ${page}`);
+          
         }
         
         const totalTime = Date.now() - startTime;
-        console.log(`✅ [EXPLORER CACHE] searchInfluencersWithCache (CACHE HIT) completado en ${totalTime}ms`);
+        
         return cacheHitResult;
       }
       
       // 🎯 LOGGING DETALLADO PARA CACHE MISS COMPLETO
       const creatorDBStartTime = Date.now();
-      console.log(`🔍 [CACHE MISS COMPLETO] Iniciando búsqueda nueva en CreatorDB para página ${page}`);
+      
       
       // 🎯 NUEVA LÓGICA: CreatorDB ahora devuelve 25 IDs y procesa solo los 6 solicitados
       const creatorDBResult = await CreatorDBService.searchInfluencers({ ...normalizedFilters, page, size });
       
       const creatorDBEndTime = Date.now();
-      console.log(`⏱️ [CACHE MISS COMPLETO] CreatorDB tardó ${creatorDBEndTime - creatorDBStartTime}ms`);
+      
       const creditsUsed = this.estimateTokensUsed(creatorDBResult.items?.length || 0);
       
       // 3. Guardar en caché la nueva búsqueda - ASÍNCRONO
@@ -293,7 +291,7 @@ export class ExplorerCacheService {
         userEmail
       });
       const saveSearchToCacheEndTime = Date.now();
-      console.log(`⏱️ [EXPLORER CACHE] saveSearchToCache completado en ${saveSearchToCacheEndTime - saveSearchToCacheStartTime}ms`);
+      
       
       // 4. Guardar resultados paginados - ASÍNCRONO
       if (searchId && creatorDBResult.items?.length > 0) {
@@ -301,40 +299,39 @@ export class ExplorerCacheService {
         const totalIdsAvailable = (creatorDBResult as any).searchMeta?.totalIdsAvailable || creatorDBResult.count || 0;
         const hasNextPage = (page * size) < totalIdsAvailable;
         
-        console.log(`📊 [CACHE SAVE] Guardando página ${page}: ${creatorDBResult.items.length} items, total IDs: ${totalIdsAvailable}, hasNextPage: ${hasNextPage}`);
+        
         
         // 🚀 GUARDADO ASÍNCRONO: No esperar a que se guarde para mostrar resultados
         this.saveCachedResults(searchId, page, size, creatorDBResult.items, hasNextPage, totalIdsAvailable).then(() => {
           const saveCachedResultsEndTime = Date.now();
-          console.log(`⏱️ [EXPLORER CACHE] saveCachedResults (nueva búsqueda) completado en ${saveCachedResultsEndTime - saveSearchToCacheStartTime}ms`);
+          
         }).catch(error => {
           console.error(`❌ [EXPLORER CACHE] Error guardando cachedResults:`, error);
         });
         
-        console.log(`📊 [PREFETCH CHECK] Evaluando prefetch: página=${page}, size=${size}, total=${totalIdsAvailable}, hasNextPage=${hasNextPage}`);
+
         
         // ✨ NUEVO: PREFETCH DINÁMICO - Siempre precargar la siguiente página si hay más resultados
         if (hasNextPage) {
           const nextPageNumber = page + 1;
-          console.log(`🚀 [PREFETCH AUTOMÁTICO] Iniciando prefetch de página ${nextPageNumber} para búsqueda nueva`);
-          console.log(`🔍 [PREFETCH] Datos: searchId=${searchId}, nextPage=${nextPageNumber}, size=${size}, hasNextPage=${hasNextPage}`);
+          
           
           // Hacer prefetch en background sin bloquear la respuesta
           this.prefetchNextPage(normalizedFilters, searchId, nextPageNumber, size).catch(error => {
             console.error(`⚠️ [PREFETCH] Error precargando página ${nextPageNumber}:`, error.message);
           });
         } else {
-          console.log(`ℹ️ [PREFETCH] No hay páginas siguientes para precargar. Total resultados: ${totalIdsAvailable}, página actual: ${page}, tamaño: ${size}`);
+          
         }
       }
       
       const generateSearchHashStartTime = Date.now();
       const searchHash = await this.generateSearchHash(normalizedFilters);
       const generateSearchHashEndTime = Date.now();
-      console.log(`⏱️ [EXPLORER CACHE] generateSearchHash completado en ${generateSearchHashEndTime - generateSearchHashStartTime}ms`);
+      
       
       const totalTime = Date.now() - startTime;
-      console.log(`✅ [EXPLORER CACHE] searchInfluencersWithCache (CACHE MISS) completado en ${totalTime}ms`);
+      
       
       return {
         ...creatorDBResult,
@@ -377,12 +374,12 @@ export class ExplorerCacheService {
   ): Promise<void> {
     try {
       const prefetchStartTime = Date.now();
-      console.log(`🔄 [PREFETCH] Iniciando precarga de página ${nextPage} en background...`);
+      
       
       // Pequeño delay para no saturar la API
       await new Promise(resolve => setTimeout(resolve, 300));
       
-      console.log(`🔍 [PREFETCH] Buscando página ${nextPage} en CreatorDB...`);
+      
       
       // Buscar la siguiente página en CreatorDB
       const prefetchCreatorDBStartTime = Date.now();
@@ -392,12 +389,12 @@ export class ExplorerCacheService {
         size: pageSize 
       });
       const prefetchCreatorDBEndTime = Date.now();
-      console.log(`⏱️ [PREFETCH] CreatorDB.searchInfluencers completado en ${prefetchCreatorDBEndTime - prefetchCreatorDBStartTime}ms`);
+      
       
       if (nextPageResult.items?.length > 0) {
         const hasNextPage = (nextPage * pageSize) < (nextPageResult.count || 0);
         
-        console.log(`✅ [PREFETCH] Página ${nextPage} obtenida: ${nextPageResult.items.length} influencers`);
+        
         
                  // Guardar en caché
          const prefetchSaveStartTime = Date.now();
@@ -410,12 +407,11 @@ export class ExplorerCacheService {
            nextPageResult.count || 0
          );
          const prefetchSaveEndTime = Date.now();
-         console.log(`⏱️ [PREFETCH] saveCachedResults completado en ${prefetchSaveEndTime - prefetchSaveStartTime}ms`);
          
          const prefetchTotalTime = Date.now() - prefetchStartTime;
-         console.log(`✅ [PREFETCH] prefetchNextPage completado en ${prefetchTotalTime}ms`);
+         
       } else {
-        console.warn(`⚠️ [PREFETCH] Página ${nextPage} no devolvió resultados`);
+        
       }
       
     } catch (error) {

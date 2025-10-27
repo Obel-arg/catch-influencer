@@ -22,7 +22,6 @@ export const useAuth = () => {
       const data = await authService.login(credentials);
       setUser(data.user);
       
-      console.log('🔐 Login exitoso, guardando tokens...', { token: data.token?.substring(0, 20) + '...' });
       
       // Guardar tokens en localStorage (solo en el cliente)
       if (typeof window !== 'undefined') {
@@ -32,7 +31,6 @@ export const useAuth = () => {
         
         // Verificar que se guardaron correctamente
         const savedToken = localStorage.getItem('token');
-        console.log('✅ Token guardado en localStorage:', savedToken ? 'SÍ' : 'NO');
       }
       
       // Guardar datos básicos del usuario inmediatamente
@@ -56,7 +54,6 @@ export const useAuth = () => {
 
       // Obtener y guardar el rol del usuario en caché inmediatamente
       try {
-        console.log('🔄 Obteniendo rol del usuario para caché...');
         const userResponse = await authService.getCurrentUser();
         let organizations = [];
         
@@ -99,14 +96,12 @@ export const useAuth = () => {
             permissions: [], // Por ahora vacío
           });
           
-          console.log('✅ Rol guardado en caché:', finalRole);
         }
       } catch (roleError) {
         console.warn('⚠️ No se pudo obtener el rol del usuario para caché:', roleError);
         // No fallar el login si no se puede obtener el rol
       }
-      
-      console.log('🚀 Redirigiendo a /explorer...');
+          
       
       // Redirigir inmediatamente sin hacer llamada adicional a /me
       router.push('/explorer');
@@ -366,10 +361,7 @@ export const useAuth = () => {
         // Verificar que se guardaron correctamente
         const savedToken = localStorage.getItem('token');
         const savedRefreshToken = localStorage.getItem('refreshToken');
-        console.log('✅ Tokens guardados en localStorage:', {
-          token: !!savedToken,
-          refreshToken: !!savedRefreshToken
-        });
+        
       }
       
       // Guardar datos básicos del usuario
@@ -393,7 +385,7 @@ export const useAuth = () => {
 
       // Obtener y guardar el rol del usuario en caché para Google OAuth también
       try {
-        console.log('🔄 Obteniendo rol del usuario para caché (Google OAuth)...');
+        
         const userResponse = await authService.getCurrentUser();
         let organizations = [];
         
@@ -436,17 +428,14 @@ export const useAuth = () => {
             permissions: [], // Por ahora vacío
           });
           
-          console.log('✅ Rol guardado en caché (Google OAuth):', finalRole);
+          
         }
       } catch (roleError) {
         console.warn('⚠️ No se pudo obtener el rol del usuario para caché (Google OAuth):', roleError);
         // No fallar el login si no se puede obtener el rol
       }
       
-      console.log('✅ Google callback procesado exitosamente:', {
-        userId: data.user.id,
-        userEmail: data.user.email
-      });
+        
       
       // Retornar los datos para que el callback page pueda actualizar el contexto
       return data;

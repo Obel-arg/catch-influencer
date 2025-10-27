@@ -125,11 +125,10 @@ export const useBrands = () => {
   const deleteBrand = useCallback(async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
-      setError(null);
-      console.log('🗑️ [Hook] Iniciando eliminación de marca:', id);
+      setError(null); 
       
       await brandService.deleteBrand(id);
-      console.log('🗑️ [Hook] Eliminación exitosa en servicio');
+      
       
       // Actualizar el estado local eliminando la marca
       const filteredBrands = brandsRef.current.filter(b => b.id !== id);
@@ -137,17 +136,12 @@ export const useBrands = () => {
       brandsRef.current = filteredBrands;
       globalBrandsCache = filteredBrands;
       
-      console.log('🗑️ [Hook] Estado local actualizado');
+        
       return true;
-    } catch (err) {
-      console.error('🗑️ [Hook] Error capturado:', err);
-      console.error('🗑️ [Hook] Error type:', typeof err);
-      console.error('🗑️ [Hook] Error properties:', Object.keys(err || {}));
+    } catch (err) { 
       
       if (err && typeof err === 'object') {
-        console.error('🗑️ [Hook] Error.response:', (err as any).response);
-        console.error('🗑️ [Hook] Error.status:', (err as any).status);
-        console.error('🗑️ [Hook] Error.message:', (err as any).message);
+        
       }
       
       if (handleHookError(err, setError, 'Error al eliminar marca')) {

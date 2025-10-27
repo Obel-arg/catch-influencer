@@ -47,7 +47,6 @@ export const useProtectedRoute = (options: UseProtectedRouteOptions = {}) => {
 
       // Si no hay caché de rol, no autorizar
       if (!isRoleCached()) {
-        console.log('❌ No hay caché de rol, redirigiendo...');
         setIsAuthorized(false);
         setIsLoading(false);
         return;
@@ -56,8 +55,7 @@ export const useProtectedRoute = (options: UseProtectedRouteOptions = {}) => {
       const userRole = getCachedRole();
       
       // Si no hay rol, no autorizar
-      if (!userRole) {
-        console.log('❌ No se pudo obtener el rol del usuario, redirigiendo...');
+      if (!userRole) {  
         setIsAuthorized(false);
         setIsLoading(false);
         return;
@@ -65,7 +63,6 @@ export const useProtectedRoute = (options: UseProtectedRouteOptions = {}) => {
 
       // Si no se especificaron roles permitidos, permitir acceso
       if (allowedRoles.length === 0) {
-        console.log('✅ Sin restricciones de rol, permitiendo acceso');
         setIsAuthorized(true);
         setIsLoading(false);
         return;
@@ -74,11 +71,7 @@ export const useProtectedRoute = (options: UseProtectedRouteOptions = {}) => {
       // Verificar si el rol del usuario está en la lista de roles permitidos
       const hasPermission = allowedRoles.includes(userRole);
       
-      console.log(`🔍 Verificando autorización:`, {
-        userRole,
-        allowedRoles,
-        hasPermission
-      });
+
 
       setIsAuthorized(hasPermission);
       setIsLoading(false);
@@ -90,7 +83,7 @@ export const useProtectedRoute = (options: UseProtectedRouteOptions = {}) => {
   // Redirigir si no está autorizado
   useEffect(() => {
     if (isAuthorized === false && !isLoading) {
-      console.log(`🚫 Acceso denegado, redirigiendo a ${redirectTo}`);
+        
       router.push(redirectTo);
     }
   }, [isAuthorized, isLoading, router, redirectTo]);

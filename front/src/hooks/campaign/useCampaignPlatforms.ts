@@ -162,7 +162,7 @@ export const useCampaignPlatforms = (campaignId: string) => {
       } else {
         // No data available yet, but don't force loading state to avoid infinite loops
         // The loading state is already managed by the initial state and other conditions
-        console.log('⏳ [PLATFORMS] No data available yet, waiting for posts...');
+        
       }
     } catch (err) {
       console.error('Error fetching platform data:', err);
@@ -261,14 +261,9 @@ export const useCampaignPlatforms = (campaignId: string) => {
     // Calculate from posts when posts change and are loaded
   const calculateFromPosts = useCallback(() => {
     if (posts.length > 0 && !postsLoading) {
-      console.log('🔄 [PLATFORMS] Calculating metrics from posts:', posts.length);
+        
       const calculatedMetrics = campaignMetricsService.calculateMetricsFromPosts(posts);
-      console.log('🐦 [PLATFORMS] Twitter metrics:', {
-        posts: calculatedMetrics?.posts?.twitter || 0,
-        reach: calculatedMetrics?.reach?.twitter || 0,
-        engagement: calculatedMetrics?.engagement?.twitter || 0,
-        likes: calculatedMetrics?.likes?.twitter || 0
-      });
+      
       const hasCalculatedData = (calculatedMetrics?.reach?.total || 0) > 0 || 
                                (calculatedMetrics?.likes?.total || 0) > 0 || 
                                (calculatedMetrics?.comments?.total || 0) > 0 ||

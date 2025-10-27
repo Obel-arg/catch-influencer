@@ -23,12 +23,7 @@ export function useCampaignExport() {
         posts: posts.map(post => {
           // Debug: Log para posts de Instagram
           if (post.platform.toLowerCase() === 'instagram') {
-            console.log('🔍 [HOOK DEBUG] Instagram post being processed:', {
-              postId: post.id,
-              hasPostMetrics: !!post.post_metrics,
-              hasRawResponse: !!post.post_metrics?.raw_response,
-              platform: post.platform
-            });
+            
           }
           
           return {
@@ -55,7 +50,6 @@ export function useCampaignExport() {
       // Exportar a Excel
       await exportCampaignPostsToExcel(campaignData);
       
-      console.log('✅ Exportación completada exitosamente');
       
     } catch (error) {
       console.error('❌ Error en la exportación:', error);

@@ -35,15 +35,14 @@ export const useRoleCache = () => {
       const roleData: CachedRoleData = JSON.parse(cached);
       
       // Verificar si el caché ha expirado
-      if (new Date() > new Date(roleData.expiresAt)) {
-        console.log('🔄 Caché de rol expirado, limpiando...');
+      if (new Date() > new Date(roleData.expiresAt)) {  
         localStorage.removeItem(ROLE_CACHE_KEY);
         setCachedRole(null);
         setLoading(false);
         return;
       }
 
-      console.log('✅ Rol cargado desde caché:', roleData.role);
+      
       setCachedRole(roleData);
     } catch (error) {
       console.error('❌ Error cargando rol desde caché:', error);
@@ -68,7 +67,7 @@ export const useRoleCache = () => {
     try {
       localStorage.setItem(ROLE_CACHE_KEY, JSON.stringify(cacheData));
       setCachedRole(cacheData);
-      console.log('💾 Rol guardado en caché:', roleData.role);
+      
     } catch (error) {
       console.error('❌ Error guardando rol en caché:', error);
     }
@@ -79,7 +78,7 @@ export const useRoleCache = () => {
 
     localStorage.removeItem(ROLE_CACHE_KEY);
     setCachedRole(null);
-    console.log('🗑️ Caché de rol limpiado');
+      
   }, []);
 
   const refreshRoleCache = useCallback(() => {

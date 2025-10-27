@@ -46,7 +46,7 @@ export function CampaignsView() {
   // Escuchar cambios en el cache de campañas para recargar automáticamente
   useEffect(() => {
     const handleCacheInvalidation = () => {
-      console.log("🔄 [CampaignsView] Cache invalidado, recargando campañas...");
+        
       getCampaignsWithMetrics();
     };
 
@@ -69,17 +69,17 @@ export function CampaignsView() {
   }, []);
 
   const handleCampaignCreated = useCallback(() => {
-    console.log("🔄 [CampaignsView] Campaña creada, recargando página completa...");
+    
     
     // Pequeño delay para asegurar que la campaña se haya guardado completamente
     setTimeout(() => {
-      console.log("🔄 [CampaignsView] Haciendo refresh completo de la página...");
+      
       window.location.reload();
     }, 1000);
   }, []);
 
   const handleReloadCampaigns = useCallback(() => {
-    console.log("🔄 [CampaignsView] Recargando página completa (F5)...");
+
     window.location.reload();
   }, []);
 

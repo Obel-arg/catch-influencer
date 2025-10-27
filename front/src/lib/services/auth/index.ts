@@ -105,14 +105,11 @@ export class AuthService {
         baseURL = "http://localhost:5000/api/auth";
       }
       
-      console.log('🔐 Iniciando Google OAuth desde:', currentOrigin);
-      console.log('🔗 URL del backend:', baseURL);
       
       // Llamar directamente al endpoint de Google Auth del backend
       // Esto permitirá que el backend detecte el dominio de origen
       const authUrl = `${baseURL}/google`;
       
-      console.log('🚀 Redirigiendo a:', authUrl);
       
       // Redirigir al usuario a Google
       window.location.href = authUrl;

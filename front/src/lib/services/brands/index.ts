@@ -60,13 +60,9 @@ export const brandService = {
    * Eliminar una marca
    */
   async deleteBrand(id: string): Promise<void> {
-    console.log('🗑️ [Service] Iniciando DELETE request para marca:', id);
-    console.log('🗑️ [Service] URL:', `/brands/${id}`);
     
     try {
       const response = await api.delete(`/brands/${id}`);
-      console.log('🗑️ [Service] Response status:', response.status);
-      console.log('🗑️ [Service] Response data:', response.data);
     } catch (error) {
       console.error('🗑️ [Service] Error en DELETE request:', error);
       console.error('🗑️ [Service] Error response:', (error as any)?.response);

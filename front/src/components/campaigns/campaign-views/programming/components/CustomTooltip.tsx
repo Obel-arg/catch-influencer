@@ -239,11 +239,7 @@ export const CustomTooltip = ({ item, children, campaignId }: CustomTooltipProps
         metrics.comments_count || 0
       );
       
-      console.log('🔍 [TOOLTIP APPROXIMATE REACH] Calculated for Instagram:', {
-        likes: metrics.likes_count,
-        comments: metrics.comments_count,
-        approximateReach: approximateReach
-      });
+      
       
       return approximateReach;
     }

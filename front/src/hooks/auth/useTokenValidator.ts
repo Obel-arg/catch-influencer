@@ -76,15 +76,15 @@ const showSessionExpiredModal = () => {
 };
 
 const checkTokenAndShowModal = () => {
-  console.log('🔍 useTokenValidator - Verificando token...');
-  const token = localStorage.getItem('token');
-  console.log('🔑 Token encontrado:', !!token);
+  
+  const token = localStorage.getItem('token');  
+  
   
   if (token && isTokenExpired(token)) {
-    console.log('🚨 Token expirado, mostrando modal...');
+    
     showSessionExpiredModal();
   } else {
-    console.log('✅ Token válido o no encontrado');
+    
   }
 };
 

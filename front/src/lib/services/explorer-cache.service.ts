@@ -116,7 +116,6 @@ export class ExplorerCacheService {
       const cacheInfo = await this.checkCacheAvailability(filters);
       
       if (!cacheInfo) {
-        console.log('No hay cache disponible para precargar');
         return;
       }
 
@@ -141,7 +140,6 @@ export class ExplorerCacheService {
       });
 
       if (pagesToLoad.length > 0) {
-        console.log(`🚀 Precargando páginas en background: ${pagesToLoad.join(', ')}`);
       }
     } catch (error) {
       console.warn('Error en prefetch de páginas:', error);

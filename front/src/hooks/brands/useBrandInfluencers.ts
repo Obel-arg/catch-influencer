@@ -68,8 +68,7 @@ const processAvatarUrl = async (avatarUrl: string): Promise<string> => {
     // URLs que funcionan perfectamente → usar directamente  
     if (avatarUrl.startsWith('https://yt3.googleusercontent.com') || 
         avatarUrl.startsWith('https://youtube.com') ||
-        avatarUrl.startsWith('https://www.youtube.com')) {
-      console.log('🖼️ Avatar directo (sin procesar):', avatarUrl.substring(0, 60) + '...');
+        avatarUrl.startsWith('https://www.youtube.com')) {    
       return avatarUrl;
     }
     
@@ -82,7 +81,7 @@ const processAvatarUrl = async (avatarUrl: string): Promise<string> => {
         !avatarUrl.includes('tiktok.') &&
         !avatarUrl.includes('muscdn.') &&
         !avatarUrl.includes('twimg.com')) {
-      console.log('🖼️ Avatar directo (HTTP genérico):', avatarUrl.substring(0, 60) + '...');
+      
       return avatarUrl;
     }
     
@@ -93,7 +92,7 @@ const processAvatarUrl = async (avatarUrl: string): Promise<string> => {
         avatarUrl.includes('cdninstagram') ||
         avatarUrl.includes('fbcdn.net') ||
         avatarUrl.includes('instagram.')) {
-      console.log('🔧 Procesando Instagram (CORS):', avatarUrl.substring(0, 60) + '...');
+      
       try {
         const processed = await getInstagramThumbnailValidated(avatarUrl);
         if (processed && processed.length > 100 && !processed.includes('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJQAAACUCAMAAABC4vDmAAABHVBMVEUAAAD')) {
@@ -107,8 +106,7 @@ const processAvatarUrl = async (avatarUrl: string): Promise<string> => {
     }
     
     // TikTok - solo si tiene problemas
-    if (avatarUrl.includes('tiktok.') || avatarUrl.includes('muscdn.')) {
-      console.log('🔧 Procesando TikTok:', avatarUrl.substring(0, 60) + '...');
+    if (avatarUrl.includes('tiktok.') || avatarUrl.includes('muscdn.')) { 
       try {
         const processed = await getTikTokThumbnailValidated(avatarUrl);
         if (processed && processed.length > 100) {
@@ -122,7 +120,7 @@ const processAvatarUrl = async (avatarUrl: string): Promise<string> => {
     
     // Twitter - solo si tiene problemas  
     if (avatarUrl.includes('twimg.com')) {
-      console.log('🔧 Procesando Twitter:', avatarUrl.substring(0, 60) + '...');
+      
       try {
         const processed = await getTwitterThumbnailValidated(avatarUrl);
         if (processed && processed.length > 100) {
@@ -136,12 +134,12 @@ const processAvatarUrl = async (avatarUrl: string): Promise<string> => {
     
     // Base64 válido
     if (avatarUrl.startsWith('data:image') && avatarUrl.length > 100) {
-      console.log('🖼️ Base64 válido');
+      
       return avatarUrl;
     }
     
     // Default: usar original
-    console.log('🖼️ Avatar original (default):', avatarUrl.substring(0, 60) + '...');
+    
     return avatarUrl;
     
   } catch (error) {
@@ -184,14 +182,13 @@ export const useBrandInfluencers = () => {
                // Obtener información completa del influencer (incluyendo avatar)
                const fullInfluencerData = await influencerService.getInfluencerById(campaignInfluencer.influencer_id);
                
-                               console.log('🔍 DEBUG - Influencer:', fullInfluencerData?.name || 'Unknown');
-                console.log('🔍 DEBUG - Avatar from API:', fullInfluencerData?.avatar);
+                               
                 
                 // 🎯 Procesar el avatar según la plataforma
                 const originalAvatar = fullInfluencerData?.avatar || campaignInfluencer.influencers?.avatar || '';
                 const processedAvatar = await processAvatarUrl(originalAvatar);
                 
-                console.log('🖼️ Avatar final:', processedAvatar.substring(0, 100) + (processedAvatar.length > 100 ? '...' : ''));
+                          
                
                return {
                  ...campaignInfluencer,

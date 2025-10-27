@@ -26,6 +26,7 @@ import { ImageProxyService } from '@/lib/services/image-proxy.service';
 import { getInstagramThumbnailValidated, getInstagramDefaultThumbnail, getOptimizedAvatarUrl } from '@/utils/instagram';
 import { getTikTokThumbnailValidated, getTikTokDefaultThumbnail, getSafeAvatarUrlForModal } from '@/utils/tiktok';
 import { getYouTubeThumbnail } from '@/utils/youtube';
+import { NumberDisplay } from '@/components/ui/NumberDisplay';
 
 // 🎯 Imports para las mejoras
 import { SkeletonInfluencerTable } from "./SkeletonInfluencerRow";
@@ -264,11 +265,15 @@ export default function Explorer() {
 
  
 
-  // Función para formatear números
+  // Función para formatear números - Evita problemas de hidratación
   const formatNumber = (num: number) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
     if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-    return num.toString();
+    // Para números pequeños, usar formato consistente
+    return num.toLocaleString('es-ES', { 
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0 
+    });
   };
 
   // Debounce para el search query - 500ms delay
@@ -366,10 +371,7 @@ export default function Explorer() {
       if (result && result.success) {
         setInfluencers(result.items || []);
         setTotalCount(result.totalCount || 0);
-        console.log('✅ [EXPLORER] Búsqueda HypeAuditor completada:', {
-          totalResults: result.items?.length || 0,
-          searchTime: result.metadata?.searchTime
-        });
+
       } else {
         setInfluencers([]);
         setTotalCount(0);
@@ -411,8 +413,7 @@ export default function Explorer() {
       });
     } finally {
       const searchEndTime = Date.now();
-      console.log(`⏱️ [EXPLORER] Búsqueda completada en ${searchEndTime - searchStartTime}ms`);
-      
+
       setLoadingInfluencers(false);
       setIsSearchActive(false);
     }
@@ -420,7 +421,7 @@ export default function Explorer() {
 
   // 🎯 PAGINACIÓN INTERNA (solo HypeAuditor)
   const handlePageChange = async (newPage: number) => {
-    console.log("🔍 [PAGE CHANGE] Cambiando a página:", newPage);
+
     
     // 🚀 PAGINACIÓN INTERNA: Solo cambiar página local
     setPage(newPage);
@@ -595,16 +596,7 @@ export default function Explorer() {
     if (!influencer) return [];
 
     // 🚀 MINI DEBUG: Mostrar estructura de datos que llega a la tabla
-    console.log("🔍 [EXPLORER DEBUG] Influencer en tabla:", {
-      id: influencer.id || influencer.creatorId,
-      name: influencer.name,
-      platformInfo: influencer.platformInfo ? Object.keys(influencer.platformInfo) : 'none',
-      socialPlatforms: influencer.socialPlatforms?.length || 0,
-      followersCount: influencer.followersCount,
-      averageEngagementRate: influencer.averageEngagementRate,
-      mainSocialPlatform: influencer.mainSocialPlatform,
-      platform: influencer.platform
-    });
+
 
     const platformInfo = influencer.platformInfo || {};
     const platforms = [];
@@ -702,11 +694,11 @@ export default function Explorer() {
 
     // ✅ FALLBACK MEJORADO: Si no hay plataformas en platformInfo, usar socialPlatforms o detectar por avatar URL
     if (platforms.length === 0) {
-      console.log("🔍 [EXPLORER DEBUG] No se detectaron plataformas en platformInfo, usando fallback");
+     
      
       // Usar socialPlatforms si está disponible
       if (influencer.socialPlatforms && influencer.socialPlatforms.length > 0) {
-        console.log("🔍 [EXPLORER DEBUG] Usando socialPlatforms como fallback:", influencer.socialPlatforms);
+       
         influencer.socialPlatforms.forEach((platform: any) => {
           const platformName = typeof platform === 'string' ? platform : platform.platform;
           const followers = typeof platform === 'object' ? platform.followers : 0;
@@ -719,7 +711,7 @@ export default function Explorer() {
       }
       // Si no, detectar por avatar URL como último recurso
       else {
-        console.log("🔍 [EXPLORER DEBUG] Usando detección por avatar URL");
+       
         const avatar = influencer.avatar || '';
         if (avatar.includes('googleusercontent.com') || avatar.includes('ytimg.com') || avatar.includes('ggpht.com')) {
           platforms.push({ name: 'YouTube', followers: 0 });
@@ -731,7 +723,7 @@ export default function Explorer() {
         
         // Si aún no hay nada, usar la plataforma principal
         if (platforms.length === 0 && influencer.mainSocialPlatform) {
-          console.log("🔍 [EXPLORER DEBUG] Usando mainSocialPlatform:", influencer.mainSocialPlatform);
+         
           platforms.push({ 
             name: influencer.mainSocialPlatform.charAt(0).toUpperCase() + influencer.mainSocialPlatform.slice(1), 
             followers: influencer.followersCount || 0 
@@ -740,7 +732,7 @@ export default function Explorer() {
       }
     }
 
-    console.log("🔍 [EXPLORER DEBUG] Plataformas detectadas:", platforms);
+      
     return platforms;
   };
 
@@ -1669,8 +1661,8 @@ export default function Explorer() {
                       <div><strong>Platform:</strong> {platform}</div>
                       <div><strong>Search:</strong> {searchQuery || 'N/A'}</div>
                       <div><strong>Location:</strong> {location}</div>
-                      <div><strong>Min Followers:</strong> {minFollowers?.toLocaleString()}</div>
-                      <div><strong>Max Followers:</strong> {maxFollowers?.toLocaleString()}</div>
+                      <div><strong>Min Followers:</strong> <NumberDisplay value={minFollowers} format="short" /></div>
+                      <div><strong>Max Followers:</strong> <NumberDisplay value={maxFollowers} format="short" /></div>
                       <div><strong>Min Engagement:</strong> {minEngagement}%</div>
                       <div><strong>Max Engagement:</strong> {maxEngagement}%</div>
                     </div>
@@ -1682,7 +1674,7 @@ export default function Explorer() {
                         <div><strong>Name:</strong> {limitedInfluencers[0].name}</div>
                         <div><strong>PlatformInfo:</strong> {limitedInfluencers[0].platformInfo ? Object.keys(limitedInfluencers[0].platformInfo).join(', ') : 'none'}</div>
                         <div><strong>SocialPlatforms:</strong> {limitedInfluencers[0].socialPlatforms?.length || 0}</div>
-                        <div><strong>Followers:</strong> {limitedInfluencers[0].followersCount?.toLocaleString()}</div>
+                        <div><strong>Followers:</strong> <NumberDisplay value={limitedInfluencers[0].followersCount || 0} format="short" /></div>
                         <div><strong>Engagement:</strong> {limitedInfluencers[0].averageEngagementRate ? `${(limitedInfluencers[0].averageEngagementRate * 100).toFixed(2)}%` : 'N/A'}</div>
                       </div>
                     )}
@@ -1967,7 +1959,7 @@ export default function Explorer() {
                                   <span 
                                     key={platform.name} 
                                     className="inline-flex"
-                                    title={`${platform.name}: ${platform.followers.toLocaleString()} seguidores`}
+                                    title={`${platform.name}: ${platform.followers.toLocaleString('es-ES')} seguidores`}
                                   >
                                     {getPlatformIcon(platform.name)}
                                   </span>
@@ -1987,7 +1979,9 @@ export default function Explorer() {
                           <span className="font-medium">{influencer.location || '-'}</span>
                         </td>
                         <td className="py-4 px-6 text-center">
-                          <span className="font-medium">{formatNumber(influencer.followersCount)}</span>
+                          <span className="font-medium">
+                            <NumberDisplay value={influencer.followersCount} format="short" />
+                          </span>
                         </td>
                         <td className="py-4 px-6 text-center">
                           <span className="font-medium">

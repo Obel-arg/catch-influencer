@@ -52,18 +52,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("userData");
 
-    console.log("🔍 AuthContext - Inicializando estado:", {
-      hasToken: !!token,
-      hasUserData: !!userData
-    });
+
 
     if (token && userData) {
       try {
         const parsedUser = JSON.parse(userData);
-        console.log("✅ AuthContext - Usuario cargado desde localStorage:", {
-          userId: parsedUser.id,
-          userEmail: parsedUser.email
-        });
+        
         setUser(parsedUser);
         
         // Sincronizar caché de roles si el usuario tiene rol
@@ -75,7 +69,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               organizationName: parsedUser.organization_name || '',
               permissions: []
             });
-            console.log('✅ AuthContext - Caché de roles sincronizado al cargar:', parsedUser.role);
+            
           } catch (error) {
             console.warn('Error sincronizando caché de roles al cargar:', error);
           }
@@ -86,20 +80,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.removeItem("token");
       }
     } else {
-      console.log("ℹ️ AuthContext - No hay datos de usuario en localStorage");
     }
 
     setIsLoading(false);
     setIsInitialized(true);
-    console.log("✅ AuthContext - Inicialización completada");
+    
   }, []); // Dependencias vacías para ejecutar solo una vez
 
   const login = (token: string, userData: User) => {
-    console.log("🔄 AuthContext - Login llamado:", {
-      hasToken: !!token,
-      userId: userData.id,
-      userEmail: userData.email
-    });
+    
     
     localStorage.setItem("token", token);
     localStorage.setItem("userData", JSON.stringify(userData));
@@ -114,13 +103,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           organizationName: userData.organization_name || '',
           permissions: []
         });
-        console.log('✅ AuthContext - Caché de roles sincronizado:', userData.role);
+        
       } catch (error) {
         console.warn('Error sincronizando caché de roles:', error);
       }
     }
     
-    console.log("✅ AuthContext - Login completado");
+
   };
 
   const logout = () => {

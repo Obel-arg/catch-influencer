@@ -127,7 +127,6 @@ export const LazyInfluencerAvatar = ({
       if (isHypeAuditorUrl) {
         // Para HypeAuditor, usar URL directamente (ya está optimizada)
         processedUrl = originalSrc;
-        console.log('🎯 [LAZY AVATAR] Usando URL directa de HypeAuditor:', processedUrl);
       } else {
         // Para otros casos, usar función de optimización
         processedUrl = getOptimizedAvatarUrl(originalSrc, influencer.name || '');

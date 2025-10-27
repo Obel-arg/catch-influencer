@@ -477,7 +477,6 @@ export class CreatorService {
     platform?: string;
   }): Promise<any> {
     const smartSearchStartTime = Date.now();
-    console.log(`🚀 [FRONTEND SERVICE] Iniciando smartSearch - query: "${searchData.query}"`);
     
     const response = await httpApiClient.post(`${this.baseUrl}/explorer/smart-search`, searchData, {
       headers: new AxiosHeaders({
@@ -487,7 +486,6 @@ export class CreatorService {
     });
     
     const smartSearchEndTime = Date.now();
-    console.log(`⏱️ [FRONTEND SERVICE] smartSearch completado en ${smartSearchEndTime - smartSearchStartTime}ms`);
     
     return response.data;
   }

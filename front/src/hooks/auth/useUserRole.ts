@@ -111,7 +111,7 @@ export const useUserRole = () => {
     const initializeRole = async () => {
       // Si hay caché válido, usarlo
       if (isRoleCached() && cachedRole) {
-        console.log('✅ Usando rol desde caché:', cachedRole.role);
+          
         setUserRole({
           role: cachedRole.role,
           organizationId: cachedRole.organizationId,
@@ -122,7 +122,7 @@ export const useUserRole = () => {
       }
 
       // Si no hay caché o expiró, obtener del backend
-      console.log('🔄 Caché no disponible, obteniendo rol del backend...');
+      
       await fetchUserRole();
     };
 

@@ -138,24 +138,23 @@ export function ConnectPlatformsModal({
             } | null>(null);
 
   // Extraer plataforma e ID cuando se ingresa URL
-  const handleUrlChange = (url: string) => {
-    console.log('handleUrlChange called with:', url);
+  const handleUrlChange = (url: string) => {  
     setNewPlatformUrl(url);
     setSubmitError("");
     setSubmitSuccess("");
 
     if (!url) {
-      console.log('URL is empty, setting newPlatformData to null');
+      
       setNewPlatformData(null);
       return;
     }
 
     const result = extractPlatformAndId(url);
-    console.log('extractPlatformAndId result:', result);
+    
     
     if (result) {
       // URL coincide con patrones conocidos
-      console.log('Setting newPlatformData with known platform:', result);
+      
                       setNewPlatformData({
                   platform: result.platform,
                   platformId: result.platformUserId,
@@ -164,7 +163,7 @@ export function ConnectPlatformsModal({
                 });
     } else {
       // URL no coincide con patrones conocidos, pero permitir verificar manualmente
-      console.log('Setting newPlatformData with unknown platform');
+      
       setNewPlatformData({
         platform: 'unknown',
         platformId: url,
@@ -212,11 +211,7 @@ export function ConnectPlatformsModal({
           }
         }
         
-        console.log('Verificando plataforma:', {
-          originalUrl: newPlatformData.platformId,
-          detectedPlatform,
-          platformId
-        });
+
         
         const checkResult = await creatorService.checkIdExists(detectedPlatform, platformId);
         
@@ -689,7 +684,7 @@ export function ConnectPlatformsModal({
           </div>
 
           {/* Información de plataforma detectada */}
-          {console.log('Rendering newPlatformData:', newPlatformData)}
+          
           {newPlatformData && (
             <div className="mb-4 p-3 bg-gray-50 rounded-lg border">
               <div className="flex items-center justify-between">

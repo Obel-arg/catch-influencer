@@ -339,15 +339,7 @@ export const extractMetricsFromRawResponse = (post: InfluencerPost): {
     if (platform === 'instagram' && rawResponse.data?.basicInstagramPost) {
       const instagramData = rawResponse.data.basicInstagramPost;
       
-      // Debug: mostrar qué campos están disponibles
-      console.log('🔍 [POST-UTILS] Instagram data available:', {
-        videoViews: instagramData.videoViews,
-        views: instagramData.views,
-        reach: instagramData.reach,
-        impressions: instagramData.impressions,
-        viewsCount: instagramData.viewsCount,
-        rawData: instagramData
-      });
+      
       
       // Buscar alcance en múltiples campos posibles para Instagram
       let views = instagramData.videoViews || 
@@ -357,7 +349,7 @@ export const extractMetricsFromRawResponse = (post: InfluencerPost): {
                   instagramData.viewsCount || 
                   '...';
       
-      console.log('🔍 [POST-UTILS] Selected views value:', views);
+        
       
       return {
         likes: instagramData.likes || '...',

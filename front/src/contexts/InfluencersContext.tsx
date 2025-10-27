@@ -361,7 +361,6 @@ export const InfluencersProvider: React.FC<InfluencersProviderProps> = ({
         setLoading(true);
         setError(null);
 
-        console.log('🚀 [CONTEXT] Iniciando búsqueda con HypeAuditor Discovery:', filters);
 
         // Realizar búsqueda con HypeAuditor
         const hypeAuditorResponse = await hypeAuditorDiscoveryService.searchDiscovery(filters);
@@ -372,11 +371,7 @@ export const InfluencersProvider: React.FC<InfluencersProviderProps> = ({
         // Actualizar el estado con los resultados transformados
         setInfluencers(transformedData.items);
         
-        console.log('✅ [CONTEXT] Búsqueda HypeAuditor completada:', {
-          totalResults: transformedData.items.length,
-          searchTime: transformedData.metadata.searchTime,
-          provider: transformedData.provider
-        });
+        
 
         return transformedData;
       } catch (err) {

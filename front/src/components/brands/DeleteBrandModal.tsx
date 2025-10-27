@@ -25,10 +25,8 @@ export const DeleteBrandModal = ({ open, onOpenChange, brand, onDeleted }: Delet
 
     try {
       setIsDeleting(true);
-      console.log('🗑️ [DEBUG] Iniciando eliminación de marca:', brand.id);
       
       const success = await deleteBrand(brand.id);
-      console.log('🗑️ [DEBUG] Resultado de eliminación:', success);
       
       if (success) {
         toast.success('Marca eliminada exitosamente');

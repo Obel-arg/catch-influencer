@@ -439,8 +439,6 @@ export function UserTable({
         isOpen={!!userToAssignCampaigns}
         onClose={() => setUserToAssignCampaigns(null)}
         onSuccess={() => {
-          // Aquí podrías refrescar los datos si es necesario
-          console.log("Usuario asignado exitosamente");
         }}
       />
     </>

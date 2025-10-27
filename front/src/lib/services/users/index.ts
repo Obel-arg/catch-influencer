@@ -136,11 +136,10 @@ export class UsersService {
    * Elimina un usuario de la organización
    */
   async removeUser(organizationId: string, userId: string): Promise<void> {
-    console.log('🗑️ UsersService - Eliminando usuario:', { organizationId, userId });
     
     try {
       await httpClient.delete(`${this.baseUrl}/${organizationId}/members/${userId}`);
-      console.log('✅ UsersService - Usuario eliminado exitosamente');
+      
     } catch (error) {
       console.error('❌ UsersService - Error al eliminar usuario:', error);
       throw new Error('No se pudo eliminar el usuario de la organización');
