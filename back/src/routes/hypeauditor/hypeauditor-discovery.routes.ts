@@ -9,17 +9,10 @@ router.use(authenticateToken);
 
 /**
  * @route POST /api/hypeauditor/discovery/search
- * @desc Búsqueda de discovery usando filtros del Explorer
+ * @desc Búsqueda de discovery (producción)
  * @access Private
  */
 router.post('/search', HypeAuditorDiscoveryController.searchDiscovery);
-
-/**
- * @route POST /api/hypeauditor/discovery/search-sandbox
- * @desc Búsqueda de discovery en modo sandbox (para testing)
- * @access Private
- */
-router.post('/search-sandbox', HypeAuditorDiscoveryController.searchDiscoverySandbox);
 
 /**
  * @route POST /api/hypeauditor/discovery/search-direct

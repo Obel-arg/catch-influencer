@@ -105,7 +105,7 @@ function makeHypeAuditorDiscoveryGetRequest(endpoint) {
 async function runDiscoveryTests() {
  
 
-  // Test 1: Búsqueda básica en sandbox
+  // Test 1: Búsqueda básica en production
  
   const searchData = {
     social_network: 'instagram',
@@ -121,7 +121,7 @@ async function runDiscoveryTests() {
   };
 
  
-  makeHypeAuditorDiscoveryRequest('/api/method/auditor.searchSandbox/', searchData);
+  makeHypeAuditorDiscoveryRequest('/api/method/auditor.searchproduction/', searchData);
 
   // Esperar un poco antes del siguiente test
   setTimeout(() => {
@@ -143,7 +143,7 @@ async function runDiscoveryTests() {
     };
 
    
-    makeHypeAuditorDiscoveryRequest('/api/method/auditor.searchSandbox/', searchData2);
+    makeHypeAuditorDiscoveryRequest('/api/method/auditor.searchproduction/', searchData2);
   }, 3000);
 
   // Esperar un poco antes del siguiente test
@@ -164,7 +164,7 @@ async function runDiscoveryTests() {
     };
 
    
-    makeHypeAuditorDiscoveryRequest('/api/method/auditor.searchSandbox/', searchData3);
+    makeHypeAuditorDiscoveryRequest('/api/method/auditor.searchproduction/', searchData3);
   }, 6000);
 
   // Esperar un poco antes del siguiente test

@@ -15,7 +15,6 @@
 ### Scripts de Prueba
 - ✅ `back/src/scripts/test-hypeauditor-report.js`
 - ✅ `back/src/scripts/test-hypeauditor-discovery-direct.js`
-- ✅ `back/src/scripts/hypeauditor-sandbox-search.js`
 - ✅ `back/src/scripts/hypeauditor-full-payload-test.js`
 - ✅ `back/src/scripts/get-hypeauditor-taxonomy.js`
 

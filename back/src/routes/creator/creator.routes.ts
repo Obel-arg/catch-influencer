@@ -119,4 +119,24 @@ router.get('/explorer/cache/popular-searches', CreatorDBController.getPopularSea
 // Endpoint para consultar el estado del cache de una búsqueda
 router.get('/explorer/cache/check', CreatorDBController.getCacheCheck);
 
+// ==============================================
+// EXPLORER ROUTES
+// ==============================================
+
+// Búsqueda avanzada para el explorador
+router.get('/explorer/search', CreatorDBController.searchInfluencers);
+
+// 🔍 BÚSQUEDA INTELIGENTE
+router.post('/explorer/smart-search', CreatorDBController.smartSearch);
+
+// 🔧 FALLBACK: Obtener influencers específicos por IDs
+router.post('/explorer/fallback-search', CreatorDBController.getInfluencersByIds);
+
+// Analytics del sistema de caché
+router.get('/explorer/cache/analytics', CreatorDBController.getCacheAnalytics);
+router.get('/explorer/cache/popular-searches', CreatorDBController.getPopularSearches);
+
+// Endpoint para consultar el estado del cache de una búsqueda
+router.get('/explorer/cache/check', CreatorDBController.getCacheCheck);
+
 export default router; 

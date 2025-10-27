@@ -64,7 +64,7 @@ export function useRealTimeMetrics() {
   // Conectar al WebSocket
   const connect = useCallback(() => {
     try {
-      const newSocket = io(process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000', {
+      const newSocket = io(process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001', {
         transports: ['websocket'],
         autoConnect: true,
         reconnection: true,

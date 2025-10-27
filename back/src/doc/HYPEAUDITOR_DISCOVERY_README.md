@@ -46,7 +46,7 @@ back/src/
 **Archivo:** `services/hypeauditor/hypeauditor-discovery.service.ts`
 
 - ✅ Búsqueda de discovery con todos los filtros de HypeAuditor
-- ✅ Modo sandbox para testing sin consumir créditos
+- ✅ Modo producción para búsquedas reales
 - ✅ Transformación de filtros del Explorer a formato HypeAuditor
 - ✅ Transformación de respuestas de HypeAuditor al formato del Explorer
 - ✅ Obtención de taxonomía de categorías
@@ -68,7 +68,7 @@ back/src/
 **Archivo:** `controllers/hypeauditor/hypeauditor-discovery.controller.ts`
 
 - ✅ Búsqueda de discovery usando filtros del Explorer
-- ✅ Búsqueda en modo sandbox
+- ✅ Búsqueda en modo producción
 - ✅ Búsqueda directa con parámetros de HypeAuditor
 - ✅ Búsqueda inteligente
 - ✅ Health check y estadísticas de uso
@@ -89,7 +89,6 @@ back/src/
 
 ```
 POST /hypeauditor/discovery/search          # Búsqueda con filtros del Explorer
-POST /hypeauditor/discovery/sandbox         # Búsqueda en modo sandbox
 POST /hypeauditor/discovery/direct          # Búsqueda directa
 POST /hypeauditor/discovery/smart-search    # Búsqueda inteligente
 GET  /hypeauditor/discovery/taxonomy        # Taxonomía de categorías
@@ -304,7 +303,7 @@ node src/scripts/test-hypeauditor-discovery.js --with-config
 7. ✅ Búsqueda unificada (auto)
 8. ✅ Taxonomía de HypeAuditor
 9. ✅ Búsqueda directa en HypeAuditor Discovery
-10. ✅ Búsqueda sandbox
+10. ✅ Búsqueda producción
 11. ✅ Health check de HypeAuditor Discovery
 12. ✅ Estadísticas de uso
 13. ✅ Configuración de proveedores
@@ -321,8 +320,7 @@ export const hypeAuditorConfig = {
   apiToken: '$2y$04$27ZuGEARpPSjtwdBhJnf6OYuZKqTxKFkGi723IpY4MxJefff3Lgsa',
   baseUrl: 'https://hypeauditor.com/api/method',
   endpoints: {
-    search: '/auditor.search/',
-    sandbox: '/auditor.searchSandbox/'
+    search: '/auditor.search/'
   }
 };
 ```

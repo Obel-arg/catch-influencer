@@ -23,7 +23,7 @@ function testYouTube() {
     }
   };
 
-  makeRequest('/api/method/auditor.searchSandbox/', request, 'YouTube');
+  makeRequest('/api/method/auditor.searchproduction/', request, 'YouTube');
 }
 
 // Test 2: TikTok
@@ -40,7 +40,7 @@ function testTikTok() {
     }
   };
 
-  makeRequest('/api/method/auditor.searchSandbox/', request, 'TikTok');
+  makeRequest('/api/method/auditor.searchproduction/', request, 'TikTok');
 }
 
 // Test 3: Twitter
@@ -57,7 +57,7 @@ function testTwitter() {
     }
   };
 
-  makeRequest('/api/method/auditor.searchSandbox/', request, 'Twitter');
+  makeRequest('/api/method/auditor.searchproduction/', request, 'Twitter');
 }
 
 // Test 4: Twitch
@@ -74,7 +74,7 @@ function testTwitch() {
     }
   };
 
-  makeRequest('/api/method/auditor.searchSandbox/', request, 'Twitch');
+  makeRequest('/api/method/auditor.searchproduction/', request, 'Twitch');
 }
 
 // Test 5: Instagram con formato diferente (sin account_has_contacts)
@@ -91,7 +91,7 @@ function testInstagramAlternative() {
     }
   };
 
-  makeRequest('/api/method/auditor.searchSandbox/', request, 'Instagram Alternative');
+  makeRequest('/api/method/auditor.searchproduction/', request, 'Instagram Alternative');
 }
 
 // Test 6: YouTube con filtros avanzados
@@ -120,7 +120,7 @@ function testYouTubeAdvanced() {
     }
   };
 
-  makeRequest('/api/method/auditor.searchSandbox/', request, 'YouTube Advanced');
+  makeRequest('/api/method/auditor.searchproduction/', request, 'YouTube Advanced');
 }
 
 // Test 7: TikTok con filtros avanzados
@@ -149,7 +149,7 @@ function testTikTokAdvanced() {
     }
   };
 
-  makeRequest('/api/method/auditor.searchSandbox/', request, 'TikTok Advanced');
+  makeRequest('/api/method/auditor.searchproduction/', request, 'TikTok Advanced');
 }
 
 // Test 8: Verificar taxonomy

@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 // Configuración
-const BASE_URL = 'http://localhost:5000/api';
+const BASE_URL = 'http://localhost:5001/api';
 
 // Generar token de prueba
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -54,7 +54,7 @@ async function testAudienceFiltersMapping() {
 
        
 
-        const response = await axios.post(`${BASE_URL}/hypeauditor/discovery/search-sandbox`, filtersWithAudience, { headers });
+        const response = await axios.post(`${BASE_URL}/hypeauditor/discovery/search`, filtersWithAudience, { headers });
         
 
         
@@ -72,7 +72,7 @@ async function testAudienceFiltersMapping() {
             }
         };
 
-        const response2 = await axios.post(`${BASE_URL}/hypeauditor/discovery/search-sandbox`, filtersWithAnyGender, { headers });
+        const response2 = await axios.post(`${BASE_URL}/hypeauditor/discovery/search`, filtersWithAnyGender, { headers });
         
 
     } catch (error) {

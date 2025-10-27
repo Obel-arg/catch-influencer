@@ -41,21 +41,6 @@ export class HypeAuditorService {
 		}
 	}
 
-	async searchSandbox(request: HypeAuditorSearchRequest): Promise<HypeAuditorSearchResponse> {
-		try {
-			if (!request || !request.social_network) {
-				throw new Error('El campo social_network es requerido');
-			}
-
-			const url = `${this.baseUrl}${hypeAuditorConfig.endpoints.sandbox}`;
-			const response: AxiosResponse<HypeAuditorSearchResponse> = await axios.post(url, request, {
-				headers: createHypeAuditorHeaders(hypeAuditorConfig.clientId, hypeAuditorConfig.apiToken)
-			});
-			return response.data;
-		} catch (error: any) {
-			throw new Error(error.response?.data?.message || error.message);
-		}
-	}
 
 	async getInstagramReport(username: string, features?: string): Promise<any> {
 		try {

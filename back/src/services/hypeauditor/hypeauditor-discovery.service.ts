@@ -387,13 +387,13 @@ export class HypeAuditorDiscoveryService {
 	}
 
 	/**
-	 * Realiza una búsqueda de discovery en modo sandbox (para testing)
+	 * Realiza una búsqueda de discovery (producción)
 	 */
-	async searchDiscoverySandbox(request: DiscoverySearchRequest): Promise<DiscoveryResponse> {
+	async searchDiscovery(request: DiscoverySearchRequest): Promise<DiscoveryResponse> {
 		try {
 
 			
-			const response = await this.makeHttpsRequest('/api/method/auditor.searchSandbox', request);
+			const response = await this.makeHttpsRequest('/api/method/auditor.search', request);
 			
 
 			return response;
@@ -739,8 +739,8 @@ export class HypeAuditorDiscoveryService {
 				// Campos que usa directamente la tabla
 				followersCount: followers, // ✅ Campo que lee la tabla
 				averageEngagementRate: engagementRate / 100, // ✅ Campo que lee la tabla (convertir a decimal)
-				location: undefined, // No disponible en sandbox
-				language: undefined, // No disponible en sandbox
+				location: undefined, // No disponible en la respuesta
+				language: undefined, // No disponible en la respuesta
 				categories: contentNiches,
 				
 				// Plataforma principal

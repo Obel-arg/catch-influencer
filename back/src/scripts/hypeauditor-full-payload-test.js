@@ -149,7 +149,7 @@ function makeFullHypeAuditorRequest() {
   const options = {
     hostname: 'hypeauditor.com',
     port: 443,
-    path: '/api/method/auditor.searchSandbox/',
+    path: '/api/method/auditor.searchproduction/',
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

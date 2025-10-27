@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 // Configuración
-const BASE_URL = 'http://localhost:5000/api';
+const BASE_URL = 'http://localhost:5001/api';
 
 // Generar token de prueba
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -26,7 +26,7 @@ async function testHypeAuditorDiscovery() {
    
 
     try {
-        // Búsqueda básica en sandbox
+        // Búsqueda básica en producción
         const searchData = {
             platform: 'instagram',
             minFollowers: 10000,
@@ -38,7 +38,7 @@ async function testHypeAuditorDiscovery() {
 
        
 
-        const searchResponse = await axios.post(`${BASE_URL}/hypeauditor/discovery/search-sandbox`, searchData, { headers });
+        const searchResponse = await axios.post(`${BASE_URL}/hypeauditor/discovery/search`, searchData, { headers });
         
        
 

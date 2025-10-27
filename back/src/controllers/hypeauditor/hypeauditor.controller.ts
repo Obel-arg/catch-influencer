@@ -12,15 +12,6 @@ export class HypeAuditorController {
 		}
 	}
 
-	static async sandbox(req: Request, res: Response) {
-		try {
-			const body = req.body || {};
-			const result = await hypeAuditorService.searchSandbox(body);
-			res.json({ success: true, ...result, provider: 'HypeAuditor' });
-		} catch (error: any) {
-			res.status(400).json({ success: false, error: error.message, provider: 'HypeAuditor' });
-		}
-	}
 
 	static async getInstagramReport(req: Request, res: Response) {
 		try {

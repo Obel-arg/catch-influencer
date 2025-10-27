@@ -4,62 +4,44 @@ const https = require('https');
 const CLIENT_ID = '2694138';
 const API_TOKEN = '$2y$04$27ZuGEARpPSjtwdBhJnf6OYuZKqTxKFkGi723IpY4MxJefff3Lgsa';
 
-console.log('🔍 DEBUG: Investigando error 8 de HypeAuditor');
+console.log('🔍 TEST: HypeAuditor con endpoint de PRODUCCIÓN');
 console.log('📋 Client ID:', CLIENT_ID);
 console.log('🔑 Token:', API_TOKEN.substring(0, 20) + '...');
 console.log('');
 
-// Test 1: Petición mínima válida (formato correcto según documentación)
-function testMinimalRequest() {
-  console.log('🧪 TEST 1: Petición mínima válida');
+// Test 1: Petición mínima con endpoint de producción
+function testMinimalProduction() {
+  console.log('🧪 TEST 1: Petición mínima con endpoint de PRODUCCIÓN');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   
-  const minimalRequest = {
+  const request = {
     "social_network": "instagram",
     "account_has_contacts": true
   };
 
-  makeRequest('/api/method/auditor.searchproduction/', minimalRequest, 'Minimal Request');
+  makeRequest('/api/method/auditor.search/', request, 'Minimal Production');
 }
 
-// Test 2: Petición con búsqueda básica (formato correcto)
-function testSearchRequest() {
-  console.log('\n\n🧪 TEST 2: Petición con búsqueda básica');
+// Test 2: Petición con búsqueda en producción
+function testSearchProduction() {
+  console.log('\n\n🧪 TEST 2: Petición con búsqueda en PRODUCCIÓN');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   
-  const searchRequest = {
-    "social_network": "instagram",
-    "search": ["fashion"],
-    "account_has_contacts": true
-  };
-
-  makeRequest('/api/method/auditor.searchproduction/', searchRequest, 'Search Request');
-}
-
-// Test 3: Petición con filtros de seguidores (formato correcto)
-function testFollowersRequest() {
-  console.log('\n\n🧪 TEST 3: Petición con filtros de seguidores');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  
-  const followersRequest = {
+  const request = {
     "social_network": "instagram",
     "search": ["fashion"],
-    "subscribers_count": {
-      "from": 10000,
-      "to": 100000
-    },
     "account_has_contacts": true
   };
 
-  makeRequest('/api/method/auditor.searchproduction/', followersRequest, 'Followers Request');
+  makeRequest('/api/method/auditor.search/', request, 'Search Production');
 }
 
-// Test 4: Petición con filtros de engagement
-function testEngagementRequest() {
-  console.log('\n\n🧪 TEST 4: Petición con filtros de engagement');
+// Test 3: Petición con filtros básicos en producción
+function testBasicFiltersProduction() {
+  console.log('\n\n🧪 TEST 3: Petición con filtros básicos en PRODUCCIÓN');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   
-  const engagementRequest = {
+  const request = {
     "social_network": "instagram",
     "search": ["fashion"],
     "subscribers_count": {
@@ -67,151 +49,139 @@ function testEngagementRequest() {
       "to": 100000
     },
     "er": {
-      "from": 2,
-      "to": 15
+      "from": 1,
+      "to": 20
     },
-    "page": 1
+    "account_has_contacts": true
   };
 
-  makeRequest('/api/method/auditor.searchproduction/', engagementRequest, 'Engagement Request');
+  makeRequest('/api/method/auditor.search/', request, 'Basic Filters Production');
 }
 
-// Test 5: Petición con filtros de audiencia
-function testAudienceRequest() {
-  console.log('\n\n🧪 TEST 5: Petición con filtros de audiencia');
+// Test 4: Petición con categorías en producción
+function testCategoryProduction() {
+  console.log('\n\n🧪 TEST 4: Petición con categorías en PRODUCCIÓN');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   
-  const audienceRequest = {
+  const request = {
+    "social_network": "instagram",
+    "search": ["fashion"],
+    "category": {
+      "include": [1020, 1021] // Beauty, Fashion
+    },
+    "subscribers_count": {
+      "from": 10000,
+      "to": 100000
+    },
+    "account_has_contacts": true
+  };
+
+  makeRequest('/api/method/auditor.search/', request, 'Category Production');
+}
+
+// Test 5: Petición con audiencia en producción
+function testAudienceProduction() {
+  console.log('\n\n🧪 TEST 5: Petición con audiencia en PRODUCCIÓN');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  
+  const request = {
     "social_network": "instagram",
     "search": ["fashion"],
     "subscribers_count": {
       "from": 10000,
       "to": 100000
-    },
-    "er": {
-      "from": 2,
-      "to": 15
     },
     "audience_gender": {
       "gender": "female",
       "prc": 60
     },
     "audience_age": {
-      "groups": [
-        { "key": "18_24", "prc": 40 },
-        { "key": "25_34", "prc": 30 }
-      ]
+      "groups": ["18_24", "25_34"],
+      "prc": 50
     },
-    "page": 1
+    "account_has_contacts": true
   };
 
-  makeRequest('/api/method/auditor.searchproduction/', audienceRequest, 'Audience Request');
+  makeRequest('/api/method/auditor.search/', request, 'Audience Production');
 }
 
-// Test 6: Petición con categorías
-function testCategoryRequest() {
-  console.log('\n\n🧪 TEST 6: Petición con categorías');
+// Test 6: YouTube en producción
+function testYouTubeProduction() {
+  console.log('\n\n🧪 TEST 6: YouTube en PRODUCCIÓN');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   
-  const categoryRequest = {
-    "social_network": "instagram",
+  const request = {
+    "social_network": "youtube",
+    "search": ["tech"],
+    "subscribers_count": {
+      "from": 10000,
+      "to": 100000
+    }
+  };
+
+  makeRequest('/api/method/auditor.search/', request, 'YouTube Production');
+}
+
+// Test 7: TikTok en producción
+function testTikTokProduction() {
+  console.log('\n\n🧪 TEST 7: TikTok en PRODUCCIÓN');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  
+  const request = {
+    "social_network": "tiktok",
     "search": ["fashion"],
     "subscribers_count": {
       "from": 10000,
       "to": 100000
-    },
+    }
+  };
+
+  makeRequest('/api/method/auditor.search/', request, 'TikTok Production');
+}
+
+// Test 8: Petición completa según documentación en producción
+function testCompleteProduction() {
+  console.log('\n\n🧪 TEST 8: Petición completa en PRODUCCIÓN');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  
+  const request = {
+    "social_network": "instagram",
+    "search": ["fashion"],
     "category": {
-      "include": [1020, 1021] // Beauty, Fashion
+      "include": [1020, 1021]
     },
-    "page": 1
-  };
-
-  makeRequest('/api/method/auditor.searchproduction/', categoryRequest, 'Category Request');
-}
-
-// Test 7: Petición con tipo de cuenta
-function testAccountTypeRequest() {
-  console.log('\n\n🧪 TEST 7: Petición con tipo de cuenta');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  
-  const accountTypeRequest = {
-    "social_network": "instagram",
-    "search": ["fashion"],
     "subscribers_count": {
       "from": 10000,
       "to": 100000
+    },
+    "er": {
+      "from": 1,
+      "to": 20
     },
     "account_type": "human",
-    "verified": 1,
-    "page": 1
-  };
-
-  makeRequest('/api/method/auditor.searchproduction/', accountTypeRequest, 'Account Type Request');
-}
-
-// Test 8: Petición con AQS/CQS
-function testAqsCqsRequest() {
-  console.log('\n\n🧪 TEST 8: Petición con AQS/CQS');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  
-  const aqsCqsRequest = {
-    "social_network": "instagram",
-    "search": ["fashion"],
-    "subscribers_count": {
-      "from": 10000,
-      "to": 100000
+    "account_has_contacts": true,
+    "audience_gender": {
+      "gender": "female",
+      "prc": 60
     },
-    "aqs": {
-      "from": 50,
-      "to": 100
-    },
-    "page": 1
-  };
-
-  makeRequest('/api/method/auditor.searchproduction/', aqsCqsRequest, 'AQS/CQS Request');
-}
-
-// Test 9: Petición con ubicación
-function testLocationRequest() {
-  console.log('\n\n🧪 TEST 9: Petición con ubicación');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  
-  const locationRequest = {
-    "social_network": "instagram",
-    "search": ["fashion"],
-    "subscribers_count": {
-      "from": 10000,
-      "to": 100000
+    "audience_age": {
+      "groups": ["18_24", "25_34"],
+      "prc": 50
     },
     "account_geo": {
-      "country": ["US", "CA"]
+      "country": ["us", "gb"]
     },
-    "page": 1
-  };
-
-  makeRequest('/api/method/auditor.searchproduction/', locationRequest, 'Location Request');
-}
-
-// Test 10: Petición con ordenamiento
-function testSortRequest() {
-  console.log('\n\n🧪 TEST 10: Petición con ordenamiento');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  
-  const sortRequest = {
-    "social_network": "instagram",
-    "search": ["fashion"],
-    "subscribers_count": {
-      "from": 10000,
-      "to": 100000
+    "aqs": {
+      "from": 20,
+      "to": 45
     },
     "sort": {
-      "field": "er",
+      "field": "subscribers_count",
       "order": "desc"
-    },
-    "page": 1
+    }
   };
 
-  makeRequest('/api/method/auditor.searchproduction/', sortRequest, 'Sort Request');
+  makeRequest('/api/method/auditor.search/', request, 'Complete Production');
 }
 
 // Función helper para hacer peticiones
@@ -219,6 +189,7 @@ function makeRequest(endpoint, data, testName) {
   const postData = JSON.stringify(data);
   
   console.log(`📤 Enviando ${testName}:`);
+  console.log(`🌐 Endpoint: https://hypeauditor.com${endpoint}`);
   console.log(JSON.stringify(data, null, 2));
   console.log('');
   
@@ -263,9 +234,11 @@ function makeRequest(endpoint, data, testName) {
           if (response.result?.search_results && response.result.search_results.length > 0) {
             console.log(`\n🎯 Primeros 3 resultados:`);
             response.result.search_results.slice(0, 3).forEach((result, index) => {
-              console.log(`\n  ${index + 1}. @${result.username || result.account?.username || 'N/A'}`);
-              console.log(`     👥 Seguidores: ${result.subscribers_count?.toLocaleString() || 'N/A'}`);
-              console.log(`     📈 ER: ${result.er?.toFixed(2) || 'N/A'}%`);
+              const basic = result.basic || result.account || {};
+              const metrics = result.metrics || {};
+              console.log(`\n  ${index + 1}. @${basic.username || 'N/A'}`);
+              console.log(`     👥 Seguidores: ${metrics.subscribers_count?.value?.toLocaleString() || 'N/A'}`);
+              console.log(`     📈 ER: ${metrics.er?.value?.toFixed(2) || 'N/A'}%`);
             });
           }
         }
@@ -279,6 +252,9 @@ function makeRequest(endpoint, data, testName) {
             nextTest();
           } else {
             console.log('\n🎉 Todos los tests completados!');
+            console.log('\n📋 RESUMEN:');
+            console.log('- Si algún test fue exitoso, el endpoint de producción funciona');
+            console.log('- Si todos fallan, el problema es del plan, no del endpoint');
           }
         }, 2000);
         
@@ -300,21 +276,19 @@ function makeRequest(endpoint, data, testName) {
 // Función para obtener el siguiente test
 function getNextTest(currentTest) {
   const tests = [
-    testMinimalRequest,
-    testSearchRequest,
-    testFollowersRequest,
-    testEngagementRequest,
-    testAudienceRequest,
-    testCategoryRequest,
-    testAccountTypeRequest,
-    testAqsCqsRequest,
-    testLocationRequest,
-    testSortRequest
+    testMinimalProduction,
+    testSearchProduction,
+    testBasicFiltersProduction,
+    testCategoryProduction,
+    testAudienceProduction,
+    testYouTubeProduction,
+    testTikTokProduction,
+    testCompleteProduction
   ];
   
-  const currentIndex = tests.findIndex(test => test.name === currentTest.replace(' Request', 'Request'));
+  const currentIndex = tests.findIndex(test => test.name === currentTest.replace(' Production', 'Production'));
   return tests[currentIndex + 1] || null;
 }
 
 // Iniciar tests
-testMinimalRequest();
+testMinimalProduction();

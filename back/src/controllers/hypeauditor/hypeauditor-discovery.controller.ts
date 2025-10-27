@@ -19,7 +19,6 @@ export class HypeAuditorDiscoveryController {
 		const startTime = Date.now();
 		
 		try {
-			
 			const filters: ExplorerFilters = req.body;
 			
 			// Validar parámetros requeridos
@@ -36,9 +35,7 @@ export class HypeAuditorDiscoveryController {
 			// Transformar filtros del Explorer a formato HypeAuditor
 			const hypeAuditorRequest = service.transformExplorerFiltersToHypeAuditor(filters);
 			
-
-
-			// Realizar búsqueda en HypeAuditor
+			// Realizar búsqueda en HypeAuditor (producción)
 			const discoveryResponse = await service.searchDiscovery(hypeAuditorRequest);
 			
 			// Transformar respuesta al formato del Explorer
@@ -54,15 +51,11 @@ export class HypeAuditorDiscoveryController {
 				filtersApplied: HypeAuditorDiscoveryController.getAppliedFilters(filters)
 			};
 
-
-
 			res.json(explorerResponse);
 
 		} catch (error: any) {
 			const endTime = Date.now();
 			const searchTime = endTime - startTime;
-			
-			
 			
 			res.status(400).json({
 				success: false,
@@ -77,93 +70,22 @@ export class HypeAuditorDiscoveryController {
 	}
 
 	/**
-	 * Búsqueda de discovery en modo sandbox (para testing)
-	 */
-	static async searchDiscoverySandbox(req: Request, res: Response) {
-		const startTime = Date.now();
-		
-		try {
-			
-			
-			const filters = req.body;
-			
-			// Validar parámetros requeridos
-			if (!filters.platform) {
-				return res.status(400).json({
-					success: false,
-					error: 'La plataforma es requerida',
-					provider: 'HypeAuditor Discovery Sandbox'
-				});
-			}
-
-			const service = HypeAuditorDiscoveryController.getDiscoveryService();
-
-			// Usar la transformación completa de filtros (incluyendo audiencia)
-			const hypeAuditorRequest = service.transformExplorerFiltersToHypeAuditor(filters);
-			
-
-
-			// Realizar búsqueda en HypeAuditor (sandbox)
-			const discoveryResponse = await service.searchDiscoverySandbox(hypeAuditorRequest);
-			
-			const endTime = Date.now();
-			const searchTime = endTime - startTime;
-
-
-
-			// Devolver la respuesta tal como viene de HypeAuditor
-			res.json({
-				success: true,
-				data: discoveryResponse,
-				provider: 'HypeAuditor Discovery Sandbox',
-				metadata: {
-					searchTime,
-					filtersApplied: Object.keys(hypeAuditorRequest),
-					cacheHit: false,
-					mode: 'sandbox'
-				}
-			});
-
-		} catch (error: any) {
-			const endTime = Date.now();
-			const searchTime = endTime - startTime;
-			
-			
-			
-			res.status(400).json({
-				success: false,
-				error: error.message,
-				provider: 'HypeAuditor Discovery Sandbox',
-				metadata: {
-					searchTime,
-					error: error.message,
-					mode: 'sandbox'
-				}
-			});
-		}
-	}
-
-	/**
-	 * Búsqueda directa usando parámetros de HypeAuditor (para casos avanzados)
+	 * Búsqueda directa usando parámetros de HypeAuditor
 	 */
 	static async searchDirect(req: Request, res: Response) {
 		const startTime = Date.now();
 		
 		try {
-			
-			
 			const request: DiscoverySearchRequest = req.body;
 			
 			// Validar parámetros requeridos
 			if (!request.social_network) {
 				return res.status(400).json({
 					success: false,
-					error: 'El campo social_network es requerido',
-					provider: 'HypeAuditor Discovery Direct'
+					error: 'El social_network es requerido',
+					provider: 'HypeAuditor Discovery'
 				});
 			}
-
-
 
 			const service = HypeAuditorDiscoveryController.getDiscoveryService();
 
@@ -173,15 +95,15 @@ export class HypeAuditorDiscoveryController {
 			const endTime = Date.now();
 			const searchTime = endTime - startTime;
 
-
-
 			res.json({
 				success: true,
-				...discoveryResponse,
-				provider: 'HypeAuditor Discovery Direct',
+				data: discoveryResponse,
+				provider: 'HypeAuditor Discovery',
 				metadata: {
 					searchTime,
-					mode: 'direct'
+					filtersApplied: Object.keys(request),
+					cacheHit: false,
+					mode: 'production'
 				}
 			});
 
@@ -189,90 +111,14 @@ export class HypeAuditorDiscoveryController {
 			const endTime = Date.now();
 			const searchTime = endTime - startTime;
 			
-			
-			
 			res.status(400).json({
 				success: false,
 				error: error.message,
-				provider: 'HypeAuditor Discovery Direct',
+				provider: 'HypeAuditor Discovery',
 				metadata: {
 					searchTime,
-					error: error.message,
-					mode: 'direct'
+					error: error.message
 				}
-			});
-		}
-	}
-
-	/**
-	 * Obtener taxonomía de categorías
-	 */
-	static async getTaxonomy(req: Request, res: Response) {
-		try {
-
-			
-			const service = HypeAuditorDiscoveryController.getDiscoveryService();
-			const taxonomy = await service.getTaxonomy();
-			
-
-			
-			res.json({
-				success: true,
-				data: taxonomy,
-				provider: 'HypeAuditor Discovery'
-			});
-
-		} catch (error: any) {
-
-			
-			res.status(400).json({
-				success: false,
-				error: error.message,
-				provider: 'HypeAuditor Discovery'
-			});
-		}
-	}
-
-	/**
-	 * Buscar posts por keywords
-	 */
-	static async searchKeywordsPosts(req: Request, res: Response) {
-		try {
-			const { socialNetwork, contentIds } = req.query;
-			
-			if (!socialNetwork || !contentIds) {
-				return res.status(400).json({
-					success: false,
-					error: 'Los parámetros socialNetwork y contentIds son requeridos',
-					provider: 'HypeAuditor Discovery'
-				});
-			}
-
-			const contentIdsArray = Array.isArray(contentIds) ? contentIds.map(id => String(id)) : [String(contentIds)];
-			
-
-			
-			const service = HypeAuditorDiscoveryController.getDiscoveryService();
-			const result = await service.searchKeywordsPosts(
-				socialNetwork as string,
-				contentIdsArray
-			);
-			
-
-			
-			res.json({
-				success: true,
-				...result,
-				provider: 'HypeAuditor Discovery'
-			});
-
-		} catch (error: any) {
-
-			
-			res.status(400).json({
-				success: false,
-				error: error.message,
-				provider: 'HypeAuditor Discovery'
 			});
 		}
 	}
@@ -284,32 +130,25 @@ export class HypeAuditorDiscoveryController {
 		const startTime = Date.now();
 		
 		try {
-
-			
 			const { query, platform, filters = {} } = req.body;
 			
 			// Validar parámetros requeridos
 			if (!query || !platform) {
 				return res.status(400).json({
 					success: false,
-					error: 'Los parámetros query y platform son requeridos',
-					provider: 'HypeAuditor Discovery Smart Search'
+					error: 'Query y platform son requeridos',
+					provider: 'HypeAuditor Discovery'
 				});
 			}
 
-			// Combinar query con filtros
-			const combinedFilters: ExplorerFilters = {
-				...filters,
-				searchQuery: query,
-				platform
-			};
-
 			const service = HypeAuditorDiscoveryController.getDiscoveryService();
 
-			// Transformar filtros del Explorer a formato HypeAuditor
-			const hypeAuditorRequest = service.transformExplorerFiltersToHypeAuditor(combinedFilters);
-			
-	
+			// Construir request combinando query y filtros
+			const hypeAuditorRequest: DiscoverySearchRequest = {
+				social_network: platform,
+				search: [query],
+				...filters
+			};
 
 			// Realizar búsqueda en HypeAuditor
 			const discoveryResponse = await service.searchDiscovery(hypeAuditorRequest);
@@ -324,13 +163,8 @@ export class HypeAuditorDiscoveryController {
 			explorerResponse.metadata = {
 				...explorerResponse.metadata,
 				searchTime,
-				filtersApplied: HypeAuditorDiscoveryController.getAppliedFilters(combinedFilters),
-				mode: 'smart',
-				query,
-				platform
+				filtersApplied: HypeAuditorDiscoveryController.getAppliedFilters({ platform, ...filters })
 			};
-
-	
 
 			res.json(explorerResponse);
 
@@ -338,100 +172,33 @@ export class HypeAuditorDiscoveryController {
 			const endTime = Date.now();
 			const searchTime = endTime - startTime;
 			
-
-			
 			res.status(400).json({
 				success: false,
 				error: error.message,
-				provider: 'HypeAuditor Discovery Smart Search',
+				provider: 'HypeAuditor Discovery',
 				metadata: {
 					searchTime,
-					error: error.message,
-					mode: 'smart'
+					error: error.message
 				}
 			});
 		}
 	}
 
 	/**
-	 * Obtener información de salud del servicio
+	 * Obtener taxonomía de categorías
 	 */
-	static async healthCheck(req: Request, res: Response) {
+	static async getTaxonomy(req: Request, res: Response) {
 		try {
-
-			
 			const service = HypeAuditorDiscoveryController.getDiscoveryService();
-			
-			// Realizar una búsqueda simple para verificar conectividad
-			const testRequest: DiscoverySearchRequest = {
-				social_network: 'instagram',
-				page: 1,
-				subscribers_count: { from: 1000, to: 10000 }
-			};
-
-			const startTime = Date.now();
-			const discoveryResponse = await service.searchDiscoverySandbox(testRequest);
-			const endTime = Date.now();
-			const responseTime = endTime - startTime;
-
-
+			const taxonomy = await service.getTaxonomy();
 			
 			res.json({
 				success: true,
-				status: 'healthy',
-				provider: 'HypeAuditor Discovery',
-				responseTime,
-				queriesLeft: discoveryResponse.result.queries_left,
-				testResults: discoveryResponse.result.search_results.length,
-				timestamp: new Date().toISOString()
+				data: taxonomy,
+				provider: 'HypeAuditor Discovery'
 			});
 
 		} catch (error: any) {
-
-			
-			res.status(503).json({
-				success: false,
-				status: 'unhealthy',
-				error: error.message,
-				provider: 'HypeAuditor Discovery',
-				timestamp: new Date().toISOString()
-			});
-		}
-	}
-
-	/**
-	 * Obtener estadísticas de uso
-	 */
-	static async getUsageStats(req: Request, res: Response) {
-		try {
-
-
-			const service = HypeAuditorDiscoveryController.getDiscoveryService();
-			
-			// Realizar una búsqueda simple para obtener queries_left
-			const testRequest: DiscoverySearchRequest = {
-				social_network: 'instagram',
-				page: 1,
-				subscribers_count: { from: 1000, to: 10000 }
-			};
-
-			const discoveryResponse = await service.searchDiscoverySandbox(testRequest);
-			
-
-			
-			res.json({
-				success: true,
-				provider: 'HypeAuditor Discovery',
-				queriesLeft: discoveryResponse.result.queries_left,
-				totalPages: discoveryResponse.result.total_pages,
-				currentPage: discoveryResponse.result.current_page,
-				resultsPerPage: 20,
-				timestamp: new Date().toISOString()
-			});
-
-		} catch (error: any) {
-			console.error(`❌ [HYPEAUDITOR DISCOVERY CONTROLLER] Error obteniendo estadísticas:`, error.message);
-			
 			res.status(400).json({
 				success: false,
 				error: error.message,
@@ -441,59 +208,110 @@ export class HypeAuditorDiscoveryController {
 	}
 
 	/**
-	 * Obtener lista de filtros aplicados para metadatos
+	 * Buscar posts por keywords
 	 */
-	private static getAppliedFilters(filters: ExplorerFilters): string[] {
-		const appliedFilters: string[] = [];
+	static async searchKeywordsPosts(req: Request, res: Response) {
+		try {
+			const { keywords, platform, limit = 10 } = req.query;
+			
+			if (!keywords || !platform) {
+				return res.status(400).json({
+					success: false,
+					error: 'Keywords y platform son requeridos',
+					provider: 'HypeAuditor Discovery'
+				});
+			}
+
+			const service = HypeAuditorDiscoveryController.getDiscoveryService();
+			const posts = await service.searchKeywordsPosts(
+				keywords as string, 
+				platform as string, 
+				parseInt(limit as string)
+			);
+			
+			res.json({
+				success: true,
+				data: posts,
+				provider: 'HypeAuditor Discovery'
+			});
+
+		} catch (error: any) {
+			res.status(400).json({
+				success: false,
+				error: error.message,
+				provider: 'HypeAuditor Discovery'
+			});
+		}
+	}
+
+	/**
+	 * Health check del servicio
+	 */
+	static async healthCheck(req: Request, res: Response) {
+		try {
+			const service = HypeAuditorDiscoveryController.getDiscoveryService();
+			const health = await service.healthCheck();
+			
+			res.json({
+				success: true,
+				data: health,
+				provider: 'HypeAuditor Discovery'
+			});
+
+		} catch (error: any) {
+			res.status(500).json({
+				success: false,
+				error: error.message,
+				provider: 'HypeAuditor Discovery'
+			});
+		}
+	}
+
+	/**
+	 * Obtener estadísticas de uso
+	 */
+	static async getUsageStats(req: Request, res: Response) {
+		try {
+			const service = HypeAuditorDiscoveryController.getDiscoveryService();
+			const stats = await service.getUsageStats();
+			
+			res.json({
+				success: true,
+				data: stats,
+				provider: 'HypeAuditor Discovery'
+			});
+
+		} catch (error: any) {
+			res.status(400).json({
+				success: false,
+				error: error.message,
+				provider: 'HypeAuditor Discovery'
+			});
+		}
+	}
+
+	/**
+	 * Helper para obtener filtros aplicados
+	 */
+	private static getAppliedFilters(filters: any): string[] {
+		const applied: string[] = [];
 		
-		if (filters.searchQuery) appliedFilters.push('searchQuery');
-		if (filters.platform) appliedFilters.push('platform');
-		if (filters.minFollowers || filters.maxFollowers) appliedFilters.push('followers');
-		if (filters.minEngagement || filters.maxEngagement) appliedFilters.push('engagement');
-		if (filters.location && filters.location !== 'all') appliedFilters.push('location');
-		if (filters.selectedCategories && filters.selectedCategories.length > 0) appliedFilters.push('categories');
-		if (filters.selectedGrowthRate) appliedFilters.push('growth');
-		if (filters.aqs) appliedFilters.push('aqs');
-		if (filters.cqs) appliedFilters.push('cqs');
-		if (filters.sortBy) appliedFilters.push('sort');
-		if (filters.accountType) appliedFilters.push('accountType');
-		if (filters.verified !== undefined) appliedFilters.push('verified');
-		if (filters.hasContacts !== undefined) appliedFilters.push('hasContacts');
-		if (filters.hasLaunchedAdvertising !== undefined) appliedFilters.push('hasLaunchedAdvertising');
-		if (filters.searchContent && filters.searchContent.length > 0) appliedFilters.push('searchContent');
-		if (filters.searchDescription && filters.searchDescription.length > 0) appliedFilters.push('searchDescription');
-		if (filters.audienceAge) appliedFilters.push('audienceAge');
-		if (filters.audienceGender) appliedFilters.push('audienceGender');
-		if (filters.audienceGeo) appliedFilters.push('audienceGeo');
-		if (filters.bloggerPrices) appliedFilters.push('bloggerPrices');
-		if (filters.lastMediaTime) appliedFilters.push('lastMediaTime');
-		if (filters.mediaCount) appliedFilters.push('mediaCount');
-		if (filters.likesCount) appliedFilters.push('likesCount');
-		if (filters.likesAvg) appliedFilters.push('likesAvg');
-		if (filters.viewsAvg) appliedFilters.push('viewsAvg');
-		if (filters.commentsAvg) appliedFilters.push('commentsAvg');
-		if (filters.sharesAvg) appliedFilters.push('sharesAvg');
-		if (filters.likesGrowthPrc) appliedFilters.push('likesGrowthPrc');
-		if (filters.reelsVideoViewsAvg) appliedFilters.push('reelsVideoViewsAvg');
-		if (filters.shortsVideoViewsAvg) appliedFilters.push('shortsVideoViewsAvg');
-		if (filters.twitchActiveDaysPerWeek) appliedFilters.push('twitchActiveDaysPerWeek');
-		if (filters.twitchHoursStreamed) appliedFilters.push('twitchHoursStreamed');
-		if (filters.twitchLiveViewersAvg) appliedFilters.push('twitchLiveViewersAvg');
-		if (filters.twitchGames) appliedFilters.push('twitchGames');
-		if (filters.twitterLikes) appliedFilters.push('twitterLikes');
-		if (filters.twitterReplies) appliedFilters.push('twitterReplies');
-		if (filters.twitterRetweet) appliedFilters.push('twitterRetweet');
-		if (filters.twitterTweet) appliedFilters.push('twitterTweet');
-		if (filters.accountAge) appliedFilters.push('accountAge');
-		if (filters.accountGender) appliedFilters.push('accountGender');
-		if (filters.accountLanguages && filters.accountLanguages.length > 0) appliedFilters.push('accountLanguages');
-		if (filters.accountMentions) appliedFilters.push('accountMentions');
-		if (filters.income) appliedFilters.push('income');
-		if (filters.ethnicity) appliedFilters.push('ethnicity');
-		if (filters.interests) appliedFilters.push('interests');
-		if (filters.usernameExclude && filters.usernameExclude.length > 0) appliedFilters.push('usernameExclude');
-		if (filters.similar) appliedFilters.push('similar');
+		if (filters.platform) applied.push('platform');
+		if (filters.search && filters.search.length > 0) applied.push('search');
+		if (filters.subscribers_count) applied.push('subscribers_count');
+		if (filters.er) applied.push('er');
+		if (filters.audience_geo) applied.push('audience_geo');
+		if (filters.interests) applied.push('interests');
+		if (filters.categories) applied.push('categories');
+		if (filters.account_type) applied.push('account_type');
+		if (filters.verified !== undefined) applied.push('verified');
+		if (filters.has_contacts !== undefined) applied.push('has_contacts');
+		if (filters.has_launched_advertising !== undefined) applied.push('has_launched_advertising');
+		if (filters.aqs) applied.push('aqs');
+		if (filters.cqs) applied.push('cqs');
+		if (filters.sort) applied.push('sort');
+		if (filters.page) applied.push('page');
 		
-		return appliedFilters;
+		return applied;
 	}
 }

@@ -90,13 +90,12 @@ export interface HypeAuditorSearchResponse {
 }
 
 export const hypeAuditorConfig = {
-	clientId: '2694138',
-	apiToken: '$2y$04$27ZuGEARpPSjtwdBhJnf6OYuZKqTxKFkGi723IpY4MxJefff3Lgsa',
-	baseUrl: 'https://hypeauditor.com/api/method',
-	endpoints: {
-		search: '/auditor.search/',
-		sandbox: '/auditor.searchSandbox/'
-	}
+  clientId: '2694138',
+  apiToken: '$2y$04$27ZuGEARpPSjtwdBhJnf6OYuZKqTxKFkGi723IpY4MxJefff3Lgsa',
+  baseUrl: 'https://hypeauditor.com/api/method',
+  endpoints: {
+    search: '/auditor.search/'
+  }
 };
 
 export const createHypeAuditorHeaders = (clientId: string, apiToken: string) => ({

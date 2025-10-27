@@ -5,11 +5,11 @@ import { setupRequestMonitoring } from './httpInterceptor';
 
 // URLs para el backend principal
 const API_AUTH_BASE_URL = process.env.NODE_ENV === "development"
-  ? "http://localhost:5000/api/auth"
+  ? "http://localhost:5001/api/auth"
   : "https://catch-influencer-back.vercel.app/api/auth";
 
 const API_BASE_URL = process.env.NODE_ENV === "development"
-  ? "http://localhost:5000/api"
+  ? "http://localhost:5001/api"
   : "https://catch-influencer-back.vercel.app/api";
 
 export class HttpClient {

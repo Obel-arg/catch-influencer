@@ -19,7 +19,7 @@ function testMinimalOfficial() {
     "account_has_contacts": true
   };
 
-  makeRequest('/api/method/auditor.searchSandbox/', request, 'Minimal Official');
+  makeRequest('/api/method/auditor.searchproduction/', request, 'Minimal Official');
 }
 
 // Test 2: Petición con búsqueda según documentación
@@ -33,7 +33,7 @@ function testSearchOfficial() {
     "account_has_contacts": true
   };
 
-  makeRequest('/api/method/auditor.searchSandbox/', request, 'Search Official');
+  makeRequest('/api/method/auditor.searchproduction/', request, 'Search Official');
 }
 
 // Test 3: Petición con filtros básicos según documentación
@@ -55,7 +55,7 @@ function testBasicFiltersOfficial() {
     "account_has_contacts": true
   };
 
-  makeRequest('/api/method/auditor.searchSandbox/', request, 'Basic Filters Official');
+  makeRequest('/api/method/auditor.searchproduction/', request, 'Basic Filters Official');
 }
 
 // Test 4: Petición con categorías según documentación
@@ -76,7 +76,7 @@ function testCategoryOfficial() {
     "account_has_contacts": true
   };
 
-  makeRequest('/api/method/auditor.searchSandbox/', request, 'Category Official');
+  makeRequest('/api/method/auditor.searchproduction/', request, 'Category Official');
 }
 
 // Test 5: Petición con audiencia según documentación
@@ -102,7 +102,7 @@ function testAudienceOfficial() {
     "account_has_contacts": true
   };
 
-  makeRequest('/api/method/auditor.searchSandbox/', request, 'Audience Official');
+  makeRequest('/api/method/auditor.searchproduction/', request, 'Audience Official');
 }
 
 // Test 6: Petición con ubicación según documentación
@@ -123,7 +123,7 @@ function testLocationOfficial() {
     "account_has_contacts": true
   };
 
-  makeRequest('/api/method/auditor.searchSandbox/', request, 'Location Official');
+  makeRequest('/api/method/auditor.searchproduction/', request, 'Location Official');
 }
 
 // Test 7: Petición con tipo de cuenta según documentación
@@ -143,7 +143,7 @@ function testAccountTypeOfficial() {
     "account_has_launched_advertising": true
   };
 
-  makeRequest('/api/method/auditor.searchSandbox/', request, 'Account Type Official');
+  makeRequest('/api/method/auditor.searchproduction/', request, 'Account Type Official');
 }
 
 // Test 8: Petición con AQS según documentación
@@ -165,7 +165,7 @@ function testAqsOfficial() {
     "account_has_contacts": true
   };
 
-  makeRequest('/api/method/auditor.searchSandbox/', request, 'AQS Official');
+  makeRequest('/api/method/auditor.searchproduction/', request, 'AQS Official');
 }
 
 // Test 9: Petición con ordenamiento según documentación
@@ -187,7 +187,7 @@ function testSortOfficial() {
     "account_has_contacts": true
   };
 
-  makeRequest('/api/method/auditor.searchSandbox/', request, 'Sort Official');
+  makeRequest('/api/method/auditor.searchproduction/', request, 'Sort Official');
 }
 
 // Test 10: Petición completa según documentación
@@ -232,7 +232,7 @@ function testCompleteOfficial() {
     }
   };
 
-  makeRequest('/api/method/auditor.searchSandbox/', request, 'Complete Official');
+  makeRequest('/api/method/auditor.searchproduction/', request, 'Complete Official');
 }
 
 // Función helper para hacer peticiones

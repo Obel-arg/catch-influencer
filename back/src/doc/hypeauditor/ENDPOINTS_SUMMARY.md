@@ -155,8 +155,7 @@ export const hypeAuditorConfig = {
   apiToken: '$2y$04$27ZuGEARpPSjtwdBhJnf6OYuZKqTxKFkGi723IpY4MxJefff3Lgsa',
   baseUrl: 'https://hypeauditor.com/api/method',
   endpoints: {
-    search: '/auditor.search/',
-    sandbox: '/auditor.searchSandbox/'
+    search: '/auditor.search/'
   }
 };
 ```
@@ -180,7 +179,7 @@ export const hypeAuditorConfig = {
 - **Métricas avanzadas**: AQS, CQS, engagement real
 - **Filtros más específicos**: Por ubicación, idioma, edad, etc.
 - **Datos de audiencia**: Demografía detallada
-- **Modo sandbox**: Testing sin consumir créditos
+- **Modo producción**: Búsquedas reales con datos completos
 - **API más moderna**: Mejor documentación y soporte
 
 ### ❌ Limitaciones

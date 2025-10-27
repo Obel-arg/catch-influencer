@@ -135,109 +135,69 @@ class HypeAuditorDiscoveryService {
   /**
    * Realiza una búsqueda de discovery usando HypeAuditor
    */
-            async searchDiscovery(filters: HypeAuditorDiscoveryFilters): Promise<HypeAuditorDiscoveryResponse> {
-            try {
-              const response = await httpApiClient.post<HypeAuditorDiscoveryResponse>(`${this.baseUrl}/search-sandbox`, filters);
-              return response.data;
-            } catch (error) {
-              console.error('Error en búsqueda HypeAuditor:', error);
-              throw error;
-            }
-          }
+  async searchDiscovery(filters: HypeAuditorDiscoveryFilters): Promise<HypeAuditorDiscoveryResponse> {
+    try {
+      const response = await httpApiClient.post<HypeAuditorDiscoveryResponse>(`${this.baseUrl}/search`, filters);
+      return response.data;
+    } catch (error) {
+      console.error('Error en búsqueda HypeAuditor:', error);
+      throw error;
+    }
+  }
 
-            /**
-           * Verifica la salud del servicio HypeAuditor
-           */
-          async healthCheck(): Promise<HypeAuditorHealthResponse> {
-            try {
-              const response = await httpApiClient.get<HypeAuditorHealthResponse>(`${this.baseUrl}/health`);
-              return response.data;
-            } catch (error) {
-              console.error('Error en health check HypeAuditor:', error);
-              throw error;
-            }
-          }
+  /**
+   * Verifica la salud del servicio HypeAuditor
+   */
+  async healthCheck(): Promise<HypeAuditorHealthResponse> {
+    try {
+      const response = await httpApiClient.get<HypeAuditorHealthResponse>(`${this.baseUrl}/health`);
+      return response.data;
+    } catch (error) {
+      console.error('Error en health check HypeAuditor:', error);
+      throw error;
+    }
+  }
 
-            /**
-           * Obtiene estadísticas de uso
-           */
-          async getUsageStats(): Promise<HypeAuditorUsageStatsResponse> {
-            try {
-              const response = await httpApiClient.get<HypeAuditorUsageStatsResponse>(`${this.baseUrl}/usage-stats`);
-              return response.data;
-            } catch (error) {
-              console.error('❌ [HYPEAUDITOR DISCOVERY SERVICE] Error obteniendo estadísticas:', error);
-              throw error;
-            }
-          }
+  /**
+   * Obtiene estadísticas de uso
+   */
+  async getUsageStats(): Promise<HypeAuditorUsageStatsResponse> {
+    try {
+      const response = await httpApiClient.get<HypeAuditorUsageStatsResponse>(`${this.baseUrl}/usage-stats`);
+      return response.data;
+    } catch (error) {
+      console.error('❌ [HYPEAUDITOR DISCOVERY SERVICE] Error obteniendo estadísticas:', error);
+      throw error;
+    }
+  }
 
-          /**
-           * Obtiene el taxonomy de categorías de HypeAuditor
-           */
-          async getTaxonomy(): Promise<HypeAuditorTaxonomyResponse> {
-            try {
-              const response = await httpApiClient.get<HypeAuditorTaxonomyResponse>(`${this.baseUrl}/taxonomy`);
-              return response.data;
-            } catch (error) {
-              console.error('❌ [HYPEAUDITOR DISCOVERY SERVICE] Error obteniendo taxonomy:', error);
-              throw error;
-            }
-          }
+  /**
+   * Obtiene el taxonomy de categorías de HypeAuditor
+   */
+  async getTaxonomy(): Promise<HypeAuditorTaxonomyResponse> {
+    try {
+      const response = await httpApiClient.get<HypeAuditorTaxonomyResponse>(`${this.baseUrl}/taxonomy`);
+      return response.data;
+    } catch (error) {
+      console.error('❌ [HYPEAUDITOR DISCOVERY SERVICE] Error obteniendo taxonomy:', error);
+      throw error;
+    }
+  }
 
   /**
    * Transforma los resultados de HypeAuditor al formato del Explorer
    */
   transformToExplorerFormat(hypeAuditorResponse: HypeAuditorDiscoveryResponse) {
-    const results = hypeAuditorResponse.data.result.search_results;
+    // La respuesta viene directamente con items en el nivel superior
+    const results = hypeAuditorResponse.items || [];
     
     return {
       success: hypeAuditorResponse.success,
-      items: results.map(item => ({
-        // IDs básicos
-        id: item.basic.username,
-        creatorId: item.basic.username,
-        name: item.basic.title || item.basic.username,
-        avatar: item.basic.avatar_url,
-        isVerified: false,
-        contentNiches: [],
-        country: undefined,
-        location: undefined,
-        language: undefined,
-        
-        // ✅ CAMPOS QUE LEE DIRECTAMENTE LA TABLA
-        followersCount: item.metrics.subscribers_count?.value || 0, // ✅ 50,924,589
-        averageEngagementRate: (item.metrics.er?.value || 0) / 100, // ✅ 1.56% → 0.0156
-        mainSocialPlatform: 'instagram',
-        categories: [],
-        
-        // Estructura completa para compatibilidad
-        socialPlatforms: [{
-          platform: item.features.social_networks?.[0]?.type || 'instagram',
-          username: item.basic.username,
-          followers: item.metrics.subscribers_count?.value || 0,
-          engagement: item.metrics.er?.value || 0
-        }],
-        platformInfo: {
-          socialId: item.features.social_networks?.[0]?.social_id,
-          state: item.features.social_networks?.[0]?.state,
-          aqs: item.features.aqs?.data?.mark,
-          cqs: item.features.cqs?.data?.mark
-        },
-        metrics: {
-          engagementRate: item.metrics.er?.value || 0,
-          realFollowers: item.metrics.real_subscribers_count?.value,
-          likesCount: item.metrics.likes_count?.value,
-          viewsAvg: item.metrics.views_avg?.value,
-          commentsAvg: item.metrics.comments_avg?.value,
-          sharesAvg: item.metrics.shares_avg?.value,
-          aqs: item.features.aqs?.data?.mark,
-          cqs: item.features.cqs?.data?.mark
-        }
-      })),
-      totalCount: hypeAuditorResponse.data.result.total_pages * 20, // 20 items por página
-      currentPage: hypeAuditorResponse.data.result.current_page,
-      totalPages: hypeAuditorResponse.data.result.total_pages,
-      queriesLeft: hypeAuditorResponse.data.result.queries_left,
+      items: results, // Los items ya vienen transformados desde el backend
+      totalCount: hypeAuditorResponse.totalCount || 0,
+      currentPage: hypeAuditorResponse.currentPage || 1,
+      totalPages: hypeAuditorResponse.totalPages || 1,
+      queriesLeft: hypeAuditorResponse.queriesLeft || 0,
       provider: hypeAuditorResponse.provider,
       metadata: {
         searchTime: hypeAuditorResponse.metadata.searchTime,

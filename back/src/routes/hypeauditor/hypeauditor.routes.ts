@@ -7,8 +7,6 @@ const router = Router();
 // Búsqueda en producción (consume créditos por página)
 router.post('/search', authenticateToken, HypeAuditorController.search);
 
-// Búsqueda en sandbox (retorna muestra, no consume créditos)
-router.post('/sandbox', authenticateToken, HypeAuditorController.sandbox);
 
 // Reporte de Instagram por username
 router.get('/report', authenticateToken, HypeAuditorController.getInstagramReport);
@@ -20,7 +18,6 @@ router.get('/', (req, res) => {
 		version: '1.0.0',
 		endpoints: {
 			search: 'POST /hypeauditor/search',
-			sandbox: 'POST /hypeauditor/sandbox',
 			report: 'GET /hypeauditor/report?username={username}&features={features}'
 		},
 		notes: [

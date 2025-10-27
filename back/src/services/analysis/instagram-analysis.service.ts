@@ -756,7 +756,7 @@ export class InstagramAnalysisService {
       // En lugar de procesar sincrónicamente, iniciamos el proceso en background
       // y configuramos un webhook para cuando termine
       
-      const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = process.env.BACKEND_URL || 'http://localhost:5001';
       const webhookUrl = `${backendUrl}/api/webhooks/instagram/comments-ready?postId=${postId}`;
       
       // Iniciar la extracción en background usando el servicio de Instagram

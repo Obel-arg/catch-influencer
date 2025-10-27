@@ -366,7 +366,13 @@ export const InfluencersProvider: React.FC<InfluencersProviderProps> = ({
         const hypeAuditorResponse = await hypeAuditorDiscoveryService.searchDiscovery(filters);
         
         // Transformar la respuesta al formato del Explorer
-        const transformedData = hypeAuditorDiscoveryService.transformToExplorerFormat(hypeAuditorResponse);
+        let transformedData;
+        try {
+          transformedData = hypeAuditorDiscoveryService.transformToExplorerFormat(hypeAuditorResponse);
+        } catch (transformError) {
+          console.error('❌ [InfluencersContext] Error en transformación:', transformError);
+          throw transformError;
+        }
         
         // Actualizar el estado con los resultados transformados
         setInfluencers(transformedData.items);

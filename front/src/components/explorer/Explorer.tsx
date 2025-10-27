@@ -16,7 +16,7 @@ import { InfluencerProfilePanel } from "@/components/explorer/influencer-profile
 import { useInfluencers } from "@/hooks/influencer/useInfluencers";
 import { influencerService } from '@/lib/services/influencer';
 import { HypeAuditorDiscoveryFilters } from '@/lib/services/hypeauditor-discovery.service';
-import ExplorerFilters from "./ExplorerFilters";
+import HypeAuditorFilters from "./HypeAuditorFilters";
 import { cn } from "@/lib/utils";
 import { campaignService } from '@/lib/services/campaign';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -141,6 +141,7 @@ export default function Explorer() {
   const [previousInfluencers, setPreviousInfluencers] = useState<any[]>([]); // Para evitar flash
   const [loadingInfluencers, setLoadingInfluencers] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
+
 
   // Panel y cache
   const [fullInfluencerCache, setFullInfluencerCache] = useState<{ [youtubeId: string]: any }>({});
@@ -1534,12 +1535,11 @@ export default function Explorer() {
     <div className="flex gap-3 ">
       {/* Panel de filtros (izquierda) */}
       <div className="w-[350px] flex-shrink-0">
-        <ExplorerFilters
+        <HypeAuditorFilters
           platform={platform}
           setPlatform={setPlatform}
-          topics={topics}
-          setTopics={setTopics}
-
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
           location={location}
           setLocation={setLocation}
           minFollowers={minFollowers}
@@ -1550,61 +1550,26 @@ export default function Explorer() {
           setMinEngagement={setMinEngagement}
           maxEngagement={maxEngagement}
           setMaxEngagement={setMaxEngagement}
-
-          
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-
+          accountType={accountType}
+          setAccountType={setAccountType}
+          verified={verified || false}
+          setVerified={setVerified}
+          hasContacts={hasContacts || false}
+          setHasContacts={setHasContacts}
+          aqs={aqsRange}
+          setAqs={setAqsRange}
+          cqs={cqsRange}
+          setCqs={setCqsRange}
+          searchContent={[]}
+          setSearchContent={() => {}}
+          searchDescription={[]}
+          setSearchDescription={() => {}}
           selectedCategories={selectedCategories}
           setSelectedCategories={setSelectedCategories}
-          categories={categories}
-          locations={locations}
-          handleSearch={handleSearch}
-          
-          // Filtros de audiencia para HypeAuditor
-          audienceGender={audienceGender}
-          setAudienceGender={setAudienceGender}
-          audienceAge={audienceAge}
-          setAudienceAge={setAudienceAge}
-          audienceGeo={audienceGeo}
-          setAudienceGeo={setAudienceGeo}
-          handleClearFilters={() => {
-            setPlatform("all");
-            setLocation("all");
-            setMinFollowers(0);
-            setMaxFollowers(100000000);
-            setSearchQuery("");
-
-            setSelectedCategories([]);
-            setTopics([]);
-
-            setMinEngagement(0);
-            setMaxEngagement(100);
-
-            // Limpiar filtros de audiencia de HypeAuditor
-            setAudienceGender({ gender: 'any', percentage: 50 });
-            setAudienceAge({ minAge: 18, maxAge: 54, percentage: 10 });
-            setAudienceGeo({ countries: {}, cities: {} });
-            
-            // Limpiar filtros de taxonomy
-            setTaxonomyCategories({ include: [], exclude: [] });
-
-        
-            setLoadingInfluencers(false); // ✅ Asegurar que no haya loading al limpiar
-            setInfluencers([]); // ✅ Limpiar resultados
-            setPreviousInfluencers([]); // 🎯 MEJORA: Limpiar datos previos
-            setTotalCount(0); // ✅ Resetear contador
-            // 🗑️ lastFilters eliminado
-            setIsSearchActive(false); // 🎯 MEJORA: Resetear estado de búsqueda activa
-            setHasEverSearched(false); // 🎯 ARREGLO: Resetear flag de búsqueda realizada
-            // Nota: NO limpiamos el cache híbrido de localStorage para mantener los 14 días
-          }}
-          showFilters={showFilters}
-          setShowFilters={setShowFilters}
-          
-          // ✨ NUEVO: Props para categorías del taxonomy de HypeAuditor
-          taxonomyCategories={taxonomyCategories}
-          setTaxonomyCategories={setTaxonomyCategories}
+          selectedGrowthRate={{ min: 0, max: 100, period: 'month' }}
+          setSelectedGrowthRate={() => {}}
+          onSearch={handleSearch}
+          isLoading={loadingInfluencers}
         />
       </div>
 

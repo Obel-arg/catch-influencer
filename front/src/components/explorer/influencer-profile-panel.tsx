@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getInstagramThumbnailValidated, getOptimizedAvatarUrl } from "@/utils/instagram";
 import { getTikTokThumbnailValidated, getTikTokDefaultThumbnail, getSafeAvatarUrlForModal } from "@/utils/tiktok";
+import { CountryFlag } from "@/components/ui/country-flag";
 
 interface InfluencerProfilePanelProps {
   influencer: any;
@@ -386,22 +387,14 @@ export function InfluencerProfilePanel({
   isLoading = false,
 }: InfluencerProfilePanelProps) {
   
-  // 🎯 FUNCIÓN PARA DETECTAR SI TIENE DATOS EXTENDIDOS O BÁSICOS DE HYPEAUDITOR
+  // 🎯 FUNCIÓN PARA DETECTAR SI TIENE DATOS EXTENDIDOS
   const hasExtendedData = useMemo(() => {
     if (!influencer) return false;
     
     // Verificar si tiene metadatos de fuente de datos
     if (influencer._metadata?.hasExtendedData) return true;
     
-    // 🚀 NUEVO: Si tiene datos básicos de HypeAuditor en socialPlatforms, considerarlos válidos
-    if (influencer.socialPlatforms?.length > 0) {
-      const hasValidPlatforms = influencer.socialPlatforms.some((social: any) => 
-        social.followers > 0 && social.platform && social.username
-      );
-      if (hasValidPlatforms) return true;
-    }
-    
-    // Verificar si tiene datos detallados de plataformas (estructura tradicional)
+    // Verificar si tiene datos detallados de plataformas
     const platformInfo = influencer.platformInfo || {};
     
     // Buscar datos extendidos en cualquier plataforma
@@ -438,39 +431,15 @@ export function InfluencerProfilePanel({
     return hasYouTubeExtended || hasInstagramExtended || hasTikTokExtended || hasFacebookExtended || hasThreadsExtended;
   }, [influencer]);
 
-  // 🚀 FUNCIÓN MEJORADA para obtener datos de plataforma (HypeAuditor + tradicional)
+  // Nueva función para obtener los datos correctos de la plataforma
   const getPlatformData = (platform: string) => {
-    // 🎯 PRIMERO: Intentar obtener de platformInfo (estructura tradicional)
-    if (influencer.platformInfo && influencer.platformInfo[platform.toLowerCase()]) {
-      const pdata = influencer.platformInfo[platform.toLowerCase()];
-      if (platform === "Instagram" && pdata.basicInstagram) return pdata.basicInstagram;
-      if (platform === "TikTok" && pdata.basicTikTok) return pdata.basicTikTok;
-      if (platform === "Facebook" && pdata.basicFacebook) return pdata.basicFacebook;
-      if (platform === "Threads" && pdata.basicThreads) return pdata.basicThreads;
-      return pdata;
-    }
-    
-    // 🚀 SEGUNDO: Buscar en socialPlatforms (datos de HypeAuditor)
-    if (influencer.socialPlatforms?.length > 0) {
-      const socialData = influencer.socialPlatforms.find((social: any) => 
-        social.platform.toLowerCase() === platform.toLowerCase()
-      );
-      
-      if (socialData) {
-        // Adaptar estructura de socialPlatforms al formato esperado
-        return {
-          followers: socialData.followers,
-          subscribers: socialData.followers, // Para YouTube
-          engageRate: socialData.engagement / 100, // Convertir porcentaje a decimal
-          username: socialData.username,
-          // Campos básicos sin posts recientes (datos básicos de HypeAuditor)
-          recentPosts: [],
-          recentVideos: []
-        };
-      }
-    }
-    
-    return null;
+    const pdata = influencer.platformInfo[platform.toLowerCase()];
+    if (!pdata) return null;
+    if (platform === "Instagram" && pdata.basicInstagram) return pdata.basicInstagram;
+    if (platform === "TikTok" && pdata.basicTikTok) return pdata.basicTikTok;
+    if (platform === "Facebook" && pdata.basicFacebook) return pdata.basicFacebook;
+    if (platform === "Threads" && pdata.basicThreads) return pdata.basicThreads;
+    return pdata;
   };
 
   const [mounted, setMounted] = useState(false)
@@ -485,71 +454,57 @@ export function InfluencerProfilePanel({
       return platforms;
     }
     
-    // 🚀 PRIMERO: Verificar platformInfo (estructura tradicional)
-    if (influencer.platformInfo) {
-      const platformInfo = influencer.platformInfo;
-      
-      // YouTube
-      if (platformInfo.youtube && (
-        platformInfo.youtube.subscribers > 0 ||
-        platformInfo.youtube.recentVideos?.length > 0 ||
-        platformInfo.youtube.views > 0 ||
-        Object.keys(platformInfo.youtube).length > 0
-      )) {
-        platforms.push("YouTube");
-      }
-      
-      // Instagram
-      if (platformInfo.instagram && (
-        platformInfo.instagram.basicInstagram?.followers > 0 ||
-        platformInfo.instagram.recentPosts?.length > 0 ||
-        platformInfo.instagram.basicInstagram?.engageRate > 0 ||
-        Object.keys(platformInfo.instagram).length > 0
-      )) {
-        platforms.push("Instagram");
-      }
-      
-      // TikTok
-      if (platformInfo.tiktok && (
-        platformInfo.tiktok.basicTikTok?.followers > 0 ||
-        platformInfo.tiktok.recentVideos?.length > 0 ||
-        platformInfo.tiktok.basicTikTok?.engageRate > 0 ||
-        Object.keys(platformInfo.tiktok).length > 0
-      )) {
-        platforms.push("TikTok");
-      }
-      
-      // Facebook
-      if (platformInfo.facebook && (
-        platformInfo.facebook.basicFacebook?.followers > 0 ||
-        platformInfo.facebook.recentPosts?.length > 0 ||
-        platformInfo.facebook.basicFacebook?.engageRate > 0 ||
-        Object.keys(platformInfo.facebook).length > 0
-      )) {
-        platforms.push("Facebook");
-      }
-      
-      // Threads
-      if (platformInfo.threads && (
-        platformInfo.threads.basicThreads?.followers > 0 ||
-        platformInfo.threads.recentPosts?.length > 0 ||
-        platformInfo.threads.basicThreads?.gRateThreadsTabAvgLikes > 0 ||
-        Object.keys(platformInfo.threads).length > 0
-      )) {
-        platforms.push("Threads");
-      }
+    // Verificar cada plataforma en platformInfo - más robusto
+    const platformInfo = influencer.platformInfo;
+    
+    // YouTube
+    if (platformInfo.youtube && (
+      platformInfo.youtube.subscribers > 0 ||
+      platformInfo.youtube.recentVideos?.length > 0 ||
+      platformInfo.youtube.views > 0 ||
+      Object.keys(platformInfo.youtube).length > 0
+    )) {
+      platforms.push("YouTube");
     }
     
-    // 🚀 SEGUNDO: Si no hay platformInfo, verificar socialPlatforms (HypeAuditor)
-    if (platforms.length === 0 && influencer.socialPlatforms?.length > 0) {
-      influencer.socialPlatforms.forEach((social: any) => {
-        if (social.followers > 0 && social.platform) {
-          const platformName = social.platform.charAt(0).toUpperCase() + social.platform.slice(1).toLowerCase();
-          if (!platforms.includes(platformName)) {
-            platforms.push(platformName);
-          }
-        }
-      });
+    // Instagram
+    if (platformInfo.instagram && (
+      platformInfo.instagram.basicInstagram?.followers > 0 ||
+      platformInfo.instagram.recentPosts?.length > 0 ||
+      platformInfo.instagram.basicInstagram?.engageRate > 0 ||
+      Object.keys(platformInfo.instagram).length > 0
+    )) {
+      platforms.push("Instagram");
+    }
+    
+    // TikTok
+    if (platformInfo.tiktok && (
+      platformInfo.tiktok.basicTikTok?.followers > 0 ||
+      platformInfo.tiktok.recentVideos?.length > 0 ||
+      platformInfo.tiktok.basicTikTok?.engageRate > 0 ||
+      Object.keys(platformInfo.tiktok).length > 0
+    )) {
+      platforms.push("TikTok");
+    }
+    
+    // Facebook
+    if (platformInfo.facebook && (
+      platformInfo.facebook.basicFacebook?.followers > 0 ||
+      platformInfo.facebook.recentPosts?.length > 0 ||
+      platformInfo.facebook.basicFacebook?.engageRate > 0 ||
+      Object.keys(platformInfo.facebook).length > 0
+    )) {
+      platforms.push("Facebook");
+    }
+    
+    // Threads
+    if (platformInfo.threads && (
+      platformInfo.threads.basicThreads?.followers > 0 ||
+      platformInfo.threads.recentPosts?.length > 0 ||
+      platformInfo.threads.basicThreads?.gRateThreadsTabAvgLikes > 0 ||
+      Object.keys(platformInfo.threads).length > 0
+    )) {
+      platforms.push("Threads");
     }
       
     return platforms;
@@ -585,13 +540,7 @@ export function InfluencerProfilePanel({
     setMounted(true);
     if (isOpen) {
       document.body.style.overflow = "hidden";
-      // 🚀 MEJORADO: Determinar la plataforma inicial de manera inteligente
-      const initialPlatform = 
-        influencer.platform || 
-        influencer.mainSocialPlatform || 
-        availablePlatforms[0] || 
-        'Instagram'; // Default para HypeAuditor
-      setActivePlatform(initialPlatform);
+      setActivePlatform(influencer.platform || availablePlatforms[0] || 'YouTube');
     }
     return () => {
       document.body.style.overflow = "";
@@ -609,7 +558,7 @@ export function InfluencerProfilePanel({
   }, [influencer]);
   
   const platformData = useMemo(() => {
-    if (!influencer) return null;
+    if (!influencer?.platformInfo) return null;
     return getPlatformData(activePlatform);
   }, [activePlatform, influencer]);
 
@@ -746,21 +695,15 @@ export function InfluencerProfilePanel({
                     <div className="text-sm text-gray-500">
                       {influencer.location || influencer.country} • <NumberDisplay value={aggregatedData.totalFollowers} format="short" /> Seguidores Totales
                     </div>
-                    {/* 🎯 MOSTRAR FUENTE DE DATOS */}
-                    <div className="text-xs text-blue-600 font-medium mt-1">
-                      {influencer._metadata?.source ? (
-                        <>
-                          📊 {influencer._metadata.source === 'local-database' ? 'Base de Datos' : 'API Externa'}
-                          {influencer._metadata.completenessScore && 
-                            ` • ${influencer._metadata.completenessScore}% completo`
-                          }
-                        </>
-                      ) : influencer.socialPlatforms?.length > 0 ? (
-                        <>🚀 HypeAuditor Discovery • Datos básicos</>
-                      ) : (
-                        <>📊 Datos del sistema</>
-                      )}
-                    </div>
+                    {/* 🎯 MOSTRAR FUENTE DE DATOS SI ESTÁ DISPONIBLE */}
+                    {influencer._metadata?.source && (
+                      <div className="text-xs text-blue-600 font-medium mt-1">
+                        📊 {influencer._metadata.source === 'local-database' ? 'Base de Datos' : 'API Externa'}
+                        {influencer._metadata.completenessScore && 
+                          ` • ${influencer._metadata.completenessScore}% completo`
+                        }
+                      </div>
+                    )}
                   </div>
                 </div>
               </Card>
@@ -825,23 +768,6 @@ export function InfluencerProfilePanel({
             <Card className="border rounded-md overflow-hidden">
               <div className="p-4 space-y-4">
                 <div className="text-sm font-semibold text-gray-700">Posts recientes</div>
-                
-                {/* 🚀 MENSAJE INFORMATIVO PARA DATOS DE HYPEAUDITOR */}
-                {influencer.socialPlatforms?.length > 0 && !influencer.platformInfo && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                    <div className="flex items-start gap-2">
-                      <div className="text-blue-600">ℹ️</div>
-                      <div className="text-sm">
-                        <div className="font-medium text-blue-800">Datos básicos de HypeAuditor</div>
-                        <div className="text-blue-600 mt-1">
-                          Mostrando información básica del influencer. Los posts recientes no están disponibles en este modo. 
-                          Para obtener datos completos, sincroniza este influencer.
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
                 <div className="grid grid-cols-4 gap-2">
                   {(platformData.recentPosts || platformData.recentVideos)?.slice(0, 4).map((post: any) => (
                     <a

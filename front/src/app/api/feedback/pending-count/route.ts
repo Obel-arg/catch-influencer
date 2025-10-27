@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/feedback/pending-count`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/feedback/pending-count`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`
