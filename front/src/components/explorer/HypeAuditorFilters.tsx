@@ -168,14 +168,6 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
     setSearchDescription(searchDescription.filter((_, i) => i !== index));
   };
 
-  const handleCategoryToggle = (categoryId: string) => {
-    if (selectedCategories.includes(categoryId)) {
-      setSelectedCategories(selectedCategories.filter(id => id !== categoryId));
-    } else {
-      setSelectedCategories([...selectedCategories, categoryId]);
-    }
-  };
-
   const resetFilters = () => {
     setSearchQuery('');
     setLocation('all');
@@ -208,8 +200,13 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
         </button>
       </div>
 
-      {/* Filtros básicos */}
-      <div className="space-y-4">
+      {/* Paso 1: Filtros básicos */}
+      <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+        <h4 className="text-md font-medium text-gray-700 mb-4 flex items-center">
+          <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full mr-2">1</span>
+          Filtros básicos
+        </h4>
+        <div className="space-y-4">
         {/* Plataforma */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -326,207 +323,222 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Categorías
           </label>
-          <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+          <select
+            multiple
+            value={selectedCategories}
+            onChange={(e) => {
+              const values = Array.from(e.target.selectedOptions, option => option.value);
+              setSelectedCategories(values);
+            }}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            size={5}
+          >
             {categories.map(category => (
-              <label key={category.id} className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectedCategories.includes(category.id)}
-                  onChange={() => handleCategoryToggle(category.id)}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="text-sm">{category.icon} {category.name}</span>
-              </label>
+              <option key={category.id} value={category.id}>
+                {category.icon} {category.name}
+              </option>
             ))}
-          </div>
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            Mantén presionado Ctrl (Cmd en Mac) para seleccionar múltiples categorías
+          </p>
+        </div>
         </div>
       </div>
 
-      {/* Filtros avanzados */}
+      {/* Paso 2: Filtros avanzados */}
       {isExpanded && (
-        <div className="mt-6 pt-6 border-t border-gray-200 space-y-4">
-          {/* Tipo de cuenta */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tipo de cuenta
-            </label>
-            <select
-              value={accountType}
-              onChange={(e) => setAccountType(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">Todos los tipos</option>
-              <option value="human">Persona</option>
-              <option value="brand">Marca</option>
-            </select>
-          </div>
-
-          {/* Verificada */}
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="verified"
-              checked={verified}
-              onChange={(e) => setVerified(e.target.checked)}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <label htmlFor="verified" className="text-sm font-medium text-gray-700">
-              Solo cuentas verificadas
-            </label>
-          </div>
-
-          {/* Tiene contactos */}
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="hasContacts"
-              checked={hasContacts}
-              onChange={(e) => setHasContacts(e.target.checked)}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <label htmlFor="hasContacts" className="text-sm font-medium text-gray-700">
-              Tiene información de contacto
-            </label>
-          </div>
-
-          {/* AQS */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Audience Quality Score (AQS)
-            </label>
-            <div className="flex items-center space-x-2">
-              <input
-                type="number"
-                value={aqs.min}
-                onChange={(e) => setAqs({ ...aqs, min: Number(e.target.value) })}
-                placeholder="Mínimo"
-                min="0"
-                max="100"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <span className="text-gray-500">-</span>
-              <input
-                type="number"
-                value={aqs.max}
-                onChange={(e) => setAqs({ ...aqs, max: Number(e.target.value) })}
-                placeholder="Máximo"
-                min="0"
-                max="100"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* CQS */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Channel Quality Score (CQS)
-            </label>
-            <div className="flex items-center space-x-2">
-              <input
-                type="number"
-                value={cqs.min}
-                onChange={(e) => setCqs({ ...cqs, min: Number(e.target.value) })}
-                placeholder="Mínimo"
-                min="0"
-                max="100"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <span className="text-gray-500">-</span>
-              <input
-                type="number"
-                value={cqs.max}
-                onChange={(e) => setCqs({ ...cqs, max: Number(e.target.value) })}
-                placeholder="Máximo"
-                min="0"
-                max="100"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* Búsqueda por contenido */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Búsqueda por contenido
-            </label>
-            <div className="flex space-x-2">
-              <input
-                type="text"
-                value={contentInput}
-                onChange={(e) => setContentInput(e.target.value)}
-                placeholder="Agregar palabra clave..."
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                onKeyPress={(e) => e.key === 'Enter' && handleAddContent()}
-              />
-              <button
-                type="button"
-                onClick={handleAddContent}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                Agregar
-              </button>
-            </div>
-            {searchContent.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {searchContent.map((content, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-md"
-                  >
-                    {content}
-                    <button
-                      onClick={() => handleRemoveContent(index)}
-                      className="ml-1 text-blue-600 hover:text-blue-800"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h4 className="text-md font-medium text-gray-700 mb-4 flex items-center">
+              <span className="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded-full mr-2">2</span>
+              Filtros avanzados
+            </h4>
+            <div className="space-y-4">
+              {/* Tipo de cuenta */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tipo de cuenta
+                </label>
+                <select
+                  value={accountType}
+                  onChange={(e) => setAccountType(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">Todos los tipos</option>
+                  <option value="human">Persona</option>
+                  <option value="brand">Marca</option>
+                </select>
               </div>
-            )}
-          </div>
 
-          {/* Búsqueda por descripción */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Búsqueda por descripción
-            </label>
-            <div className="flex space-x-2">
-              <input
-                type="text"
-                value={descriptionInput}
-                onChange={(e) => setDescriptionInput(e.target.value)}
-                placeholder="Agregar palabra clave..."
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                onKeyPress={(e) => e.key === 'Enter' && handleAddDescription()}
-              />
-              <button
-                type="button"
-                onClick={handleAddDescription}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                Agregar
-              </button>
-            </div>
-            {searchDescription.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {searchDescription.map((description, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 text-sm rounded-md"
-                  >
-                    {description}
-                    <button
-                      onClick={() => handleRemoveDescription(index)}
-                      className="ml-1 text-green-600 hover:text-green-800"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
+              {/* Verificada */}
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="verified"
+                  checked={verified}
+                  onChange={(e) => setVerified(e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <label htmlFor="verified" className="text-sm font-medium text-gray-700">
+                  Solo cuentas verificadas
+                </label>
               </div>
-            )}
+
+              {/* Tiene contactos */}
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="hasContacts"
+                  checked={hasContacts}
+                  onChange={(e) => setHasContacts(e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <label htmlFor="hasContacts" className="text-sm font-medium text-gray-700">
+                  Tiene información de contacto
+                </label>
+              </div>
+
+              {/* AQS */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Audience Quality Score (AQS)
+                </label>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="number"
+                    value={aqs.min}
+                    onChange={(e) => setAqs({ ...aqs, min: Number(e.target.value) })}
+                    placeholder="Mínimo"
+                    min="0"
+                    max="100"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <span className="text-gray-500">-</span>
+                  <input
+                    type="number"
+                    value={aqs.max}
+                    onChange={(e) => setAqs({ ...aqs, max: Number(e.target.value) })}
+                    placeholder="Máximo"
+                    min="0"
+                    max="100"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* CQS */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Channel Quality Score (CQS)
+                </label>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="number"
+                    value={cqs.min}
+                    onChange={(e) => setCqs({ ...cqs, min: Number(e.target.value) })}
+                    placeholder="Mínimo"
+                    min="0"
+                    max="100"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <span className="text-gray-500">-</span>
+                  <input
+                    type="number"
+                    value={cqs.max}
+                    onChange={(e) => setCqs({ ...cqs, max: Number(e.target.value) })}
+                    placeholder="Máximo"
+                    min="0"
+                    max="100"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Búsqueda por contenido */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Búsqueda por contenido
+                </label>
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={contentInput}
+                    onChange={(e) => setContentInput(e.target.value)}
+                    placeholder="Agregar palabra clave..."
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onKeyPress={(e) => e.key === 'Enter' && handleAddContent()}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddContent}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  >
+                    Agregar
+                  </button>
+                </div>
+                {searchContent.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {searchContent.map((content, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-md"
+                      >
+                        {content}
+                        <button
+                          onClick={() => handleRemoveContent(index)}
+                          className="ml-1 text-blue-600 hover:text-blue-800"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Búsqueda por descripción */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Búsqueda por descripción
+                </label>
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={descriptionInput}
+                    onChange={(e) => setDescriptionInput(e.target.value)}
+                    placeholder="Agregar palabra clave..."
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onKeyPress={(e) => e.key === 'Enter' && handleAddDescription()}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddDescription}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  >
+                    Agregar
+                  </button>
+                </div>
+                {searchDescription.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {searchDescription.map((description, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 text-sm rounded-md"
+                      >
+                        {description}
+                        <button
+                          onClick={() => handleRemoveDescription(index)}
+                          className="ml-1 text-green-600 hover:text-green-800"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
