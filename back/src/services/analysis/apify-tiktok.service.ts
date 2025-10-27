@@ -136,7 +136,7 @@ export class ApifyTikTokService {
    */
   public async startApifyRunWithWebhook(tiktokUrl: string, postId: string, maxComments: number = 1000): Promise<ApifyRunResult> {
     try {
-      const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = process.env.BACKEND_URL || 'http://localhost:5001';
       const webhookUrl = `${backendUrl}/api/webhooks/apify/tiktok-comments-ready?postId=${postId}`;
 
       const input = {

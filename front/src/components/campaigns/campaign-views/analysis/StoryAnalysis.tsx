@@ -208,8 +208,8 @@ const StoryAnalysis: React.FC<StoryAnalysisProps> = ({ postUrl, platform, postId
       // Usar fetch para evitar interferencia del httpApiClient con headers
       const token = localStorage.getItem('token');
       const apiBaseUrl = process.env.NODE_ENV === 'development' 
-        ? 'http://localhost:5000/api' 
-        : 'http://localhost:5000/api';
+        ? 'http://localhost:5001/api' 
+        : 'http://localhost:5001/api';
       
       const fetchResponse = await fetch(`${apiBaseUrl}/influencer-posts/${postId}/screenshot`, {
         method: 'POST',

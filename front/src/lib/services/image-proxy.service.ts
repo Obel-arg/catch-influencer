@@ -1,7 +1,7 @@
 import { httpApiClient } from '@/lib/http';
 
 // Obtener la URL base del API desde la configuración
-const backendUrl = "http://localhost:5000";
+const backendUrl = "http://localhost:5001";
 
 export class ImageProxyService {
   /**

@@ -195,7 +195,7 @@ export const setupTokenInterceptors = (axiosInstance: any) => {
           }
 
           // Intentar refrescar el token
-          const backendUrl = "http://localhost:5000/api/auth";
+          const backendUrl = "http://localhost:5001/api/auth";
 
           const response = await fetch(`${backendUrl}/refresh`, {
             method: 'POST',

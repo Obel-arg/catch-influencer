@@ -10,12 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { BookmarkIcon, ExternalLink, Filter, Instagram, Music, Search, X, Zap } from "lucide-react";
+import { BookmarkIcon, ExternalLink, Filter, Instagram, Music, Search, X } from "lucide-react";
 import { Youtube } from "lucide-react";
 import { InfluencerProfilePanel } from "@/components/explorer/influencer-profile-panel";
 import { useInfluencers } from "@/hooks/influencer/useInfluencers";
+import { creatorService } from '@/lib/services/creator';
 import { influencerService } from '@/lib/services/influencer';
-import { HypeAuditorDiscoveryFilters } from '@/lib/services/hypeauditor-discovery.service';
 import ExplorerFilters from "./ExplorerFilters";
 import { cn } from "@/lib/utils";
 import { campaignService } from '@/lib/services/campaign';
@@ -28,10 +28,10 @@ import { getTikTokThumbnailValidated, getTikTokDefaultThumbnail, getSafeAvatarUr
 import { getYouTubeThumbnail } from '@/utils/youtube';
 import { NumberDisplay } from '@/components/ui/NumberDisplay';
 
-// 🎯 Imports para las mejoras
+// 🎯 Nuevos imports para las mejoras
 import { SkeletonInfluencerTable } from "./SkeletonInfluencerRow";
 import { LazyInfluencerAvatar } from "./LazyInfluencerAvatar";
-
+import { explorerCacheService, SearchFilters } from '@/lib/services/explorer-cache.service';
 
 
 
@@ -67,65 +67,33 @@ export default function Explorer() {
   
   // Toast notifications
   const { toast } = useToast();
-
-  // 🚀 Hook de influencers para HypeAuditor
-  const { searchHypeAuditorInfluencers, loading: loadingHypeAuditor } = useInfluencers();
   
-  // 🎯 Estado para manejar información de búsqueda
-  const [searchInfo, setSearchInfo] = useState<{
+  // 🎯 Estado para manejar información de cache
+  const [cacheInfo, setCacheInfo] = useState<{
+    isFromCache: boolean;
     searchHash?: string;
     tokensUsed?: number;
     expiresAt?: string;
-  }>({});
+    pagesAvailable?: number;
+  }>({ isFromCache: false });
   
   // State for filters
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [platform, setPlatform] = useState<string>("all");
   const [topics, setTopics] = useState<string[]>([]);
-
+  const [niches, setNiches] = useState<string[]>([]);
   const [location, setLocation] = useState<string>("all"); // ✅ Iniciar con "todos los países"
   const [minFollowers, setMinFollowers] = useState<number>(0);
   const [maxFollowers, setMaxFollowers] = useState<number>(100000000);
   const [minEngagement, setMinEngagement] = useState<number>(0);
   const [maxEngagement, setMaxEngagement] = useState<number>(100); // ✅ Iniciar con valor máximo correcto
-
+  const [selectedGrowthRate, setSelectedGrowthRate] = useState<{ min: number; max: number } | null>(null);
   const [showFilters, setShowFilters] = useState(true);
   const [sortBy, setSortBy] = useState<string>("followers");
   const [savedInfluencers, setSavedInfluencers] = useState<string[]>([]);
 
-
-
-  // 🎯 NUEVOS ESTADOS PARA FILTROS DE HYPEAUDITOR DISCOVERY
-  const [audienceGender, setAudienceGender] = useState<{ gender: 'male' | 'female' | 'any'; percentage: number }>({
-    gender: 'any',
-    percentage: 50
-  });
-  const [audienceAge, setAudienceAge] = useState<{ minAge: number; maxAge: number; percentage: number }>({
-    minAge: 18,
-    maxAge: 54,
-    percentage: 10
-  });
-  const [audienceGeo, setAudienceGeo] = useState<{ countries: { [key: string]: number }; cities: { [key: string]: number } }>({
-    countries: {},
-    cities: {}
-  });
-
-  // 🎯 NUEVO: Estado para categorías del taxonomy de HypeAuditor
-  const [taxonomyCategories, setTaxonomyCategories] = useState<{
-    include: string[];
-    exclude: string[];
-  }>({
-    include: [],
-    exclude: []
-  });
-
-  const [accountType, setAccountType] = useState<'brand' | 'human' | 'any'>('any');
-  const [verified, setVerified] = useState<boolean | null>(null);
-  const [hasContacts, setHasContacts] = useState<boolean | null>(null);
-  const [hasLaunchedAdvertising, setHasLaunchedAdvertising] = useState<boolean | null>(null);
-  const [aqsRange, setAqsRange] = useState<{ min: number; max: number }>({ min: 0, max: 100 });
-  const [cqsRange, setCqsRange] = useState<{ min: number; max: number }>({ min: 0, max: 100 });
+  const [hashtags, setHashtags] = useState<string>("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   const [selectedInfluencer, setSelectedInfluencer] = useState<any>(null);
@@ -133,8 +101,7 @@ export default function Explorer() {
 
   // Estado para paginado y filtros
   const [page, setPage] = useState(1);
-  const [size] = useState(6); // 🎯 UI: 6 influencers por página (para mantener tamaño)
-  const [totalResultsPerPage] = useState(20); // 🚀 HypeAuditor: 20 resultados por página
+  const [size] = useState(6); // 6 influencers por página
 
   // 🎯 MEJORA: Influencers con persistencia de datos previos
   const [influencers, setInfluencers] = useState<any[]>([]);
@@ -176,13 +143,8 @@ export default function Explorer() {
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [hasEverSearched, setHasEverSearched] = useState(false);
 
-  // 🚀 Estado del proveedor (solo HypeAuditor)
-  const [provider] = useState<'hypeauditor'>('hypeauditor');
-
   // ✨ NUEVO: Estado para manejar avatares procesados
   const [processedAvatars, setProcessedAvatars] = useState<{ [key: string]: string }>({});
-
-
 
   // 🧹 FUNCIÓN PARA LIMPIAR CACHE DE AVATARES (útil cuando cambia la lógica)
   const clearAvatarCache = useCallback(() => {
@@ -293,6 +255,7 @@ export default function Explorer() {
 
   // 🗑️ ELIMINADOS: pagesCached y cacheExpiresAt - cache ahora es automático en el backend
 
+<<<<<<< HEAD
   // 🚀 NUEVA FUNCIÓN PARA BÚSQUEDA CON HYPEAUDITOR
   const handleHypeAuditorSearch = async () => {
     try {
@@ -390,57 +353,245 @@ export default function Explorer() {
   };
 
   // 🎯 FUNCIÓN DE BÚSQUEDA CON HYPEAUDITOR
+=======
+  // 🎯 FUNCIÓN INTELIGENTE DE BÚSQUEDA
+>>>>>>> 734e09103dd483d07281a24dbde54f4d174c4fc6
   const handleSearch = async () => {
     const searchStartTime = Date.now();
 
+    
     setHasEverSearched(true);
     setLoadingInfluencers(true);
-    setIsSearchActive(true);
+    setIsSearchActive(true); // 🎯 SKELETON SIEMPRE POR 1 SEGUNDO
 
     // Reiniciar paginación
     setPage(1);
 
     try {
-      await handleHypeAuditorSearch();
+      // 🎯 DECIDIR ENTRE BÚSQUEDA INTELIGENTE O POR FILTROS
+      if (searchQuery.trim()) {
+
+        
+        // 🔍 BÚSQUEDA INTELIGENTE cuando hay texto - SOLO QUERY Y PLATFORM
+        const searchData = {
+          query: searchQuery.trim(),
+          platform: platform === "all" ? undefined : platform,
+        };
+        
+        const smartSearchStartTime = Date.now();
+
+        const result = await creatorService.smartSearch(searchData);
+        const smartSearchEndTime = Date.now();
+        
+        console.log(`📊 [FRONTEND LOG] Datos enviados a smartSearch:`, searchData);
+        console.log(`📊 [FRONTEND LOG] Respuesta de smartSearch:`, result);
+
+         
+         if (result.success) {
+           console.log(`📊 [FRONTEND LOG] Procesando resultado exitoso - items:`, result.items);
+           console.log(`📊 [FRONTEND LOG] searchSummary:`, result.searchSummary);
+           
+           // 🔧 FALLBACK: Si no hay items pero sí hay searchSummary con resultados
+           if ((!result.items || result.items.length === 0) && result.searchSummary) {
+             const totalFound = Object.values(result.searchSummary).reduce((sum: number, count: any) => sum + (count || 0), 0);
+             
+             if (totalFound > 0) {
+
+               
+               // Construir array de platform IDs basado en searchSummary
+               const platformIds = [];
+               if (result.searchSummary.instagram > 0) {
+                 // Para el fallback, simularemos algunos IDs comunes que podrían coincidir
+                 platformIds.push({ platform: 'instagram', ids: [searchQuery.trim().toLowerCase()] });
+               }
+               if (result.searchSummary.tiktok > 0) {
+                 platformIds.push({ platform: 'tiktok', ids: [searchQuery.trim().toLowerCase()] });
+               }
+               if (result.searchSummary.youtube > 0) {
+                 platformIds.push({ platform: 'youtube', ids: [searchQuery.trim().toLowerCase()] });
+               }
+               
+               // Intentar fallback
+               try {
+                 const fallbackResult = await creatorService.getInfluencersByIds(platformIds);
+                 if (fallbackResult.success && fallbackResult.items && fallbackResult.items.length > 0) {
+
+                   setInfluencers(fallbackResult.items);
+                   setTotalCount(fallbackResult.count || 0);
+                 } else {
+
+                   setInfluencers([]);
+                   setTotalCount(0);
+                 }
+               } catch (fallbackError) {
+
+                 setInfluencers([]);
+                 setTotalCount(0);
+               }
+             } else {
+               setInfluencers([]);
+               setTotalCount(0);
+             }
+           } else {
+             // Funcionamiento normal
+             console.log(`📊 [FRONTEND LOG] Estableciendo influencers normalmente:`, result.items);
+             setInfluencers(result.items || []);
+             setTotalCount(result.count || 0);
+           }
+         } else {
+           setInfluencers([]);
+           setTotalCount(0);
+         }
+      } else {
+        // 📋 BÚSQUEDA POR FILTROS cuando no hay texto
+        const filters: any = {};
+        if (platform !== "all") filters.platform = platform;
+        if (topics.length > 0) filters.topicIds = topics;
+        if (niches.length > 0) filters.nicheIds = niches;
+        if (location !== "all") filters.country = location;
+        if (minFollowers > 0) filters.minFollowers = minFollowers;
+        if (maxFollowers < 100000000) filters.maxFollowers = maxFollowers;
+        if (minEngagement > 0) filters.minEngagement = minEngagement;
+        if (maxEngagement < 100) filters.maxEngagement = maxEngagement;
+        if (selectedGrowthRate) {
+          filters.minGRateFollowers = selectedGrowthRate.min;
+          filters.maxGRateFollowers = selectedGrowthRate.max;
+        }
+        if (hashtags.trim()) filters.hashtags = hashtags.trim();
+        if (selectedCategories.length > 0) filters.categories = selectedCategories;
+
+        const result = await creatorService.explorerSearch({
+          ...filters,
+          page: 1,
+          size: 6
+        });
+
+        // Actualizar datos
+        setInfluencers(result.items || []);
+        setTotalCount(result.count || 0);
+      }
+
     } catch (error: any) {
       console.error('❌ Error en búsqueda:', error);
       setInfluencers([]);
       setTotalCount(0);
-      toast({
-        title: "Error",
-        description: "Error al buscar influencers",
-        variant: "destructive"
-      });
     } finally {
+<<<<<<< HEAD
       const searchEndTime = Date.now();
 
+=======
+      // 🎯 EARLY RETURN: Mostrar resultados inmediatamente cuando lleguen
+>>>>>>> 734e09103dd483d07281a24dbde54f4d174c4fc6
       setLoadingInfluencers(false);
       setIsSearchActive(false);
     }
   };
 
-  // 🎯 PAGINACIÓN INTERNA (solo HypeAuditor)
+  // 🎯 PAGINACIÓN INTELIGENTE
   const handlePageChange = async (newPage: number) => {
+<<<<<<< HEAD
 
     
     // 🚀 PAGINACIÓN INTERNA: Solo cambiar página local
+=======
+    const pageChangeStartTime = Date.now();
+
+    // 🎯 ACTUALIZAR PÁGINA INMEDIATAMENTE para mostrar "Cargando página X"
+>>>>>>> 734e09103dd483d07281a24dbde54f4d174c4fc6
     setPage(newPage);
-    setLoadingInfluencers(false);
-    setIsSearchActive(false);
+    
+    setLoadingInfluencers(true);
+    setIsSearchActive(true); // 🎯 SKELETON SIEMPRE POR 750ms
+
+    try {
+      // 🎯 MANTENER EL MISMO TIPO DE BÚSQUEDA
+      if (searchQuery.trim()) {
+        // 🔍 PAGINACIÓN CON BÚSQUEDA INTELIGENTE
+        const searchData = {
+          query: searchQuery.trim(),
+          platform: platform === "all" ? undefined : platform,
+          country: location !== "all" ? location : undefined,
+          topicIds: topics.length > 0 ? topics : undefined,
+          nicheIds: niches.length > 0 ? niches : undefined,
+          minFollowers: minFollowers > 0 ? minFollowers : undefined,
+          maxFollowers: maxFollowers < 100000000 ? maxFollowers : undefined,
+          minEngagement: minEngagement > 0 ? minEngagement : undefined,
+          maxEngagement: maxEngagement < 100 ? maxEngagement : undefined,
+          minGRateFollowers: selectedGrowthRate ? selectedGrowthRate.min : undefined,
+          maxGRateFollowers: selectedGrowthRate ? selectedGrowthRate.max : undefined,
+          categories: selectedCategories.length > 0 ? selectedCategories : undefined,
+          page: newPage,
+          size: 6
+        };
+        
+        const result = await creatorService.smartSearch(searchData);
+        
+        if (result.success) {
+          setInfluencers(result.items || []);
+          setTotalCount(result.count || 0);
+        }
+      } else {
+        // 📋 PAGINACIÓN CON FILTROS
+        const filters: any = {};
+        if (platform !== "all") filters.platform = platform;
+        if (topics.length > 0) filters.topicIds = topics;
+        if (niches.length > 0) filters.nicheIds = niches;
+        if (location !== "all") filters.country = location;
+        if (minFollowers > 0) filters.minFollowers = minFollowers;
+        if (maxFollowers < 100000000) filters.maxFollowers = maxFollowers;
+        if (minEngagement > 0) filters.minEngagement = minEngagement;
+        if (maxEngagement < 100) filters.maxEngagement = maxEngagement;
+        if (selectedGrowthRate) {
+          filters.minGRateFollowers = selectedGrowthRate.min;
+          filters.maxGRateFollowers = selectedGrowthRate.max;
+        }
+        if (hashtags.trim()) filters.hashtags = hashtags.trim();
+        if (selectedCategories.length > 0) filters.categories = selectedCategories;
+
+        const result = await creatorService.explorerSearch({
+          ...filters,
+          page: newPage,
+          size: 6
+        });
+
+        // Actualizar datos
+        setInfluencers(result.items || []);
+        setTotalCount(result.count || 0);
+      }
+
+    } catch (error: any) {
+      console.error('❌ Error en paginación:', error);
+    } finally {
+      const pageChangeEndTime = Date.now();
+
+      
+      // 🎯 EARLY RETURN: Mostrar resultados inmediatamente cuando lleguen
+      setLoadingInfluencers(false);
+      setIsSearchActive(false);
+    }
   };
 
-  // 🎯 Sistema simplificado: Solo HypeAuditor
-  // - Búsqueda directa con HypeAuditor Discovery
-  // - Paginación interna con datos cargados
-  // - Sin cache complejo ni múltiples proveedores
+  // 🗑️ ELIMINADA handleSmartSearch - funcionalidad integrada en handleSearch
+
+  // 🗑️ ELIMINADAS LAS FUNCIONES COMPLICADAS:
+  // - fetchInfluencers ❌
+  // - prefetchNextPage ❌  
+  // - generateCacheKey ❌
+  // - Cache en memoria ❌
+  // Ahora solo usamos handleSearch y handlePageChange
+
+  // 🗑️ ELIMINADO: useEffect de paginación automática - ahora es manual con handlePageChange
 
   const adaptedInfluencers = useMemo(() => {
-
+    console.log(`📊 [FRONTEND LOG] adaptedInfluencers - influencers raw:`, influencers);
+    
     if (influencers.length === 0) {
       return [];
     }
     
     const adapted = influencers.map((inf, index) => {
+      console.log(`📊 [FRONTEND LOG] Procesando influencer ${index}:`, inf);
+      
       if (!inf) {
         return null;
       }
@@ -595,8 +746,11 @@ export default function Explorer() {
   const detectAvailablePlatforms = (influencer: any) => {
     if (!influencer) return [];
 
+<<<<<<< HEAD
     // 🚀 MINI DEBUG: Mostrar estructura de datos que llega a la tabla
 
+=======
+>>>>>>> 734e09103dd483d07281a24dbde54f4d174c4fc6
 
     const platformInfo = influencer.platformInfo || {};
     const platforms = [];
@@ -694,6 +848,7 @@ export default function Explorer() {
 
     // ✅ FALLBACK MEJORADO: Si no hay plataformas en platformInfo, usar socialPlatforms o detectar por avatar URL
     if (platforms.length === 0) {
+<<<<<<< HEAD
      
      
       // Usar socialPlatforms si está disponible
@@ -706,12 +861,22 @@ export default function Explorer() {
             name: platformName.charAt(0).toUpperCase() + platformName.slice(1), 
             followers: followers 
           });
+=======
+     
+      // Usar socialPlatforms si está disponible
+      if (influencer.socialPlatforms && influencer.socialPlatforms.length > 0) {
+        influencer.socialPlatforms.forEach((platform: string) => {
+          platforms.push({ name: platform.charAt(0).toUpperCase() + platform.slice(1), followers: 0 });
+>>>>>>> 734e09103dd483d07281a24dbde54f4d174c4fc6
         });
          
       }
       // Si no, detectar por avatar URL como último recurso
       else {
+<<<<<<< HEAD
        
+=======
+>>>>>>> 734e09103dd483d07281a24dbde54f4d174c4fc6
         const avatar = influencer.avatar || '';
         if (avatar.includes('googleusercontent.com') || avatar.includes('ytimg.com') || avatar.includes('ggpht.com')) {
           platforms.push({ name: 'YouTube', followers: 0 });
@@ -723,7 +888,10 @@ export default function Explorer() {
         
         // Si aún no hay nada, usar la plataforma principal
         if (platforms.length === 0 && influencer.mainSocialPlatform) {
+<<<<<<< HEAD
          
+=======
+>>>>>>> 734e09103dd483d07281a24dbde54f4d174c4fc6
           platforms.push({ 
             name: influencer.mainSocialPlatform.charAt(0).toUpperCase() + influencer.mainSocialPlatform.slice(1), 
             followers: influencer.followersCount || 0 
@@ -732,7 +900,11 @@ export default function Explorer() {
       }
     }
 
+<<<<<<< HEAD
       
+=======
+
+>>>>>>> 734e09103dd483d07281a24dbde54f4d174c4fc6
     return platforms;
   };
 
@@ -901,7 +1073,9 @@ export default function Explorer() {
     ].filter(Boolean);
     const cacheKey = allIds.join('|') || influencer.creatorId;
     
-
+    console.log("🔍 [PANEL-OPEN] All platform IDs:", allPlatformIds);
+    console.log("🔍 [PANEL-OPEN] Data needs:", needs);
+    console.log("🔍 [PANEL-OPEN] Cache key:", cacheKey);
     
     // 🎯 NUEVO: Determinar si necesitamos cargar datos adicionales
     const hasMultiplePlatforms = allIds.length > 1;
@@ -1120,7 +1294,7 @@ export default function Explorer() {
 
   // 🎯 NUEVA: Función para seleccionar/deseleccionar todos los influencers visibles
   const handleSelectAll = () => {
-    const dataToShow = limitedInfluencers.slice((page - 1) * size, page * size);
+    const dataToShow = limitedInfluencers.slice(0, size);
     const visibleIds = dataToShow.map(inf => inf.creatorId);
     const allSelected = visibleIds.every(id => selectedInfluencers.includes(id));
     
@@ -1423,7 +1597,7 @@ export default function Explorer() {
       platformIds.facebookId = basicThreads.facebookId || basicThreads.facebookPageId || platformIds.facebookId;
     }
 
-
+    console.log("🔍 [EXTRACT-IDS] Platform IDs found:", platformIds);
     return platformIds;
   };
 
@@ -1454,8 +1628,6 @@ export default function Explorer() {
     
     return hasYouTubeExtended || hasInstagramExtended || hasTikTokExtended;
   };
-
-
 
   // 🎯 NUEVA FUNCIÓN: Determinar qué datos ya tenemos vs qué necesitamos obtener
   const determineDataNeeds = (influencer: any, platformIds: any) => {
@@ -1525,21 +1697,23 @@ export default function Explorer() {
     needs.facebook = platformIds.facebookId && !hasData.facebook;
     needs.threads = platformIds.threadsId && !hasData.threads;
 
-
+    console.log("🔍 [DATA-NEEDS] Has data:", hasData);
+    console.log("🔍 [DATA-NEEDS] Needs data:", needs);
 
     return { needs, hasData };
   };
 
   return (
-    <div className="flex gap-3 ">
+    <div className="flex flex-col lg:flex-row gap-3">
       {/* Panel de filtros (izquierda) */}
-      <div className="w-[350px] flex-shrink-0">
+      <div className="w-full lg:w-[350px] lg:flex-shrink-0">
         <ExplorerFilters
           platform={platform}
           setPlatform={setPlatform}
           topics={topics}
           setTopics={setTopics}
-
+          niches={niches}
+          setNiches={setNiches}
           location={location}
           setLocation={setLocation}
           minFollowers={minFollowers}
@@ -1550,45 +1724,31 @@ export default function Explorer() {
           setMinEngagement={setMinEngagement}
           maxEngagement={maxEngagement}
           setMaxEngagement={setMaxEngagement}
-
+          selectedGrowthRate={selectedGrowthRate}
+          setSelectedGrowthRate={setSelectedGrowthRate}
           
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
-
+          hashtags={hashtags}
+          setHashtags={setHashtags}
           selectedCategories={selectedCategories}
           setSelectedCategories={setSelectedCategories}
           categories={categories}
           locations={locations}
           handleSearch={handleSearch}
-          
-          // Filtros de audiencia para HypeAuditor
-          audienceGender={audienceGender}
-          setAudienceGender={setAudienceGender}
-          audienceAge={audienceAge}
-          setAudienceAge={setAudienceAge}
-          audienceGeo={audienceGeo}
-          setAudienceGeo={setAudienceGeo}
           handleClearFilters={() => {
             setPlatform("all");
             setLocation("all");
             setMinFollowers(0);
             setMaxFollowers(100000000);
             setSearchQuery("");
-
+            setHashtags("");
             setSelectedCategories([]);
             setTopics([]);
-
+            setNiches([]);
             setMinEngagement(0);
             setMaxEngagement(100);
-
-            // Limpiar filtros de audiencia de HypeAuditor
-            setAudienceGender({ gender: 'any', percentage: 50 });
-            setAudienceAge({ minAge: 18, maxAge: 54, percentage: 10 });
-            setAudienceGeo({ countries: {}, cities: {} });
-            
-            // Limpiar filtros de taxonomy
-            setTaxonomyCategories({ include: [], exclude: [] });
-
+            setSelectedGrowthRate(null);
         
             setLoadingInfluencers(false); // ✅ Asegurar que no haya loading al limpiar
             setInfluencers([]); // ✅ Limpiar resultados
@@ -1601,38 +1761,35 @@ export default function Explorer() {
           }}
           showFilters={showFilters}
           setShowFilters={setShowFilters}
-          
-          // ✨ NUEVO: Props para categorías del taxonomy de HypeAuditor
-          taxonomyCategories={taxonomyCategories}
-          setTaxonomyCategories={setTaxonomyCategories}
         />
       </div>
 
       {/* Panel de debug del skeleton desactivado */}
 
       {/* Contenido principal (derecha) */}
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden" style={{ scrollBehavior: 'auto' }}>
           {/* 🎯 HEADER MEJORADO - CONSISTENTE CON INFLUENCER TABLE */}
-          <div className="px-6 py-4 border-b border-gray-100 bg-white">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+          <div className="px-4 sm:px-6 py-4 border-b border-gray-100 bg-white">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
                 <h2 className="text-lg font-semibold text-gray-900">Resultados de búsqueda</h2>
                 <div className="flex items-center gap-3">
                   
-                                     {/* 🎯 INDICADOR DE BÚSQUEDA */}
-                   {searchInfo.tokensUsed && (
-                     <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-50 border border-blue-200 rounded-md">
-                       <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                       <span className="text-xs font-medium text-blue-700">HypeAuditor</span>
-                       <span className="text-xs text-blue-600">({searchInfo.tokensUsed} tokens)</span>
-                     </div>
-                   )}
-
-
+                  {/* 🎯 INDICADOR DE CACHE */}
+                  {cacheInfo.isFromCache && (
+                    <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50 border border-green-200 rounded-md">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-xs font-medium text-green-700">Cache</span>
+                      {cacheInfo.tokensUsed && (
+                        <span className="text-xs text-green-600">({cacheInfo.tokensUsed} tokens)</span>
+                      )}
+                    </div>
+                  )}
                  
                 </div>
               </div>
+<<<<<<< HEAD
                              <div className="flex items-center gap-3">
 
                 {/* 🚀 MINI DEBUG PANEL */}
@@ -1681,22 +1838,25 @@ export default function Explorer() {
                   </div>
                 </details>
 
+=======
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+>>>>>>> 734e09103dd483d07281a24dbde54f4d174c4fc6
                 {!selectMode ? (
-                   <button
-                     onClick={handleToggleSelectMode}
-                     disabled={!hasEverSearched || (!loadingInfluencers && limitedInfluencers.length === 0)}
-                     className={
-                       "font-medium py-2 px-4 rounded-md shadow-sm transition-all duration-200 flex items-center gap-2 text-sm" +
-                       (!hasEverSearched || (!loadingInfluencers && limitedInfluencers.length === 0)
-                         ? " bg-gray-300 text-gray-500 cursor-not-allowed"
-                         : " bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 hover:shadow-md")
-                     }
-                   >
-                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                     </svg>
-                     Asignar a campaña
-                   </button>
+                  <button
+                    onClick={handleToggleSelectMode}
+                    disabled={!hasEverSearched || (!loadingInfluencers && limitedInfluencers.length === 0)}
+                    className={
+                      "font-medium py-2 px-4 rounded-md shadow-sm transition-all duration-200 flex items-center gap-2 text-sm" +
+                      (!hasEverSearched || (!loadingInfluencers && limitedInfluencers.length === 0)
+                        ? " bg-gray-300 text-gray-500 cursor-not-allowed"
+                        : " bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 hover:shadow-md")
+                    }
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Asignar a campaña
+                  </button>
                 ) : (
                   <div className="flex items-center gap-2">
                     <button
@@ -1742,25 +1902,25 @@ export default function Explorer() {
                         {selectMode && (
                           <th className="py-3 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center"></th>
                         )}
-                        <th className="text-left py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="text-left py-5 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Creator
                         </th>
-                        <th className="text-center py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="text-center py-5 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Plataformas
                         </th>
-                        <th className="text-center py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="text-center py-5 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
                           Idioma
                         </th>
-                        <th className="text-center py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="text-center py-5 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
                           País
                         </th>
-                        <th className="text-center py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="text-center py-5 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Seguidores
                         </th>
-                        <th className="text-center py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="text-center py-5 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Engagement
                         </th>
-                        <th className="text-center py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="text-center py-5 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Acciones
                         </th>
                       </tr>
@@ -1782,8 +1942,9 @@ export default function Explorer() {
               </div>
             )}
 
-            <table className="w-full">
-              <thead>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[800px]">
+                <thead>
                 <tr className="border-b bg-gray-50">
                   {selectMode && (
                     <th className="py-3 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
@@ -1792,7 +1953,7 @@ export default function Explorer() {
                           type="checkbox"
                           className="sr-only"
                           checked={(() => {
-                            const dataToShow = limitedInfluencers.slice((page - 1) * size, page * size);
+                            const dataToShow = limitedInfluencers.slice(0, size);
                             const visibleIds = dataToShow.map(inf => inf.creatorId);
                             return visibleIds.length > 0 && visibleIds.every(id => selectedInfluencers.includes(id));
                           })()}
@@ -1800,7 +1961,7 @@ export default function Explorer() {
                         />
                         <div className={`w-5 h-5 rounded border-2 transition-all duration-200 flex items-center justify-center ${
                           (() => {
-                            const dataToShow = limitedInfluencers.slice((page - 1) * size, page * size);
+                            const dataToShow = limitedInfluencers.slice(0, size);
                             const visibleIds = dataToShow.map(inf => inf.creatorId);
                             const allSelected = visibleIds.length > 0 && visibleIds.every(id => selectedInfluencers.includes(id));
                             return allSelected
@@ -1809,7 +1970,7 @@ export default function Explorer() {
                           })()
                         }`}>
                           {(() => {
-                            const dataToShow = limitedInfluencers.slice((page - 1) * size, page * size);
+                            const dataToShow = limitedInfluencers.slice(0, size);
                             const visibleIds = dataToShow.map(inf => inf.creatorId);
                             const allSelected = visibleIds.length > 0 && visibleIds.every(id => selectedInfluencers.includes(id));
                             return allSelected && (
@@ -1859,7 +2020,7 @@ export default function Explorer() {
                       <tr>
                         <td colSpan={selectMode ? 8 : 7} className="p-0">
                           <div className="flex items-center justify-center min-h-[400px]">
-                            <div className="text-center">
+                            <div className="text-center px-4">
                               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 mb-6">
                                 <Search className="h-8 w-8 text-blue-600" />
                               </div>
@@ -1875,7 +2036,7 @@ export default function Explorer() {
                   }
 
                   // 🎯 CAMBIO: Una vez que se haya buscado, siempre mostrar datos o mensaje de "no encontrados"
-                  const dataToShow = limitedInfluencers.slice((page - 1) * size, page * size); // Paginación interna
+                  const dataToShow = limitedInfluencers.slice(0, size); // Máximo 6
                   
                   return (
                     <>
@@ -1923,21 +2084,21 @@ export default function Explorer() {
                             </label>
                           </td>
                         )}
-                        <td className="py-4 px-6">
-                          <div className="flex items-center gap-3">
+                        <td className="py-7 px-2">
+                          <div className="flex items-center gap-1">
                             <LazyInfluencerAvatar influencer={influencer} />
                             <div>
-                              <div className="font-medium text-gray-900 flex items-center gap-2">
+                              <div className="text-xs font-medium text-gray-900 flex items-center gap-2">
                                 <span>
                                   {influencer.name === 'Sin nombre' || /\d/.test(influencer.name) 
                                     ? influencer.creatorId 
                                     : influencer.name}
                                 </span>
                               </div>
-                              <div className="text-sm text-gray-500 flex items-center gap-2">
+                              <div className="text-xs text-gray-500 flex items-center gap-2">
                                 {influencer.verified && (
-                                  <Badge variant="secondary" className="ml-1">
-                                    <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                  <Badge variant="secondary" className="text-xs px-1 py-0 h-4">
+                                    <svg className="h-1.5 w-1.5" viewBox="0 0 20 20" fill="currentColor">
                                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                     </svg>
                                     Verificado
@@ -1947,8 +2108,8 @@ export default function Explorer() {
                             </div>
                           </div>
                         </td>
-                        <td className="py-4 px-6 text-center">
-                          <div className="flex justify-center gap-3">
+                        <td className="py-7 px-2 text-center">
+                          <div className="flex justify-center gap-1">
                             {/* Mostrar TODAS las plataformas donde tiene cuenta */}
                             {(() => {
                               const platforms = detectAvailablePlatforms(influencer);
@@ -1970,46 +2131,51 @@ export default function Explorer() {
                             })()}
                           </div>
                         </td>
-                        <td className="py-4 px-6 text-center">
-                          <span className="font-medium">
+                        <td className="py-7 px-2 text-center hidden md:table-cell">
+                          <span className="text-xs font-medium">
                             {getLanguageName(influencer.language)}
                           </span>
                         </td>
-                        <td className="py-4 px-6 text-center">
-                          <span className="font-medium">{influencer.location || '-'}</span>
+                        <td className="py-7 px-2 text-center hidden lg:table-cell">
+                          <span className="text-xs font-medium">{influencer.location || '-'}</span>
                         </td>
+<<<<<<< HEAD
                         <td className="py-4 px-6 text-center">
                           <span className="font-medium">
                             <NumberDisplay value={influencer.followersCount} format="short" />
                           </span>
+=======
+                        <td className="py-7 px-2 text-center">
+                          <span className="text-xs font-medium">{formatNumber(influencer.followersCount)}</span>
+>>>>>>> 734e09103dd483d07281a24dbde54f4d174c4fc6
                         </td>
-                        <td className="py-4 px-6 text-center">
-                          <span className="font-medium">
+                        <td className="py-7 px-2 text-center">
+                          <span className="text-xs font-medium">
                             {influencer.averageEngagementRate > 0 ? `${(influencer.averageEngagementRate * 100).toFixed(1)}%` : '-'}
                           </span>
                         </td>
-                        <td className="py-4 px-6">
-                          <div className="flex justify-center gap-2">
+                        <td className="py-7 px-2">
+                          <div className="flex justify-center gap-1">
                             <Button
                               variant="outline"
                               size="sm"
                               className={cn(
-                                "h-8 w-8 p-0",
+                                "h-7 w-7 p-0",
                                 savedInfluencers.includes(influencer.id)
                                   ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
                                   : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
                               )}
                               onClick={() => toggleSaved(influencer.id)}
                             >
-                              <BookmarkIcon className="h-4 w-4" />
+                              <BookmarkIcon className="h-3.5 w-3.5" />
                             </Button>
                             <Button
                               variant="outline"
                               size="sm"
-                              className="h-8 w-8 p-0 hover:bg-gray-50"
+                              className="h-7 w-7 p-0 hover:bg-gray-50"
                               onClick={() => openInfluencerPanel(influencer)}
                             >
-                              <ExternalLink className="h-4 w-4" />
+                              <ExternalLink className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </td>
@@ -2021,10 +2187,11 @@ export default function Explorer() {
                 })()}
                 </tbody>
               </table>
+            </div>
               
               {/* 🎯 CAMBIO: Mensaje de "No se encontraron" cuando se ha buscado pero no hay resultados */}
               {!loadingInfluencers && hasEverSearched && limitedInfluencers.length === 0 && (
-                <div className="p-8 text-center">
+                <div className="p-4 sm:p-8 text-center">
                   <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 mb-4">
                     <Search className="h-6 w-6 text-blue-600" />
                   </div>
@@ -2053,8 +2220,8 @@ export default function Explorer() {
 
           {/* 🎯 PAGINACIÓN MEJORADA - Solo mostrar cuando se ha buscado */}
           {hasEverSearched && (
-            <div className="px-6 py-4 border-t bg-white">
-            <div className="flex justify-center items-center gap-3">
+            <div className="px-4 sm:px-6 py-4 border-t bg-white">
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-3">
               <Button
                 variant="outline"
                 size="sm"
@@ -2065,14 +2232,14 @@ export default function Explorer() {
                 ←
               </Button>
               <span className="text-sm font-medium text-gray-700">
-                {loadingInfluencers ? `Cargando página ${page}...` : `Página ${page} de ${Math.ceil(limitedInfluencers.length / size)}`}
+                {loadingInfluencers ? `Cargando página ${page}...` : `Página ${page}`}
               </span>
               <Button
                 variant="outline"
                 size="sm"
                 className="h-8 w-8 p-0 shadow-sm"
                 onClick={() => handlePageChange(page + 1)}
-                disabled={loadingInfluencers || (page * size >= limitedInfluencers.length)}
+                disabled={loadingInfluencers}
               >
                 →
               </Button>

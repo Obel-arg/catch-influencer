@@ -7,7 +7,6 @@ import InfluencerHeader from "./InfluencerHeader";
 import { InfluencerInstagramGallery } from "./InfluencerInstagramGallery";
 import { InfluencerYouTubeGallery } from "./InfluencerYouTubeGallery";
 import { InfluencerTikTokGallery } from "./InfluencerTikTokGallery";
-import InfluencerAudience from "./InfluencerAudience";
 import { useInfluencerExtended } from "@/hooks/influencer/useInfluencerExtended";
 import { useInfluencers } from "@/hooks/influencer/useInfluencers";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -162,7 +161,7 @@ export default function InfluencerDashboard({ id }: InfluencerDashboardProps) {
   const [influencer, setInfluencer] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  	const [tab, setTab] = useState<"metrics" | "content" | "audience">("metrics");
+  const [tab, setTab] = useState<"metrics" | "content">("metrics");
   const [showLinks, setShowLinks] = useState(false);
   const [contentTab, setContentTab] = useState<
     "youtube" | "instagram" | "tiktok" | "twitter"
@@ -405,16 +404,6 @@ export default function InfluencerDashboard({ id }: InfluencerDashboardProps) {
               >
                 Contenido
               </button>
-              <button
-                className={`pb-2 px-4 font-medium border-b-2 transition-colors ${
-                  tab === "audience"
-                    ? "border-blue-600 text-blue-700"
-                    : "border-transparent text-gray-500 hover:text-blue-700"
-                }`}
-                onClick={() => setTab("audience")}
-              >
-                Audiencia
-              </button>
             </div>
 
             {tab === "metrics" && (
@@ -544,9 +533,6 @@ export default function InfluencerDashboard({ id }: InfluencerDashboardProps) {
               </div>
             )}
 
-            {tab === "audience" && (
-              <InfluencerAudience influencer={influencer} />
-            )}
           </div>
         </div>
       )}
