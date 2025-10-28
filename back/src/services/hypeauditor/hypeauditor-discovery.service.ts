@@ -7,6 +7,7 @@ export interface DiscoverySearchRequest {
 	page?: number;
 	search?: string[];
 	search_content?: string[];
+	niche_search?: string[];
 	search_description?: string[];
 	category?: { include?: number[]; exclude?: number[] };
 	account_geo?: { country: string[] };
@@ -371,31 +372,12 @@ export class HypeAuditorDiscoveryService {
 	}
 
 	/**
-	 * Realiza una búsqueda de discovery usando HypeAuditor
-	 */
-	async searchDiscovery(request: DiscoverySearchRequest): Promise<DiscoveryResponse> {
-		try {
-
-			const response = await this.makeHttpsRequest('/api/method/auditor.search', request);
-			
-			
-			return response;
-		} catch (error: any) {
-			
-			throw new Error(error.message);
-		}
-	}
-
-	/**
 	 * Realiza una búsqueda de discovery (producción)
 	 */
 	async searchDiscovery(request: DiscoverySearchRequest): Promise<DiscoveryResponse> {
 		try {
-
-			
 			const response = await this.makeHttpsRequest('/api/method/auditor.search', request);
 			
-
 			return response;
 		} catch (error: any) {
 			
@@ -445,9 +427,19 @@ export class HypeAuditorDiscoveryService {
 		
 		// 📊 CATEGORÍAS LEGACY (para compatibilidad hacia atrás)
 		else if (filters.selectedCategories && filters.selectedCategories.length > 0) {
-			const categoryIds = filters.selectedCategories.map(cat => parseInt(cat)).filter(id => !isNaN(id));
-			if (categoryIds.length > 0) {
-				hypeAuditorRequest.category = { include: categoryIds };
+			// Enviar IDs numéricos a category.include y nombres como niche_search
+			const numericIds = filters.selectedCategories
+				.map(cat => parseInt(cat, 10))
+				.filter(id => !isNaN(id));
+			const nicheNames = filters.selectedCategories
+				.filter(cat => isNaN(parseInt(cat as any, 10)) && typeof cat === 'string' && cat.trim().length > 0);
+
+			if (numericIds.length > 0) {
+				hypeAuditorRequest.category = { include: numericIds };
+			}
+
+			if (nicheNames.length > 0) {
+				hypeAuditorRequest.niche_search = nicheNames as string[];
 			}
 		}
 
@@ -479,9 +471,9 @@ export class HypeAuditorDiscoveryService {
 		}
 
 		// Tiene contactos
-		if (filters.hasContacts !== undefined) {
-			hypeAuditorRequest.account_has_contacts = filters.hasContacts;
-		}
+		// if (filters.hasContacts !== undefined) {
+		// 	hypeAuditorRequest.account_has_contacts = filters.hasContacts;
+		// }
 
 		// Ha lanzado publicidad
 		if (filters.hasLaunchedAdvertising !== undefined) {
@@ -699,7 +691,7 @@ export class HypeAuditorDiscoveryService {
 			}
 		}
 
-		
+		console.log('Request sent to HypeAuditor', hypeAuditorRequest);
 		return hypeAuditorRequest;
 	}
 
@@ -775,11 +767,17 @@ export class HypeAuditorDiscoveryService {
 			};
 		});
 
+		// Ordenar por cantidad de seguidores (descendente)
+		const sortedItems = items.sort((a, b) => {
+			const aFollowers = (a as any).followersCount || 0;
+			const bFollowers = (b as any).followersCount || 0;
+			return bFollowers - aFollowers;
+		});
 
 
 		return {
 			success: true,
-			items,
+			items: sortedItems,
 			totalCount: response.result.total_pages * 20, // 20 items por página
 			currentPage: response.result.current_page,
 			totalPages: response.result.total_pages,

@@ -31,12 +31,17 @@ export class HypeAuditorDiscoveryController {
 			}
 
 			const service = HypeAuditorDiscoveryController.getDiscoveryService();
-
+			console.log('hypeAuditorRequest', filters);
 			// Transformar filtros del Explorer a formato HypeAuditor
 			const hypeAuditorRequest = service.transformExplorerFiltersToHypeAuditor(filters);
-			
+
+			console.log('hypeAuditorRequest', hypeAuditorRequest);
 			// Realizar búsqueda en HypeAuditor (producción)
 			const discoveryResponse = await service.searchDiscovery(hypeAuditorRequest);
+
+			console.log("######################## DATA ########################"); 
+			console.log('discoveryResponse', discoveryResponse.result.search_results[2]);
+			console.log('discoveryResponse', discoveryResponse.result.search_results[2].features);
 			
 			// Transformar respuesta al formato del Explorer
 			const explorerResponse = service.transformHypeAuditorResponseToExplorer(discoveryResponse);

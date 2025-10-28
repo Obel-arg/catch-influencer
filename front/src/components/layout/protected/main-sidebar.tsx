@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { useRoleCache } from "@/hooks/auth/useRoleCache";
 
-export function MainSidebar() {
+export function MainSidebar({ collapsed = false }: { collapsed?: boolean }) {
   const pathname = usePathname();
   const [isClient, setIsClient] = useState(false);
   const {
@@ -65,7 +65,10 @@ export function MainSidebar() {
   // Renderizar un skeleton/loading mientras no está hidratado o cargando el rol
   if (!isClient || roleLoading) {
     return (
-      <div className="w-56 bg-zinc-900 text-white flex flex-col py-4 border-r border-zinc-800 h-screen fixed">
+      <div className={cn(
+        collapsed ? "w-20" : "w-56",
+        "bg-zinc-900 text-white flex flex-col py-4 border-r border-zinc-800 h-screen fixed"
+      )}>
         <div className="mb-8 px-4">
           <div className="h-12 flex items-center justify-center overflow-hidden">
             <img 
@@ -81,7 +84,10 @@ export function MainSidebar() {
   }
 
   return (
-    <div className="w-56 bg-zinc-900 text-white flex flex-col py-4 border-r border-zinc-800 h-screen fixed">
+    <div className={cn(
+      collapsed ? "w-20" : "w-56",
+      "bg-zinc-900 text-white flex flex-col py-4 border-r border-zinc-800 h-screen fixed z-20"
+    )}>
       <div className="mb-8 px-4">
         <div className="h-12 flex items-center justify-center overflow-hidden">
           <img 
@@ -107,7 +113,7 @@ export function MainSidebar() {
             <div className="flex-shrink-0">
               {item.icon}
             </div>
-            <span className="text-sm font-medium">{item.label}</span>
+            <span className={cn("text-sm font-medium", collapsed && "hidden")}>{item.label}</span>
           </Link>
         ))}
       </nav>

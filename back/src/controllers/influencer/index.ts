@@ -49,6 +49,17 @@ export class InfluencerController {
     }
   }
 
+  async createInfluencerFromHypeAuditor(req: Request, res: Response) {
+    try {
+      const influencerData = req.body;
+      const result = await this.influencerService.createInfluencerFromHypeAuditor(influencerData);
+      res.json(result);
+    } catch (error: any) {
+      console.error('❌ [CONTROLLER] Error al crear influencer desde HypeAuditor:', error);
+      res.status(500).json({ error: 'Error al crear influencer desde HypeAuditor' });
+    }
+  }
+  
   async getInfluencerById(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -227,22 +238,27 @@ export class InfluencerController {
   async getFullInfluencerData(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { instagramId, tiktokId } = req.query;
+      const { instagramId, tiktokId, socialPlatform } = req.query;
 
-      // Determinar el tipo de ID y extraer los otros IDs
+      console.log("id", id);
+      console.log('req.query', req.query);
+      console.log('instagramId', instagramId);
+      console.log('tiktokId', tiktokId);
+
+
       let youtubeId: string | undefined;
       let extractedInstagramId: string | undefined;
       let extractedTiktokId: string | undefined;
 
-      if (this.isYouTubeId(id)) {
+      if (socialPlatform === 'youtube') {
         youtubeId = id;
         extractedInstagramId = instagramId as string;
         extractedTiktokId = tiktokId as string;
-      } else if (this.isInstagramId(id)) {
+      } else if (socialPlatform === 'instagram') {
         extractedInstagramId = id;
         youtubeId = req.query.youtubeId as string;
         extractedTiktokId = tiktokId as string;
-      } else if (this.isTikTokId(id)) {
+      } else if (socialPlatform === 'tiktok') {
         extractedTiktokId = id;
         youtubeId = req.query.youtubeId as string;
         extractedInstagramId = instagramId as string;
@@ -253,12 +269,17 @@ export class InfluencerController {
         extractedTiktokId = tiktokId as string;
       }
 
+      console.log('youtubeId', youtubeId);
+      console.log('extractedInstagramId', extractedInstagramId);
+      console.log('extractedTiktokId', extractedTiktokId);
+
       const data = await this.influencerService.getFullInfluencerData({
         youtubeId,
         instagramId: extractedInstagramId,
         tiktokId: extractedTiktokId,
       });
 
+      console.log('data', data);
       if (!data) {
         return res.status(404).json({ error: 'Influencer no encontrado' });
       }

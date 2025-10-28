@@ -2,6 +2,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { NumberDisplay } from '../ui/NumberDisplay';
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { getCategoriesForPlatform, type HypeAuditorCategory } from '@/constants/hypeauditor-categories';
 
 interface HypeAuditorFiltersProps {
   // Filtros básicos
@@ -94,6 +107,14 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [contentInput, setContentInput] = useState('');
   const [descriptionInput, setDescriptionInput] = useState('');
+  const [minFollowersInput, setMinFollowersInput] = useState('');
+  const [maxFollowersInput, setMaxFollowersInput] = useState('');
+  const [selectedFollowerPreset, setSelectedFollowerPreset] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Países disponibles para HypeAuditor
   const countries = [
@@ -118,33 +139,42 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
     { code: 'CN', name: 'China' },
   ];
 
-  // Categorías principales de HypeAuditor
-  const categories = [
-    { id: '1', name: 'Fashion & Style', icon: '👗' },
-    { id: '2', name: 'Beauty & Cosmetics', icon: '💄' },
-    { id: '3', name: 'Fitness & Health', icon: '💪' },
-    { id: '4', name: 'Food & Cooking', icon: '🍕' },
-    { id: '5', name: 'Travel & Tourism', icon: '✈️' },
-    { id: '6', name: 'Technology', icon: '📱' },
-    { id: '7', name: 'Gaming', icon: '🎮' },
-    { id: '8', name: 'Music & Entertainment', icon: '🎵' },
-    { id: '9', name: 'Sports', icon: '⚽' },
-    { id: '10', name: 'Lifestyle', icon: '✨' },
-    { id: '11', name: 'Business & Finance', icon: '💼' },
-    { id: '12', name: 'Education', icon: '📚' },
-    { id: '13', name: 'Art & Design', icon: '🎨' },
-    { id: '14', name: 'Pets & Animals', icon: '🐕' },
-    { id: '15', name: 'Home & Garden', icon: '🏠' },
-  ];
+  // Categorías: usar el taxonomy oficial por plataforma (default Instagram)
+  const categories: HypeAuditorCategory[] = getCategoriesForPlatform(platform);
 
-  const formatNumber = (num: number) => {
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-    return num.toLocaleString('es-ES', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    });
+  const formatFollowersInput = (num: number) => {
+    if (!Number.isFinite(num)) return '';
+    if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(num % 1_000_000 === 0 ? 0 : 1)}M`;
+    if (num >= 1_000) return `${(num / 1_000).toFixed(num % 1_000 === 0 ? 0 : 1)}K`;
+    return String(Math.max(0, Math.floor(num)));
   };
+
+  const parseFollowersInput = (value: string) => {
+    const s = value.trim().toLowerCase().replace(/[,\s]/g, '');
+    if (!s) return NaN;
+    const match = s.match(/^([0-9]*\.?[0-9]+|[0-9]+)(k|m)?$/i);
+    if (!match) return NaN;
+    const base = parseFloat(match[1]);
+    const suffix = match[2];
+    if (suffix === 'm') return Math.round(base * 1_000_000);
+    if (suffix === 'k') return Math.round(base * 1_000);
+    return Math.round(base);
+  };
+
+  // Keep text inputs in sync with numeric followers values
+  useEffect(() => {
+    setMinFollowersInput(formatFollowersInput(minFollowers));
+  }, [minFollowers]);
+  useEffect(() => {
+    setMaxFollowersInput(formatFollowersInput(maxFollowers));
+  }, [maxFollowers]);
+
+  const followerPresets = [
+    { id: '0-10k', label: '0–10K', min: 0, max: 10_000 },
+    { id: '10k-100k', label: '10K–100K', min: 10_000, max: 100_000 },
+    { id: '100k-500k', label: '100K–500K', min: 100_000, max: 500_000 },
+    { id: '500k-plus', label: '500K+', min: 500_000, max: 100_000_000 },
+  ];
 
   const handleAddContent = () => {
     if (contentInput.trim() && !searchContent.includes(contentInput.trim())) {
@@ -212,18 +242,19 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Plataforma
           </label>
-          <select
-            value={platform}
-            onChange={(e) => setPlatform(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">Todas las plataformas</option>
-            <option value="instagram">Instagram</option>
-            <option value="youtube">YouTube</option>
-            <option value="tiktok">TikTok</option>
-            <option value="twitter">Twitter</option>
-            <option value="twitch">Twitch</option>
-          </select>
+          <Select value={platform} onValueChange={setPlatform}>
+            <SelectTrigger>
+              <SelectValue placeholder="Plataforma" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas las plataformas</SelectItem>
+              <SelectItem value="instagram">Instagram</SelectItem>
+              <SelectItem value="youtube">YouTube</SelectItem>
+              <SelectItem value="tiktok">TikTok</SelectItem>
+              <SelectItem value="twitter">Twitter</SelectItem>
+              <SelectItem value="twitch">Twitch</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Búsqueda por texto */}
@@ -245,17 +276,18 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Ubicación
           </label>
-          <select
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {countries.map(country => (
-              <option key={country.code} value={country.code}>
-                {country.name}
-              </option>
-            ))}
-          </select>
+          <Select value={location} onValueChange={setLocation}>
+            <SelectTrigger>
+              <SelectValue placeholder="Ubicación" />
+            </SelectTrigger>
+            <SelectContent>
+              {countries.map(country => (
+                <SelectItem key={country.code} value={country.code}>
+                  {country.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Seguidores */}
@@ -265,24 +297,78 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
           </label>
           <div className="flex items-center space-x-2">
             <input
-              type="number"
-              value={minFollowers}
-              onChange={(e) => setMinFollowers(Number(e.target.value))}
-              placeholder="Mínimo"
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              type="text"
+              value={minFollowersInput}
+              onChange={(e) => {
+                setMinFollowersInput(e.target.value);
+                setSelectedFollowerPreset(null);
+              }}
+              onBlur={() => {
+                const parsed = parseFollowersInput(minFollowersInput);
+                if (!Number.isNaN(parsed)) setMinFollowers(parsed);
+                else setMinFollowersInput(formatFollowersInput(minFollowers));
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const parsed = parseFollowersInput(minFollowersInput);
+                  if (!Number.isNaN(parsed)) setMinFollowers(parsed);
+                  (e.currentTarget as HTMLInputElement).blur();
+                }
+              }}
+              placeholder="Mínimo (p. ej. 10K)"
+              className="w-1/2 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <span className="text-gray-500">-</span>
             <input
-              type="number"
-              value={maxFollowers}
-              onChange={(e) => setMaxFollowers(Number(e.target.value))}
-              placeholder="Máximo"
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              type="text"
+              value={maxFollowersInput}
+              onChange={(e) => {
+                setMaxFollowersInput(e.target.value);
+                setSelectedFollowerPreset(null);
+              }}
+              onBlur={() => {
+                const parsed = parseFollowersInput(maxFollowersInput);
+                if (!Number.isNaN(parsed)) setMaxFollowers(parsed);
+                else setMaxFollowersInput(formatFollowersInput(maxFollowers));
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const parsed = parseFollowersInput(maxFollowersInput);
+                  if (!Number.isNaN(parsed)) setMaxFollowers(parsed);
+                  (e.currentTarget as HTMLInputElement).blur();
+                }
+              }}
+              placeholder="Máximo (p. ej. 1M)"
+              className="w-1/2 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <div className="text-sm text-gray-500 mt-1">
-            Rango: <NumberDisplay value={minFollowers} format="short" /> - <NumberDisplay value={maxFollowers} format="short" />
+          <div className="mt-2 overflow-x-auto">
+            <ToggleGroup
+              type="single"
+              value={selectedFollowerPreset ?? undefined}
+              onValueChange={(val) => {
+                if (!val) return; // ignore empty
+                setSelectedFollowerPreset(val);
+                const preset = followerPresets.find(p => p.id === val);
+                if (preset) {
+                  setMinFollowers(preset.min);
+                  setMaxFollowers(preset.max);
+                }
+              }}
+              className="flex flex-nowrap gap-2"
+            >
+              {followerPresets.map(preset => (
+                <ToggleGroupItem
+                  key={preset.id}
+                  value={preset.id}
+                  className="rounded-full border h-auto min-h-0 min-w-0 px-2 py-0.5 leading-none text-[11px] whitespace-nowrap transition-colors border-gray-300 text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-400 data-[state=on]:bg-gray-100 data-[state=on]:border-gray-500 data-[state=on]:text-gray-900"
+                >
+                  {preset.label}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
           </div>
+
         </div>
 
         {/* Engagement Rate */}
@@ -290,58 +376,107 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Engagement Rate (%)
           </label>
-          <div className="flex items-center space-x-2">
-            <input
-              type="number"
-              value={minEngagement}
-              onChange={(e) => setMinEngagement(Number(e.target.value))}
-              placeholder="Mínimo"
-              min="0"
-              max="100"
-              step="0.1"
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <span className="text-gray-500">-</span>
-            <input
-              type="number"
-              value={maxEngagement}
-              onChange={(e) => setMaxEngagement(Number(e.target.value))}
-              placeholder="Máximo"
-              min="0"
-              max="100"
-              step="0.1"
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          <div className="px-1 py-2">
+            <Slider
+              value={[minEngagement, maxEngagement]}
+              onValueChange={([min, max]) => {
+                setMinEngagement(min);
+                setMaxEngagement(max);
+              }}
+              min={0}
+              max={100}
+              step={0.1}
             />
           </div>
-          <div className="text-sm text-gray-500 mt-1">
-            Rango: {minEngagement}% - {maxEngagement}%
-          </div>
+          {mounted && (
+            <div className="relative h-5 mt-1">
+              <span
+                className="absolute -translate-x-1/2 top-0 text-[11px] px-1.5 py-0.5 bg-gray-100 border border-gray-200 rounded-full text-gray-700"
+                style={{ left: `${(minEngagement / 100) * 100}%` }}
+              >
+                {minEngagement}%
+              </span>
+              <span
+                className="absolute -translate-x-1/2 top-0 text-[11px] px-1.5 py-0.5 bg-gray-100 border border-gray-200 rounded-full text-gray-700"
+                style={{ left: `${(maxEngagement / 100) * 100}%` }}
+              >
+                {maxEngagement}%
+              </span>
+            </div>
+          )}
         </div>
-
-        {/* Categorías */}
+        {/* Categorías (multi-select dropdown) */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Categorías
           </label>
-          <select
-            multiple
-            value={selectedCategories}
-            onChange={(e) => {
-              const values = Array.from(e.target.selectedOptions, option => option.value);
-              setSelectedCategories(values);
-            }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            size={5}
-          >
-            {categories.map(category => (
-              <option key={category.id} value={category.id}>
-                {category.icon} {category.name}
-              </option>
-            ))}
-          </select>
-          <p className="text-xs text-gray-500 mt-1">
-            Mantén presionado Ctrl (Cmd en Mac) para seleccionar múltiples categorías
-          </p>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="w-full inline-flex items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm hover:bg-gray-50"
+              >
+                <span className="truncate text-left">
+                  {selectedCategories.length === 0
+                    ? 'Seleccionar categorías'
+                    : `${selectedCategories.length} seleccionada(s)`}
+                </span>
+                <ChevronsUpDown className="h-4 w-4 opacity-50" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="p-0 w-72 bg-white">
+              <Command className="bg-white">
+                <CommandInput placeholder="Buscar categoría..." />
+                <CommandEmpty>Sin resultados.</CommandEmpty>
+                <CommandList>
+                  <CommandGroup>
+                    {categories.map((category) => {
+                      const isSelected = selectedCategories.includes(category.name);
+                      return (
+                        <CommandItem
+                          key={category.id}
+                          value={category.name}
+                          onSelect={() => {
+                            if (isSelected) {
+                              setSelectedCategories(selectedCategories.filter((cname) => cname !== category.name));
+                            } else {
+                              setSelectedCategories([...selectedCategories, category.name]);
+                            }
+                          }}
+                        >
+                          <Check className={isSelected ? 'h-4 w-4 mr-2 opacity-100' : 'h-4 w-4 mr-2 opacity-0'} />
+                          {category.name}
+                        </CommandItem>
+                      );
+                    })}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+          {selectedCategories.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {selectedCategories.map((name) => {
+                const cat = categories.find((c) => c.name === name);
+                if (!cat) return null;
+                return (
+                  <span   
+                    key={name}  
+                    className="inline-flex items-center rounded-full bg-gray-100 border border-gray-200 text-gray-700 px-2 py-0.5 text-[11px]"
+                  > 
+                    {cat.name}
+                    <button
+                      type="button"
+                      className="ml-1 text-gray-500 hover:text-gray-700"
+                      onClick={() => setSelectedCategories(selectedCategories.filter((cname) => cname !== name))}
+                    >
+                      ×
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+          )}
         </div>
         </div>
       </div>
@@ -360,15 +495,16 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Tipo de cuenta
                 </label>
-                <select
-                  value={accountType}
-                  onChange={(e) => setAccountType(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="all">Todos los tipos</option>
-                  <option value="human">Persona</option>
-                  <option value="brand">Marca</option>
-                </select>
+                <Select value={accountType} onValueChange={setAccountType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tipo de cuenta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los tipos</SelectItem>
+                    <SelectItem value="human">Persona</SelectItem>
+                    <SelectItem value="brand">Marca</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Verificada */}
@@ -544,7 +680,7 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
       )}
 
       {/* Botones de acción */}
-      <div className="mt-6 pt-6 border-t border-gray-200 flex space-x-3">
+      <div className="mt-6 pt-6 border-t border-gray-200 flex flex-col w-full gap-3">
         <button
           onClick={onSearch}
           disabled={isLoading}
@@ -554,7 +690,7 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
         </button>
         <button
           onClick={resetFilters}
-          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+          className="w-full flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
         >
           Limpiar
         </button>

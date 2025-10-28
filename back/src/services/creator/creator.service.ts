@@ -278,28 +278,12 @@ export class CreatorDBService {
   
   static async getInstagramBasic(instagramId: string) {
     const startTime = Date.now();
+    console.log('query', this.get('/instagramBasic', { instagramId }));
     const result = await this.get('/instagramBasic', { instagramId });
+    console.log('result', result);
     const endTime = Date.now();
     return result;
   }
-
-  static async getInstagramHistory(instagramId: string) {
-    return this.get('/instagramHistory', { instagramId });
-  }
-
-  // ==============================================
-  // TIKTOK METHODS - CORREGIDOS SEGÚN API v2
-  // ==============================================
-  
-  static async getTikTokBasic(tiktokId: string) {
-    return this.get('/tiktokBasic', { tiktokId });
-  }
-
-  static async getTikTokHistory(tiktokId: string) {
-    return this.get('/tiktokHistory', { tiktokId });
-  }
-
-  // ==============================================
   // THREADS METHODS - SEGÚN API v2
   // ==============================================
   

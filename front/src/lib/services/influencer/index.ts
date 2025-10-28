@@ -39,43 +39,31 @@ export class InfluencerService {
         ...withContext('InfluencerService', `getInfluencerById(${id})`).headers
       })
     });
+    console.log("Getting influencer by id", response.data);
     return response.data;
   }
 
   public async createInfluencer(data: any): Promise<any> {
     try {
-      const response = await fetch(`${this.baseUrl}`, {
-        method: 'POST',
-        headers: {
+      const response = await httpApiClient.post<any>(`${this.baseUrl}/new`, data, {
+        headers: new AxiosHeaders({
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.getToken()}`
-        },
-        body: JSON.stringify(data)
+          ...withContext('InfluencerService', 'createInfluencer').headers
+        })
       });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        if (response.status === 409 && result.duplicate) {
-          // Es un duplicado, retornar información especial
-          return {
-            success: false,
-            duplicate: true,
-            existingInfluencer: result.existingInfluencer,
-            message: result.message
-          };
-        }
-        throw new Error(result.error || 'Error al crear influencer');
+      return response.data;
+    } catch (error: any) {
+      // Manejar duplicado proveniente del backend
+      const status = error?.response?.status;
+      const dataResp = error?.response?.data || {};
+      if (status === 409 && (dataResp.duplicate || dataResp.existingInfluencer)) {
+        return {
+          success: false,
+          duplicate: true,
+          existingInfluencer: dataResp.existingInfluencer,
+          message: dataResp.message || 'Duplicated influencer'
+        };
       }
-
-      return {
-        success: true,
-        duplicate: false,
-        influencer: result.influencer,
-        message: result.message
-      };
-
-    } catch (error) {
       console.error('Error en createInfluencer:', error);
       throw error;
     }
@@ -208,6 +196,16 @@ export class InfluencerService {
     if (tiktokId && (youtubeId || instagramId)) {
       query.push(`tiktokId=${encodeURIComponent(tiktokId)}`);
     }
+
+    // Si tenemos un solo id, enviar a que social platform refiere
+    if (youtubeId && !instagramId && !tiktokId) {
+      query.push('socialPlatform=youtube');
+    } else if (instagramId && !youtubeId && !tiktokId) {
+      query.push('socialPlatform=instagram');
+    } else if (tiktokId && !youtubeId && !instagramId) {
+      query.push('socialPlatform=tiktok');
+    }
+    console.log("Query", query);
     
     const queryString = query.length > 0 ? `?${query.join('&')}` : '';
     

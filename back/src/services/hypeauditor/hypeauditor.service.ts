@@ -35,6 +35,8 @@ export class HypeAuditorService {
 			const response: AxiosResponse<HypeAuditorSearchResponse> = await axios.post(url, request, {
 				headers: createHypeAuditorHeaders(hypeAuditorConfig.clientId, hypeAuditorConfig.apiToken)
 			});
+			console.log("######################## DATA ########################"); 
+			console.log('response', response.data);
 			return response.data;
 		} catch (error: any) {
 			throw new Error(error.response?.data?.message || error.message);

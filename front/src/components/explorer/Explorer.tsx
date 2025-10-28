@@ -327,7 +327,20 @@ export default function Explorer() {
         filters.location = location;
       }
       if (selectedCategories.length > 0) {
-        filters.selectedCategories = selectedCategories;
+        // Map names -> IDs based on current platform taxonomy
+        try {
+          const { getCategoriesForPlatform } = await import('@/constants/hypeauditor-categories');
+          const cats = getCategoriesForPlatform(platform);
+          const nameToId = new Map(cats.map(c => [c.name, c.id] as const));
+          const ids = selectedCategories
+            .map(name => nameToId.get(name))
+            .filter((id): id is string => !!id);
+          if (ids.length > 0) {
+            filters.selectedCategories = ids;
+          }
+        } catch (e) {
+          filters.selectedCategories = selectedCategories; // fallback
+        }
       }
       if (accountType !== 'any') {
         filters.accountType = accountType;
@@ -1137,6 +1150,227 @@ export default function Explorer() {
     }
   };
 
+  // --- Assignment helpers ---
+  const buildCreatePayload = (row: any) => {
+    const socialPlatforms = Array.isArray(row?.socialPlatforms)
+      ? Array.from(new Set(row.socialPlatforms.map((p: any) => (typeof p === 'string' ? p : p.platform))))
+      : [];
+
+    return {
+      creator_id: row?.creatorId,
+      name: row?.name || row?.creatorId,
+      avatar: row?.avatar || row?.image || '',
+      is_verified: !!(row?.verified ?? row?.isVerified),
+      main_social_platform: row?.mainSocialPlatform || (platform !== 'all' ? platform : (socialPlatforms[0] || 'instagram')),
+      followers_count: row?.followersCount || 0,
+      average_engagement_rate: row?.averageEngagementRate || 0,
+      language: row?.language ?? null,
+      location: location && location !== 'all' ? location : null,
+      categories: row?.categories || [],
+      content_niches: row?.contentNiches || row?.categories || [],
+      social_platforms: socialPlatforms,
+      platform_info: row?.platformInfo || {},
+      metadata: { source: 'explorer', searchMeta: { appliedFilters: { platform, location } } }
+    };
+  };
+
+  // Keep previous implementation available for rollback
+  const oldOnAssign = async (campaignIds: string[]) => {
+    setAssigning(true);
+    setAssignError(null);
+    setAssignSuccess(false);
+
+    try {
+      const influencerDataMap = new Map<string, { localId: string; name: string }>();
+      for (const influencerId of selectedInfluencers) {
+        try {
+          let localInfluencer = null as any;
+          try {
+            localInfluencer = await influencerService.getInfluencerById(influencerId);
+          } catch (_) {}
+
+          if (localInfluencer) {
+            influencerDataMap.set(influencerId, {
+              localId: localInfluencer.id,
+              name: localInfluencer.name || influencerId
+            });
+          } else {
+            const selectedInfluencer = influencers.find(inf => inf.creatorId === influencerId);
+            const youtubeId = selectedInfluencer?.platformInfo?.youtube ? influencerId : undefined;
+            const instagramId = selectedInfluencer?.platformInfo?.instagram?.instagramId || 
+                              (selectedInfluencer && !youtubeId ? influencerId : undefined);
+            const tiktokId = selectedInfluencer?.platformInfo?.tiktok?.tiktokId;
+            const fullData = await influencerService.getFullInfluencerData({ youtubeId, instagramId, tiktokId });
+            const newLocalInfluencer = await saveIfNotExists(fullData);
+            if (newLocalInfluencer?.id) {
+              influencerDataMap.set(influencerId, {
+                localId: newLocalInfluencer.id,
+                name: fullData?.youtubeName || fullData?.name || influencerId
+              });
+            }
+          }
+        } catch (err) {
+          console.error(`Error procesando influencer ${influencerId}:`, err);
+        }
+      }
+
+      const validLocalIds = Array.from(influencerDataMap.values()).map(data => data.localId);
+      let totalSuccesses: string[] = [];
+      let totalAlreadyAssigned: string[] = [];
+      let totalFailed: string[] = [];
+
+      for (const campaignId of campaignIds) {
+        try {
+          const assignmentCheck = await campaignService.checkInfluencerAssignments(campaignId, validLocalIds);
+          const alreadyAssignedNames = assignmentCheck.alreadyAssigned.map((localId: string) => {
+            const entry = Array.from(influencerDataMap.entries()).find(([_, data]) => data.localId === localId);
+            return entry ? entry[1].name : localId;
+          });
+
+          const toAssignIds = assignmentCheck.notAssigned as string[];
+          const campaignSuccesses: string[] = [];
+          const campaignFailed: string[] = [];
+
+          for (const localId of toAssignIds) {
+            try {
+              await campaignService.addInfluencerToCampaign(campaignId, localId, 0);
+              const entry = Array.from(influencerDataMap.entries()).find(([_, data]) => data.localId === localId);
+              const influencerName = entry ? entry[1].name : localId;
+              campaignSuccesses.push(influencerName);
+            } catch (err: any) {
+              const entry = Array.from(influencerDataMap.entries()).find(([_, data]) => data.localId === localId);
+              const influencerName = entry ? entry[1].name : localId;
+              campaignFailed.push(influencerName);
+            }
+          }
+
+          totalSuccesses = [...totalSuccesses, ...campaignSuccesses];
+          totalAlreadyAssigned = [...totalAlreadyAssigned, ...alreadyAssignedNames];
+          totalFailed = [...totalFailed, ...campaignFailed];
+        } catch (campaignError: any) {
+          console.error(`Error procesando campaña ${campaignId}:`, campaignError);
+          const allInfluencerNames = Array.from(influencerDataMap.values()).map(data => data.name);
+          totalFailed = [...totalFailed, ...allInfluencerNames];
+        }
+      }
+
+      const parts: string[] = [];
+      if (totalSuccesses.length) parts.push(`${totalSuccesses.length} asignación(es) correcta(s)`);
+      if (totalAlreadyAssigned.length) parts.push(`${[...new Set(totalAlreadyAssigned)].length} influencer(s) ya estaban asignados en alguna campaña`);
+      if (totalFailed.length) parts.push(`${[...new Set(totalFailed)].length} con error`);
+
+      if (totalSuccesses.length || totalAlreadyAssigned.length) {
+        setAssignSuccess(true);
+        setAssignmentResult({ successes: [...new Set(totalSuccesses)], alreadyAssigned: [...new Set(totalAlreadyAssigned)], failed: [...new Set(totalFailed)] });
+        const campaignText = campaignIds.length === 1 ? 'campaña' : `${campaignIds.length} campañas`;
+        toast({ title: `Asignación a ${campaignText} completada`, description: parts.join('. '), variant: totalFailed.length > totalSuccesses.length ? 'destructive' : 'default', status: 'info' });
+      } else {
+        setAssignError(`No se pudo asignar ninguno de los influencers a las ${campaignIds.length} campañas seleccionadas.`);
+      }
+    } catch (error: any) {
+      console.error('Error en proceso de asignación:', error);
+      setAssignError(error.message || 'Error verificando asignaciones.');
+    }
+
+    setAssigning(false);
+  };
+
+  const onAssign = async (campaignIds: string[]) => {
+    setAssigning(true);
+    setAssignError(null);
+    setAssignSuccess(false);
+
+    try {
+      const influencerDataMap = new Map<string, { localId: string; name: string }>();
+
+      for (const influencerId of selectedInfluencers) {
+        try {
+          // 1) Try local first
+          try {
+            const local = await influencerService.getInfluencerById(influencerId);
+            if (local && local.id) {
+              influencerDataMap.set(influencerId, { localId: local.id, name: local.name || influencerId });
+              continue;
+            }
+          } catch (_) {}
+
+          // 2) Create from Explorer data using backend /influencers/new
+          const row = adaptedInfluencers.find(inf => inf.creatorId === influencerId) || null;
+          const payload = buildCreatePayload(row || { creatorId: influencerId, name: influencerId });
+          const created = await influencerService.createInfluencer(payload);
+          if (created?.duplicate && created?.existingInfluencer?.id) {
+            influencerDataMap.set(influencerId, { localId: created.existingInfluencer.id, name: created.existingInfluencer.name || influencerId });
+          } else if (created?.success && created?.influencer?.id) {
+            influencerDataMap.set(influencerId, { localId: created.influencer.id, name: created.influencer.name || influencerId });
+          } else {
+            throw new Error(created?.message || 'No se pudo crear el influencer');
+          }
+        } catch (err) {
+          console.error(`Error creando/leyendo influencer ${influencerId}:`, err);
+        }
+      }
+
+      const validLocalIds = Array.from(influencerDataMap.values()).map(d => d.localId);
+      let totalSuccesses: string[] = [];
+      let totalAlreadyAssigned: string[] = [];
+      let totalFailed: string[] = [];
+
+      for (const campaignId of campaignIds) {
+        try {
+          const assignmentCheck = await campaignService.checkInfluencerAssignments(campaignId, validLocalIds);
+          const alreadyAssignedNames = assignmentCheck.alreadyAssigned.map((localId: string) => {
+            const entry = Array.from(influencerDataMap.entries()).find(([_, data]) => data.localId === localId);
+            return entry ? entry[1].name : localId;
+          });
+
+          const toAssignIds: string[] = assignmentCheck.notAssigned || [];
+          const campaignSuccesses: string[] = [];
+          const campaignFailed: string[] = [];
+
+          for (const localId of toAssignIds) {
+            try {
+              await campaignService.addInfluencerToCampaign(campaignId, localId, 0);
+              const entry = Array.from(influencerDataMap.entries()).find(([_, data]) => data.localId === localId);
+              const influencerName = entry ? entry[1].name : localId;
+              campaignSuccesses.push(influencerName);
+            } catch (err: any) {
+              const entry = Array.from(influencerDataMap.entries()).find(([_, data]) => data.localId === localId);
+              const influencerName = entry ? entry[1].name : localId;
+              campaignFailed.push(influencerName);
+            }
+          }
+
+          totalSuccesses = [...totalSuccesses, ...campaignSuccesses];
+          totalAlreadyAssigned = [...totalAlreadyAssigned, ...alreadyAssignedNames];
+          totalFailed = [...totalFailed, ...campaignFailed];
+        } catch (campaignError: any) {
+          console.error(`Error procesando campaña ${campaignId}:`, campaignError);
+          const allInfluencerNames = Array.from(influencerDataMap.values()).map(data => data.name);
+          totalFailed = [...totalFailed, ...allInfluencerNames];
+        }
+      }
+
+      const parts: string[] = [];
+      if (totalSuccesses.length) parts.push(`${totalSuccesses.length} asignación(es) correcta(s)`);
+      if (totalAlreadyAssigned.length) parts.push(`${[...new Set(totalAlreadyAssigned)].length} influencer(s) ya estaban asignados en alguna campaña`);
+      if (totalFailed.length) parts.push(`${[...new Set(totalFailed)].length} con error`);
+
+      if (totalSuccesses.length || totalAlreadyAssigned.length) {
+        setAssignSuccess(true);
+        setAssignmentResult({ successes: [...new Set(totalSuccesses)], alreadyAssigned: [...new Set(totalAlreadyAssigned)], failed: [...new Set(totalFailed)] });
+        const campaignText = campaignIds.length === 1 ? 'campaña' : `${campaignIds.length} campañas`;
+        toast({ title: `Asignación a ${campaignText} completada`, description: parts.join('. '), variant: totalFailed.length > totalSuccesses.length ? 'destructive' : 'default', status: 'info' });
+      } else {
+        setAssignError(`No se pudo asignar ninguno de los influencers a las ${campaignIds.length} campañas seleccionadas.`);
+      }
+    } catch (error: any) {
+      console.error('Error en proceso de asignación:', error);
+      setAssignError(error.message || 'Error verificando asignaciones.');
+    }
+
+    setAssigning(false);
+  };
+
   // 🎯 NUEVA: Función para manejar click en fila del influencer
   const handleRowClick = (influencerId: string, event: React.MouseEvent) => {
     // Evitar selección si se hace click en botones o checkboxes
@@ -1534,8 +1768,9 @@ export default function Explorer() {
   return (
     <div className="flex gap-3 ">
       {/* Panel de filtros (izquierda) */}
-      <div className="w-[350px] flex-shrink-0">
-        <HypeAuditorFilters
+      {showFilters && (
+        <div className="w-[350px] flex-shrink-0">
+          <HypeAuditorFilters
           platform={platform}
           setPlatform={setPlatform}
           searchQuery={searchQuery}
@@ -1550,8 +1785,8 @@ export default function Explorer() {
           setMinEngagement={setMinEngagement}
           maxEngagement={maxEngagement}
           setMaxEngagement={setMaxEngagement}
-          accountType={accountType}
-          setAccountType={setAccountType}
+          accountType={accountType === 'any' ? 'all' : accountType}
+          setAccountType={(val: string) => setAccountType((val === 'all' ? 'any' : (val as 'brand' | 'human')))}
           verified={verified || false}
           setVerified={setVerified}
           hasContacts={hasContacts || false}
@@ -1570,8 +1805,9 @@ export default function Explorer() {
           setSelectedGrowthRate={() => {}}
           onSearch={handleSearch}
           isLoading={loadingInfluencers}
-        />
-      </div>
+          />
+        </div>
+      )}
 
       {/* Panel de debug del skeleton desactivado */}
 
@@ -1582,6 +1818,15 @@ export default function Explorer() {
           <div className="px-6 py-4 border-b border-gray-100 bg-white">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowFilters(prev => !prev)}
+                  className="gap-2"
+                >
+                  <Filter className="h-4 w-4" />
+                  {showFilters ? 'Ocultar filtros' : 'Mostrar filtros'}
+                </Button>
                 <h2 className="text-lg font-semibold text-gray-900">Resultados de búsqueda</h2>
                 <div className="flex items-center gap-3">
                   
@@ -1713,12 +1958,7 @@ export default function Explorer() {
                         <th className="text-center py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Plataformas
                         </th>
-                        <th className="text-center py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Idioma
-                        </th>
-                        <th className="text-center py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          País
-                        </th>
+                        
                         <th className="text-center py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Seguidores
                         </th>
@@ -1793,12 +2033,7 @@ export default function Explorer() {
                   <th className="text-center py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Plataformas
                   </th>
-                  <th className="text-center py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Idioma
-                  </th>
-                  <th className="text-center py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    País
-                  </th>
+                  
                   <th className="text-center py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Seguidores
                   </th>
@@ -1935,14 +2170,7 @@ export default function Explorer() {
                             })()}
                           </div>
                         </td>
-                        <td className="py-4 px-6 text-center">
-                          <span className="font-medium">
-                            {getLanguageName(influencer.language)}
-                          </span>
-                        </td>
-                        <td className="py-4 px-6 text-center">
-                          <span className="font-medium">{influencer.location || '-'}</span>
-                        </td>
+                        
                         <td className="py-4 px-6 text-center">
                           <span className="font-medium">
                             <NumberDisplay value={influencer.followersCount} format="short" />
@@ -2069,156 +2297,7 @@ export default function Explorer() {
         assignError={assignError}
         assignSuccess={assignSuccess}
         assignmentResult={assignmentResult}
-        onAssign={async (campaignIds) => {
-          setAssigning(true);
-          setAssignError(null);
-          setAssignSuccess(false);
-
-          try {
-            // Paso 1: Verificar existencia y obtener datos de influencers
-            const influencerDataMap = new Map();
-            for (const influencerId of selectedInfluencers) {
-              try {
-                // 🔧 OPTIMIZACIÓN: Primero verificar si ya existe en la base local
-                let localInfluencer = null;
-                try {
-                  localInfluencer = await influencerService.getInfluencerById(influencerId);
-                } catch (e) {
-                  // No existe en la base local, continuar con petición full
-                }
-
-                if (localInfluencer) {
-                  // ✅ Ya existe: usar directamente sin petición full
-                  influencerDataMap.set(influencerId, {
-                    localId: localInfluencer.id,
-                    name: localInfluencer.name || influencerId
-                  });
-                } else {
-                  // ❌ No existe: hacer petición full y crear
-                  const selectedInfluencer = influencers.find(inf => inf.creatorId === influencerId);
-                  const youtubeId = selectedInfluencer?.platformInfo?.youtube ? influencerId : undefined;
-                  const instagramId = selectedInfluencer?.platformInfo?.instagram?.instagramId || 
-                                    (selectedInfluencer && !youtubeId ? influencerId : undefined);
-                  const tiktokId = selectedInfluencer?.platformInfo?.tiktok?.tiktokId;
-                  
-                  const fullData = await influencerService.getFullInfluencerData({ youtubeId, instagramId, tiktokId });
-                  const newLocalInfluencer = await saveIfNotExists(fullData);
-                  if (newLocalInfluencer?.id) {
-                    influencerDataMap.set(influencerId, {
-                      localId: newLocalInfluencer.id,
-                      name: fullData?.youtubeName || fullData?.name || influencerId
-                    });
-                  }
-                }
-              } catch (err) {
-                console.error(`Error procesando influencer ${influencerId}:`, err);
-              }
-            }
-
-            const validLocalIds = Array.from(influencerDataMap.values()).map(data => data.localId);
-            
-            // 🎯 NUEVO: Contadores globales para todas las campañas
-            let totalSuccesses: string[] = [];
-            let totalAlreadyAssigned: string[] = [];
-            let totalFailed: string[] = [];
-            let campaignsProcessed = 0;
-
-            // Paso 2-4: Procesar cada campaña seleccionada
-            for (const campaignId of campaignIds) {
-              try {
-                // Paso 2: Verificar cuáles ya están asignados para esta campaña
-                const assignmentCheck = await campaignService.checkInfluencerAssignments(campaignId, validLocalIds);
-                
-                // Paso 3: Mapear los resultados de vuelta a nombres para esta campaña
-                const alreadyAssignedNames = assignmentCheck.alreadyAssigned.map(localId => {
-                  const entry = Array.from(influencerDataMap.entries()).find(([_, data]) => data.localId === localId);
-                  return entry ? entry[1].name : localId;
-                });
-
-                const toAssignIds = assignmentCheck.notAssigned;
-                const campaignSuccesses: string[] = [];
-                const campaignFailed: string[] = [];
-
-                // Paso 4: Asignar solo los que no están ya asignados en esta campaña
-                for (const localId of toAssignIds) {
-                  try {
-                    await campaignService.addInfluencerToCampaign(campaignId, localId, 0);
-                    const entry = Array.from(influencerDataMap.entries()).find(([_, data]) => data.localId === localId);
-                    const influencerName = entry ? entry[1].name : localId;
-                    campaignSuccesses.push(influencerName);
-                  } catch (err: any) {
-                    const entry = Array.from(influencerDataMap.entries()).find(([_, data]) => data.localId === localId);
-                    const influencerName = entry ? entry[1].name : localId;
-                    campaignFailed.push(influencerName);
-                  }
-                }
-
-                // Acumular resultados globales
-                totalSuccesses = [...totalSuccesses, ...campaignSuccesses];
-                totalAlreadyAssigned = [...totalAlreadyAssigned, ...alreadyAssignedNames];
-                totalFailed = [...totalFailed, ...campaignFailed];
-                campaignsProcessed++;
-
-              } catch (campaignError: any) {
-                console.error(`Error procesando campaña ${campaignId}:`, campaignError);
-                // Si falla toda la campaña, marcar todos los influencers como fallidos para esta campaña
-                const allInfluencerNames = Array.from(influencerDataMap.values()).map(data => data.name);
-                totalFailed = [...totalFailed, ...allInfluencerNames];
-              }
-            }
-
-            // Paso 5: Construir mensaje informativo global
-            const parts: string[] = [];
-            if (totalSuccesses.length) {
-              parts.push(`${totalSuccesses.length} asignación(es) correcta(s)`);
-            }
-            if (totalAlreadyAssigned.length) {
-              const uniqueAlreadyAssigned = [...new Set(totalAlreadyAssigned)];
-              parts.push(`${uniqueAlreadyAssigned.length} influencer(s) ya estaban asignados en alguna campaña`);
-            }
-            if (totalFailed.length) {
-              const uniqueFailed = [...new Set(totalFailed)];
-              parts.push(`${uniqueFailed.length} con error`);
-            }
-
-            if (totalSuccesses.length || totalAlreadyAssigned.length) {
-              setAssignSuccess(true);
-              setAssignmentResult({
-                successes: [...new Set(totalSuccesses)], // Eliminar duplicados
-                alreadyAssigned: [...new Set(totalAlreadyAssigned)],
-                failed: [...new Set(totalFailed)]
-              });
-              
-              const campaignText = campaignIds.length === 1 ? 'campaña' : `${campaignIds.length} campañas`;
-              toast({
-                title: `Asignación a ${campaignText} completada`,
-                description: parts.join('. '),
-                variant: totalFailed.length > totalSuccesses.length ? 'destructive' : 'default',
-                status: 'info'
-              });
-              
-              // 🎯 ARREGLO: NO limpiar selección inmediatamente - se hará cuando el modal se cierre
-              // setSelectedInfluencers([]);
-              // setSelectMode(false);
-            } else {
-              setAssignError(`No se pudo asignar ninguno de los influencers a las ${campaignIds.length} campañas seleccionadas.`);
-            }
-
-          } catch (error: any) {
-            console.error('Error en proceso de asignación:', error);
-            setAssignError(error.message || 'Error verificando asignaciones.');
-          }
-
-          setAssigning(false);
-        }}
-        onRemoveInfluencer={(influencerId) => {
-          setSelectedInfluencers(prev => prev.filter(id => id !== influencerId));
-        }}
-        onCloseSuccess={() => {
-          // 🎯 NUEVO: Limpiar selección cuando el modal se cierre exitosamente
-          setSelectedInfluencers([]);
-          setSelectMode(false);
-        }}
+        onAssign={onAssign}
       />
 
 

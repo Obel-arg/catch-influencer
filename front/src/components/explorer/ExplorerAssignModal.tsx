@@ -246,7 +246,7 @@ export default function ExplorerAssignModal({
   };
 
   if (!open) return null;
-
+console.log(influencersData);
   return (
     <>
       {/* Overlay */}

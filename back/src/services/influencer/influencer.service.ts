@@ -15,6 +15,7 @@ import { InfluencerYoutubeService, YoutubeBasic } from './influencer.youtube.ser
 import { InfluencerInstagramService, InstagramBasic } from './influencer.instagram.service';
 import { InfluencerTiktokService, TiktokBasic } from './influencer.tiktok.service';
 import { InfluencerCacheService } from './influencer-cache.service';
+import { CreatorDBService } from '../creator/creator.service';
 
 const supabase = createClient(
   config.supabase.url || '',
@@ -121,7 +122,7 @@ export class InfluencerService {
               if (!basic) basic = data;
             }
           } else {
-            console.warn(`⚠️ [INFLUENCER SERVICE] Error obteniendo datos de ${platform}:`, error);
+            console.warn(`⚠️ [INFLUENCER SERVICE] Error obteniendo datos de ${platform}:`, error.message);
           }
         } else {
           console.error(`❌ [INFLUENCER SERVICE] Error en petición:`, result.reason);
@@ -424,7 +425,6 @@ export class InfluencerService {
       throw error;
     }
   }
-
   /**
    * Obtiene solo los datos básicos de las plataformas disponibles sin guardar en BD
    * Usado para mostrar datos en el panel del influencer
@@ -1087,6 +1087,7 @@ export class InfluencerService {
    */
   async createInfluencer(influencerData: any): Promise<any> {
     try {
+      console.log('influencerData', influencerData);
 
       // 1. Extraer IDs de plataformas del influencer a crear
       const platformIds = {
@@ -1108,7 +1109,7 @@ export class InfluencerService {
           message: `Ya existe un influencer con alguno de los IDs proporcionados: ${existingInfluencer.name} (ID: ${existingInfluencer.id})`
         };
       }
-
+      console.log('influencerData', influencerData);
       // 3. Si no hay duplicados, proceder con la creación normal
       
       const { data: newInfluencer, error } = await supabase
@@ -1131,6 +1132,97 @@ export class InfluencerService {
 
     } catch (error) {
       console.error('💥 [CREATE] Error en createInfluencer:', error);
+      throw error;
+    }
+  }
+
+  async createInfluencerFromHypeAuditor(influencerData: any): Promise<any> {
+    try {
+      // Normalizar entrada proveniente de Explorer/HypeAuditor
+      const mainPlatform = (influencerData.main_social_platform || influencerData.mainSocialPlatform || 'instagram').toLowerCase();
+      const creatorId = influencerData.creator_id || influencerData.creatorId || influencerData.platform_info?.socialId || influencerData.platformInfo?.socialId;
+
+      if (!creatorId) {
+        throw new Error('creator_id (username) es requerido');
+      }
+
+      // Construir registro consistente con nuestro esquema
+      const newRecord = {
+        creator_id: creatorId,
+        name: influencerData.name || influencerData.title || creatorId,
+        avatar: influencerData.avatar || '',
+        is_verified: Boolean(influencerData.is_verified ?? influencerData.isVerified ?? false),
+        main_social_platform: mainPlatform,
+        followers_count: influencerData.followers_count ?? influencerData.followersCount ?? 0,
+        average_engagement_rate: influencerData.average_engagement_rate ?? influencerData.averageEngagementRate ?? 0,
+        language: influencerData.language || null,
+        location: influencerData.location || influencerData.country || null,
+        categories: influencerData.categories || influencerData.contentNiches || [],
+        content_niches: influencerData.content_niches || influencerData.contentNiches || [],
+        social_platforms: Array.isArray(influencerData.social_platforms)
+          ? influencerData.social_platforms
+          : Array.isArray(influencerData.socialPlatforms)
+            ? influencerData.socialPlatforms.map((p: any) => (typeof p === 'string' ? p : p.platform)).filter(Boolean)
+            : [mainPlatform],
+        platform_info: influencerData.platform_info || influencerData.platformInfo || {},
+        metadata: influencerData.metadata || { source: 'explorer' },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as any;
+
+      // Intentar enviar a CreatorDB usando solo la plataforma principal y creator_id (no bloquear si falla)
+      let creatorDBSubmission: any = null;
+      try {
+        creatorDBSubmission = await CreatorDBService.submitCreators(mainPlatform, [newRecord.creator_id]);
+      } catch (e: any) {
+        console.warn('[CreatorDB] submitCreators failed:', e?.message || e);
+      }
+
+      // Verificación de duplicado por (creator_id, main_social_platform)
+      const { data: existing, error: fetchError } = await supabase
+        .from('influencers')
+        .select('*')
+        .eq('creator_id', newRecord.creator_id)
+        .eq('main_social_platform', newRecord.main_social_platform)
+        .is('deleted_at', null)
+        .maybeSingle();
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      if (existing) {
+        return {
+          success: false,
+          duplicate: true,
+          existingInfluencer: existing,
+          message: `Ya existe un influencer ${newRecord.creator_id} en ${newRecord.main_social_platform}`,
+          creatorDBSubmission
+        };
+      }
+
+      // Insertar nuevo influencer
+      const { data: inserted, error } = await supabase
+        .from('influencers')
+        .insert(newRecord)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      // creatorDB submission result included for visibility
+
+      return {
+        success: true,
+        duplicate: false,
+        influencer: inserted,
+        message: 'Influencer creado exitosamente desde HypeAuditor/Explorer',
+        creatorDBSubmission
+      };
+    } catch (error) {
+      console.error('💥 [CREATE] Error en createInfluencerFromHypeAuditor:', error);
       throw error;
     }
   }
