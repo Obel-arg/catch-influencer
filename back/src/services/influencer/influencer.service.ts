@@ -156,9 +156,9 @@ export class InfluencerService {
           tiktok = await InfluencerTiktokService.getBasic(currentTiktokId);
         } catch (error) {}
         // Fallback: si no hay datos y tenemos nombre de YouTube, intentar buscar por nombre
-        if (!tiktok && yt && yt.youtubeName) {
+        if (!tiktok && yt && (yt as any).youtubeName) {
           try {
-            tiktok = await InfluencerTiktokService.getBasic(yt.youtubeName);
+            tiktok = await InfluencerTiktokService.getBasic((yt as any).youtubeName);
           } catch (error) {}
         }
       }
@@ -170,10 +170,10 @@ export class InfluencerService {
           );
         } catch (error) {}
         // Fallback: si no hay datos y tenemos nombre de YouTube, intentar buscar por nombre
-        if (!instagram && yt && yt.youtubeName) {
+        if (!instagram && yt && (yt as any).youtubeName) {
           try {
             instagram = await InfluencerInstagramService.getBasic(
-              yt.youtubeName
+              (yt as any).youtubeName
             );
           } catch (error) {}
         }
@@ -201,11 +201,12 @@ export class InfluencerService {
 
       // Intentar diferentes variaciones de nombres para cada plataforma
       if (yt) {
+        const ytData = yt as any;
         influencerName =
-          yt.youtubeName ||
-          yt.channelTitle ||
-          yt.name ||
-          yt.title ||
+          ytData.youtubeName ||
+          ytData.channelTitle ||
+          ytData.name ||
+          ytData.title ||
           influencerName;
       } else if (instagram) {
         // 🔧 CORREGIR: Instagram devuelve directamente el objeto, no envuelto en basicInstagram
@@ -269,19 +270,19 @@ export class InfluencerService {
       }
 
       // Obtener el mejor avatar disponible de cualquier plataforma
-      let bestAvatar = basic?.avatar || "";
+      let bestAvatar = (basic as any)?.avatar || "";
 
       // 🔧 CORREGIR: Manejar tanto wrapper como directo para todas las plataformas
       if (!bestAvatar && instagram) {
-        const igData = instagram.basicInstagram || instagram;
-        bestAvatar = igData.avatar;
+        const igData = (instagram as any).basicInstagram || instagram;
+        bestAvatar = (igData as any).avatar;
       }
-      if (!bestAvatar && yt?.avatar) {
-        bestAvatar = yt.avatar;
+      if (!bestAvatar && yt) {
+        bestAvatar = (yt as any).avatar;
       }
       if (!bestAvatar && tiktok) {
-        const tkData = tiktok.basicTikTok || tiktok;
-        bestAvatar = tkData.avatar;
+        const tkData = (tiktok as any).basicTikTok || tiktok;
+        bestAvatar = (tkData as any).avatar;
       }
 
       const fullData = {
@@ -290,8 +291,11 @@ export class InfluencerService {
         avatar: bestAvatar,
         country: (() => {
           // Prioridad 1: YouTube country
-          if (yt && yt.country && yt.country.trim()) {
-            return yt.country.trim();
+          if (yt) {
+            const ytData = yt as any;
+            if (ytData.country && ytData.country.trim()) {
+              return ytData.country.trim();
+            }
           }
           // Prioridad 2: Instagram country
           if (instagram) {
@@ -320,21 +324,24 @@ export class InfluencerService {
         })(),
         language: (() => {
           // Prioridad 1: YouTube language
-          if (yt && yt.lang && yt.lang.trim()) {
-            return yt.lang.trim();
+          if (yt) {
+            const ytData = yt as any;
+            if (ytData.lang && ytData.lang.trim()) {
+              return ytData.lang.trim();
+            }
           }
           // Prioridad 2: Instagram language
           if (instagram) {
-            const igData = instagram.basicInstagram || instagram;
-            if (igData.lang && igData.lang.trim()) {
-              return igData.lang.trim();
+            const igData = (instagram as any).basicInstagram || instagram;
+            if ((igData as any).lang && (igData as any).lang.trim()) {
+              return (igData as any).lang.trim();
             }
           }
           // Prioridad 3: TikTok language
           if (tiktok) {
-            const tkData = tiktok.basicTikTok || tiktok;
-            if (tkData.lang && tkData.lang.trim()) {
-              return tkData.lang.trim();
+            const tkData = (tiktok as any).basicTikTok || tiktok;
+            if ((tkData as any).lang && (tkData as any).lang.trim()) {
+              return (tkData as any).lang.trim();
             }
           }
           // Prioridad 4: Basic language
@@ -348,11 +355,14 @@ export class InfluencerService {
           hasYouTube ? "youtube" : null,
           hasInstagram ? "instagram" : null,
           hasTikTok ? "tiktok" : null,
-        ].filter(Boolean),
-        mainSocialPlatform: mainPlatform,
+        ].filter(Boolean) as string[],
+        mainSocialPlatform: mainPlatform || null,
         // ✅ EXTRAER: mainCategory de la plataforma principal
         mainCategory: (() => {
-          if (yt && yt.mainCategory) return yt.mainCategory;
+          if (yt) {
+            const ytData = yt as any;
+            if (ytData.mainCategory) return ytData.mainCategory;
+          }
           if (instagram) {
             const igData = instagram.basicInstagram || instagram;
             if (igData.mainCategory) return igData.mainCategory;
@@ -369,23 +379,25 @@ export class InfluencerService {
 
           // Usar la plataforma principal determinada
           if (mainPlatform === "youtube" && yt) {
-            followers = yt.subscribers || yt.followers || 0;
+            const ytData = yt as any;
+            followers = ytData.subscribers || ytData.followers || 0;
           } else if (mainPlatform === "instagram" && instagram) {
-            const igData = instagram.basicInstagram || instagram;
-            followers = igData.followers || igData.subscribers || 0;
+            const igData = (instagram as any).basicInstagram || instagram;
+            followers = (igData as any).followers || (igData as any).subscribers || 0;
           } else if (mainPlatform === "tiktok" && tiktok) {
-            const tkData = tiktok.basicTikTok || tiktok;
-            followers = tkData.followers || tkData.subscribers || 0;
+            const tkData = (tiktok as any).basicTikTok || tiktok;
+            followers = (tkData as any).followers || (tkData as any).subscribers || 0;
           } else {
             // Fallback: intentar con cualquier plataforma disponible
             if (yt) {
-              followers = yt.subscribers || yt.followers || 0;
+              const ytData = yt as any;
+              followers = ytData.subscribers || ytData.followers || 0;
             } else if (instagram) {
-              const igData = instagram.basicInstagram || instagram;
-              followers = igData.followers || igData.subscribers || 0;
+              const igData = (instagram as any).basicInstagram || instagram;
+              followers = (igData as any).followers || (igData as any).subscribers || 0;
             } else if (tiktok) {
-              const tkData = tiktok.basicTikTok || tiktok;
-              followers = tkData.followers || tkData.subscribers || 0;
+              const tkData = (tiktok as any).basicTikTok || tiktok;
+              followers = (tkData as any).followers || (tkData as any).subscribers || 0;
             } else {
               // Fallback a basic
               followers =
@@ -402,26 +414,28 @@ export class InfluencerService {
 
           // Usar la plataforma principal determinada
           if (mainPlatform === "youtube" && yt) {
-            engagement = yt.engageRate1Y || yt.engageRate || yt.engagement || 0;
+            const ytData = yt as any;
+            engagement = ytData.engageRate1Y || ytData.engageRate || ytData.engagement || 0;
           } else if (mainPlatform === "instagram" && instagram) {
-            const igData = instagram.basicInstagram || instagram;
+            const igData = (instagram as any).basicInstagram || instagram;
             engagement =
-              igData.engageRate ||
-              igData.engagement ||
-              igData.engageRate1Y ||
+              (igData as any).engageRate ||
+              (igData as any).engagement ||
+              (igData as any).engageRate1Y ||
               0;
           } else if (mainPlatform === "tiktok" && tiktok) {
-            const tkData = tiktok.basicTikTok || tiktok;
+            const tkData = (tiktok as any).basicTikTok || tiktok;
             engagement =
-              tkData.engageRate ||
-              tkData.engagement ||
-              tkData.engageRate1Y ||
+              (tkData as any).engageRate ||
+              (tkData as any).engagement ||
+              (tkData as any).engageRate1Y ||
               0;
           } else {
             // Fallback: intentar con cualquier plataforma disponible
             if (yt) {
+              const ytData = yt as any;
               engagement =
-                yt.engageRate1Y || yt.engageRate || yt.engagement || 0;
+                ytData.engageRate1Y || ytData.engageRate || ytData.engagement || 0;
             } else if (instagram) {
               const igData = instagram.basicInstagram || instagram;
               engagement =
@@ -1478,7 +1492,7 @@ export class InfluencerService {
       });
 
       // Construir respuesta con estructura similar a getFullInfluencerData
-      const response = {
+      const response: any = {
         name: null,
         avatar: null,
         country: null,
@@ -1486,7 +1500,7 @@ export class InfluencerService {
         mainCategory: null,
         followersCount: 0,
         averageEngagementRate: 0,
-        socialPlatforms: [],
+        socialPlatforms: [] as string[],
         contentNiches: [],
         platformInfo: platformData,
         isVerified: false,
@@ -1559,7 +1573,7 @@ export class InfluencerService {
       }
 
       // Usar la plataforma principal para extraer followers y engagement
-      response.mainSocialPlatform = mainPlatform;
+      response.mainSocialPlatform = mainPlatform || null;
 
       // Extraer followers según la plataforma principal
       if (mainPlatform === "youtube" && platformData.youtube) {

@@ -156,7 +156,7 @@ export class CreatorDBController {
       return res.status(400).json({ error: 'instagramId es requerido' });
     }
     try {
-      const data = await CreatorDBService.getInstagramHistory(instagramId);
+      const data = await CreatorDBService.getInstagramBasic(instagramId);
       return res.json(data);
     } catch (error: any) {
       return res.status(500).json({ error: error.message || 'Error en CreatorDB' });

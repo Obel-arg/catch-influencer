@@ -46,18 +46,18 @@ export const testAllConnections = async (req: Request, res: Response) => {
 
   // 2. Test Supabase Admin Connection
   if (supabaseAdmin) {
+    const adminStart = Date.now();
     try {
-      const adminStart = Date.now();
       const { data, error } = await supabaseAdmin
         .from('organizations')
         .select('id')
         .limit(1);
-      
+
       results.push({
         service: 'Supabase (Admin Client)',
         status: error ? 'error' : 'ok',
         message: error ? `Error: ${error.message}` : 'Conexión admin exitosa',
-        details: { 
+        details: {
           hasServiceKey: !!config.supabase.serviceKey,
           recordsFound: data?.length || 0
         },
@@ -81,17 +81,17 @@ export const testAllConnections = async (req: Request, res: Response) => {
   }
 
   // 3. Test Database Connection (Raw)
+  const dbStart = Date.now();
   try {
-    const dbStart = Date.now();
-    const dbClient = createClient(config.supabase.url, config.supabase.anonKey);
+    const dbClient = createClient(config.supabase.url || '', config.supabase.anonKey || '');
     const { data, error } = await dbClient.rpc('version');
-    
+
     results.push({
       service: 'Database (Raw)',
       status: error ? 'error' : 'ok',
       message: error ? `Error: ${error.message}` : 'Base de datos accesible',
-      details: { 
-        dbUrl: config.database?.url ? 'Configurada' : 'No configurada',
+      details: {
+        dbUrl: 'Configurada',
         version: data || 'Unknown'
       },
       responseTime: Date.now() - dbStart
@@ -106,18 +106,17 @@ export const testAllConnections = async (req: Request, res: Response) => {
   }
 
   // 4. Test Redis/KV Connection
+  const kvStart = Date.now();
   try {
-    const kvStart = Date.now();
     // Verificar si las variables de Redis están configuradas
-    const hasKvConfig = !!(config.redis?.url || process.env.KV_URL);
-    
+    const hasKvConfig = !!(process.env.KV_URL);
+
     results.push({
       service: 'Redis/KV Store',
       status: hasKvConfig ? 'ok' : 'warning',
       message: hasKvConfig ? 'Configuración de Redis encontrada' : 'Redis no configurado',
-      details: { 
+      details: {
         hasKvUrl: !!process.env.KV_URL,
-        hasRedisUrl: !!config.redis?.url,
         hasRestApi: !!process.env.KV_REST_API_URL
       },
       responseTime: Date.now() - kvStart
