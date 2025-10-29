@@ -252,12 +252,25 @@ class HypeAuditorDiscoveryService {
   }
 
   /**
+   * Obtiene el reporte detallado de un creador desde HypeAuditor
+   */
+  async getCreatorReport(creatorId: string): Promise<any> {
+    try {
+      const response = await httpApiClient.get<any>(`${this.baseUrl}/creator-report/${creatorId}`);
+      return response.data;
+    } catch (error) {
+      console.error('❌ [HYPEAUDITOR DISCOVERY SERVICE] Error obteniendo reporte del creador:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Transforma los resultados de HypeAuditor al formato del Explorer
    */
   transformToExplorerFormat(hypeAuditorResponse: HypeAuditorDiscoveryResponse) {
     // La respuesta viene directamente con items en el nivel superior
     const results = hypeAuditorResponse.items || [];
-    
+
     return {
       success: hypeAuditorResponse.success,
       items: results, // Los items ya vienen transformados desde el backend
