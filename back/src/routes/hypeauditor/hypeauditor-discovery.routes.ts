@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { HypeAuditorDiscoveryController } from '../../controllers/hypeauditor/hypeauditor-discovery.controller';
 import { authenticateToken } from '../../middleware/auth';
+import { HypeAuditorController } from '../../controllers/hypeauditor/hypeauditor.controller';
 
 const router = Router();
 
@@ -18,6 +19,10 @@ router.post(
   HypeAuditorDiscoveryController.searchSuggestion,
 );
 
+router.get(
+  '/creator-report/:creatorId',
+  HypeAuditorController.getCreatorReport,
+);
 /**
  * @route POST /api/hypeauditor/discovery/search-direct
  * @desc Búsqueda directa usando parámetros de HypeAuditor (para casos avanzados)
