@@ -36,6 +36,7 @@ interface InfluencersContextType {
   getInfluencerCampaigns: (id: string) => Promise<any[]>;
   searchCreatorDBInfluencers: (filters: Record<string, any>) => Promise<any>;
   searchHypeAuditorInfluencers: (filters: HypeAuditorDiscoveryFilters) => Promise<any>;
+  searchHypeAuditorSuggestion: (search: string, st: string) => Promise<any>;
   resetInfluencers: () => void;
 }
 
@@ -396,6 +397,44 @@ export const InfluencersProvider: React.FC<InfluencersProviderProps> = ({
     [showToast]
   );
 
+  const searchHypeAuditorSuggestion = useCallback(
+    async (search: string, st: string) => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Realizar búsqueda de sugerencias con HypeAuditor
+        const hypeAuditorResponse = await hypeAuditorDiscoveryService.searchSuggestion(search, st);
+        
+        // Transformar la respuesta al formato del Explorer
+        let transformedData;
+        try {
+          transformedData = hypeAuditorDiscoveryService.transformToExplorerFormat(hypeAuditorResponse);
+        } catch (transformError) {
+          console.error('❌ [InfluencersContext] Error en transformación:', transformError);
+          throw transformError;
+        }
+        
+        // Actualizar el estado con los resultados transformados
+        setInfluencers(transformedData.items);
+
+        return transformedData;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Error al buscar sugerencias con HypeAuditor";
+        setError(errorMessage);
+        showToast({
+          title: "Error",
+          description: errorMessage,
+        });
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [showToast]
+  );
+
   const resetInfluencers = useCallback(() => {
     setInfluencers([]);
     setIsInitialized(false);
@@ -417,6 +456,7 @@ export const InfluencersProvider: React.FC<InfluencersProviderProps> = ({
     getInfluencerCampaigns,
     searchCreatorDBInfluencers,
     searchHypeAuditorInfluencers,
+    searchHypeAuditorSuggestion,
     resetInfluencers,
   };
 

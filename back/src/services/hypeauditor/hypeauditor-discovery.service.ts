@@ -733,8 +733,17 @@ export class HypeAuditorDiscoveryService {
     }
 
     // Filtros de audiencia - Mapear al formato HypeAuditor
-    if (filters.audienceAge) {
-      // Mapear rangos de edad a grupos de HypeAuditor
+    // Si viene ya formateado como {groups: string[], prc: number}, enviarlo directamente
+    if ((filters as any).audience_age) {
+      if (typeof (filters as any).audience_age === 'object' && !Array.isArray((filters as any).audience_age) && (filters as any).audience_age.groups) {
+        // Ya viene en formato {groups: string[], prc: number}
+        hypeAuditorRequest.audience_age = (filters as any).audience_age;
+      } else if (Array.isArray((filters as any).audience_age)) {
+        // Si viene como array de rangos [{from, to, prc}], enviarlo directamente
+        hypeAuditorRequest.audience_age = (filters as any).audience_age;
+      }
+    } else if (filters.audienceAge) {
+      // Formato legacy con minAge, maxAge, percentage - convertir a grupos
       const ageGroups = this.mapAgeRangeToGroups(
         filters.audienceAge.minAge,
         filters.audienceAge.maxAge,
@@ -745,6 +754,50 @@ export class HypeAuditorDiscoveryService {
       };
     }
 
+    // Mapear audience_geo - Si viene ya formateado, enviarlo directamente
+    if ((filters as any).audience_geo && typeof (filters as any).audience_geo === 'object') {
+      // Ya viene en formato {countries: Array<{id, prc}>, cities: Array<{id, prc}>}
+      hypeAuditorRequest.audience_geo = (filters as any).audience_geo;
+    } else if ((filters as any).audience_location) {
+      // Mapear audience_location -> audience_geo (similar a account_geo)
+      const locs = (filters as any).audience_location as Array<{ id: any; type?: number; prc?: number }>;
+      const audienceGeo: any = {};
+      const countries: Array<{ id: string; prc: number }> = [];
+      const cities: Array<{ id: number; prc: number }> = [];
+      
+      for (const loc of locs) {
+        const prc = typeof loc.prc === 'number' ? loc.prc : 0;
+        
+        if (loc.type === 0) {
+          // type 0 = city (solo disponible para Instagram)
+          if (hypeAuditorRequest.social_network === 'instagram') {
+            const cityId = typeof loc.id === 'string' ? parseInt(loc.id, 10) : Number(loc.id);
+            if (!isNaN(cityId)) {
+              cities.push({ id: cityId, prc });
+            }
+          }
+        } else {
+          // type != 0 = country (ISO 3166 two-letter code)
+          const countryId = typeof loc.id === 'string' ? loc.id : String(loc.id || '');
+          // Validar que sea código de 2 letras (opcional, pero mejor validar)
+          if (countryId && countryId.length === 2) {
+            countries.push({ id: countryId.toUpperCase(), prc });
+          }
+        }
+      }
+      
+      if (countries.length > 0) {
+        audienceGeo.countries = countries;
+      }
+      if (cities.length > 0) {
+        audienceGeo.cities = cities;
+      }
+      
+      if (countries.length > 0 || cities.length > 0) {
+        hypeAuditorRequest.audience_geo = audienceGeo;
+      }
+    }
+
     if (filters.audienceGender && filters.audienceGender.gender !== 'any') {
       // Mapear gender con porcentaje correcto
       hypeAuditorRequest.audience_gender = {
@@ -753,7 +806,8 @@ export class HypeAuditorDiscoveryService {
       };
     }
 
-    if (filters.audienceGeo) {
+    // Solo procesar audienceGeo (camelCase) si no se procesó audience_geo (snake_case) arriba
+    if (!hypeAuditorRequest.audience_geo && filters.audienceGeo) {
       // Mapear países y ciudades al formato array de HypeAuditor
       const audienceGeo: any = {};
 
@@ -817,10 +871,10 @@ export class HypeAuditorDiscoveryService {
 
         // Calcular engagement rate promedio de todas las plataformas sociales
         const validEngagementRates = mappedNetworks
-          .map((n) => n.engagement)
-          .filter((eng) => typeof eng === 'number' && eng > 0);
+          .map((n: { engagement: number }) => n.engagement)
+          .filter((eng: number) => typeof eng === 'number' && eng > 0);
         const averageEngagement = validEngagementRates.length > 0
-          ? validEngagementRates.reduce((a, b) => a + b, 0) / validEngagementRates.length
+          ? validEngagementRates.reduce((a: number, b: number) => a + b, 0) / validEngagementRates.length
           : 0;
 
         // Determinar plataforma principal dinámicamente

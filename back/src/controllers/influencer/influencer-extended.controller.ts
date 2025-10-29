@@ -62,14 +62,11 @@ export class InfluencerExtendedController {
         return;
       }
 
-      
-
       const result = await this.influencerExtendedService.getFullExtendedData({
         youtubeId,
         instagramId: instagramId as string,
         tiktokId: tiktokId as string
       });
-
      
       res.json({
         success: true,

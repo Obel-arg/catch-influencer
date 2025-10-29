@@ -307,11 +307,11 @@ console.log(influencersData);
                             {influencer.name || `Influencer ${index + 1}`}
                           </p>
                           {(influencer.socialPlatforms && influencer.socialPlatforms.length > 0 && influencer.socialPlatforms[0].followers) ? (
-                            <p className="text-xs text-gray-500 leading-tight">
+                            <p className="text-xs text-gray-500 leading-tight" suppressHydrationWarning>
                               {influencer.socialPlatforms[0].followers.toLocaleString()} seguidores
                             </p>
                           ) : influencer.followersCount ? (
-                            <p className="text-xs text-gray-500 leading-tight">
+                            <p className="text-xs text-gray-500 leading-tight" suppressHydrationWarning>
                               {influencer.followersCount.toLocaleString()} seguidores
                             </p>
                                                       ) : null}
@@ -453,14 +453,14 @@ console.log(influencersData);
                                      {campaign.start_date && (
                                        <div className="flex items-center gap-1 whitespace-nowrap">
                                          <Calendar className="h-3 w-3 flex-shrink-0" />
-                                         <span className="truncate">{formatCampaignDate(campaign.start_date)}</span>
+                                         <span className="truncate" suppressHydrationWarning>{formatCampaignDate(campaign.start_date)}</span>
                                        </div>
                                      )}
                                      
                                      {campaign.budget && (
                                        <div className="flex items-center gap-1 whitespace-nowrap">
                                          <DollarSign className="h-3 w-3 flex-shrink-0" />
-                                         <span className="truncate">{campaign.budget.toLocaleString()}</span>
+                                         <span className="truncate" suppressHydrationWarning>{campaign.budget.toLocaleString()}</span>
                                        </div>
                                      )}
                                    </div>
