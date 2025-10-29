@@ -258,8 +258,6 @@ export interface ExplorerResult {
 	socialPlatforms: Array<{
 		platform: string;
 		username: string;
-		followers: number;
-		engagement: number;
 	}>;
 	platformInfo?: Record<string, any>;
 	language?: string;
@@ -707,17 +705,38 @@ export class HypeAuditorDiscoveryService {
 			// Log individual para cada resultado - usando los campos reales
 			
 
-			// Extraer seguidores y engagement de los datos reales
-			const followers = item.metrics?.subscribers_count?.value || 0;
+			// Mapear redes sociales completas desde features.social_networks
+			const rawNetworks = item.features?.social_networks || [];
+			const mappedNetworks = rawNetworks.map((n) => ({
+				platform: (n.type || '').toLowerCase(),
+				username: n.username || '',
+				followers: n.subscribers_count || 0,
+				engagement: typeof n.er === 'number' ? n.er : 0,
+				_raw: {
+					socialId: n.social_id,
+					title: n.title,
+					avatarUrl: n.avatar_url,
+					state: n.state
+				}
+			}));
+
+			// Elegir plataforma principal por mayor cantidad de seguidores
+			const sortedByFollowers = [...mappedNetworks].sort((a, b) => (b.followers || 0) - (a.followers || 0));
+			const mainNetwork = sortedByFollowers[0];
+
+			// Extraer seguidores/engagement si no hay redes
+			const fallbackFollowers = item.metrics?.subscribers_count?.value || 0;
+			const fallbackEngagementRate = item.metrics?.er?.value || 0;
+			const followers = mainNetwork?.followers ?? fallbackFollowers;
 			const realFollowers = item.metrics?.real_subscribers_count?.value || 0;
-			const engagementRate = item.metrics?.er?.value || 0;
+			const engagementRate = mainNetwork?.engagement ?? fallbackEngagementRate;
 			
 			// Mapear topics a categorías (necesitaremos un mapeo de IDs a nombres)
 			const topicIds = (item.features as any)?.blogger_topics?.data || [];
 			const contentNiches = topicIds.map((id: any) => `Topic ${id}`); // Temporal hasta tener el mapeo real
 			
-			// Determinar plataforma basada en el context de la búsqueda 
-			const platform = 'instagram'; // Por ahora, ya que estamos buscando en Instagram
+			// Determinar plataforma principal dinámicamente
+			const platform = mainNetwork?.platform || (rawNetworks[0]?.type?.toLowerCase()) || 'instagram';
 
 			// Crear el objeto en el formato que espera la tabla del Explorer
 			return {
@@ -741,24 +760,26 @@ export class HypeAuditorDiscoveryService {
 				// Estructura completa para compatibilidad
 				contentNiches: contentNiches,
 				country: undefined,
-				socialPlatforms: [{
-					platform: platform,
-					username: item.basic?.username || '',
-					followers: followers,
-					engagement: engagementRate
-				}],
+				socialPlatforms: (mappedNetworks.length > 0
+					? mappedNetworks
+						.sort((a, b) => (b.followers || 0) - (a.followers || 0))
+						.map(n => ({ platform: n.platform, username: n.username}))
+					: [{ platform, username: item.basic?.username || ''}]
+				),
 				platformInfo: {
-					socialId: item.basic?.username || '',
 					state: 'active',
-					aqs: item.features?.aqs?.data?.mark
+					aqs: item.features?.aqs?.data?.mark,
+					socialNetworks: mappedNetworks.map(n => ({
+						platform: n.platform,
+						username: n.username,
+						followers: n.followers,
+						engagement: n.engagement,
+						...n._raw
+					}))
 				},
 				metrics: {
 					engagementRate: engagementRate,
 					realFollowers: realFollowers,
-					likesCount: undefined,
-					viewsAvg: undefined,
-					commentsAvg: undefined,
-					sharesAvg: undefined,
 					aqs: item.features?.aqs?.data?.mark,
 					cqs: item.features?.cqs?.data?.mark
 				},

@@ -1146,6 +1146,7 @@ export class InfluencerService {
         throw new Error('creator_id (username) es requerido');
       }
 
+      console.log('influencerData', influencerData);
       // Construir registro consistente con nuestro esquema
       const newRecord = {
         creator_id: creatorId,
