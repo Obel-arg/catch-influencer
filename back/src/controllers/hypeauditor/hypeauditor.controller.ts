@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { hypeAuditorService } from '../../services/hypeauditor/hypeauditor.service';
 import supabase from '../../config/supabase';
 
+
 export class HypeAuditorController {
   static async search(req: Request, res: Response) {
     try {
@@ -41,13 +42,18 @@ export class HypeAuditorController {
         });
       }
 
-      const { main_social_platform, creator_id } = creatorData.data;
+      let { main_social_platform, creator_id } = creatorData.data;
+      main_social_platform = main_social_platform.toLowerCase();
+
       if (main_social_platform === 'instagram') {
-        return this.getInstagramReport((req.query.username = creator_id), res);
+        req.query.username = creator_id;
+        return HypeAuditorController.getInstagramReport(req, res);
       } else if (main_social_platform === 'youtube') {
-        return this.getYouTubeReport((req.query.channel = creator_id), res);
+        req.query.channel = creator_id;
+        return HypeAuditorController.getYouTubeReport(req, res);
       } else if (main_social_platform === 'tiktok') {
-        return this.getTikTokReport((req.query.channel = creator_id), res);
+        req.query.channel = creator_id;
+        return HypeAuditorController.getTikTokReport(req, res);
       } else {
         return res.status(400).json({
           success: false,
