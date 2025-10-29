@@ -47,8 +47,6 @@ export class HypeAuditorDiscoveryController {
         hypeAuditorRequest
       );
 
-      console.log("HypeAuditor Discovery Response", discoveryResponse);
-
       // Transformar respuesta al formato del Explorer
       const explorerResponse =
         service.transformHypeAuditorResponseToExplorer(discoveryResponse);
