@@ -5,7 +5,7 @@ import { authenticateToken } from '../../middleware/auth';
 const router = Router();
 
 // Aplicar middleware de autenticación a todas las rutas
-router.use(authenticateToken);
+//router.use(authenticateToken);
 
 /**
  * @route POST /api/hypeauditor/discovery/search
@@ -13,6 +13,10 @@ router.use(authenticateToken);
  * @access Private
  */
 router.post('/search', HypeAuditorDiscoveryController.searchDiscovery);
+router.post(
+  '/search-suggestion',
+  HypeAuditorDiscoveryController.searchSuggestion,
+);
 
 /**
  * @route POST /api/hypeauditor/discovery/search-direct
@@ -33,7 +37,10 @@ router.get('/taxonomy', HypeAuditorDiscoveryController.getTaxonomy);
  * @desc Buscar posts por keywords
  * @access Private
  */
-router.get('/search-keywords-posts', HypeAuditorDiscoveryController.searchKeywordsPosts);
+router.get(
+  '/search-keywords-posts',
+  HypeAuditorDiscoveryController.searchKeywordsPosts,
+);
 
 /**
  * @route POST /api/hypeauditor/discovery/smart-search

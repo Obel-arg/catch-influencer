@@ -284,6 +284,23 @@ export class CreatorDBService {
     const endTime = Date.now();
     return result;
   }
+
+  // ==============================================
+  // TIKTOK METHODS - SEGÚN API v2
+  // ==============================================
+
+  static async getTikTokBasic(tiktokId: string) {
+    return this.get('/tiktokBasic', { tiktokId });
+  }
+
+  static async getTikTokHistory(tiktokId: string) {
+    return this.get('/tiktokHistory', { tiktokId });
+  }
+
+  static async getTikTokDetail(tiktokId: string) {
+    return this.get('/tiktokDetail', { tiktokId });
+  }
+
   // THREADS METHODS - SEGÚN API v2
   // ==============================================
   

@@ -1171,15 +1171,26 @@ export class InfluencerService {
         updated_at: new Date().toISOString(),
       } as any;
 
-      // Intentar enviar a CreatorDB usando solo la plataforma principal y creator_id (no bloquear si falla)
-      let creatorDBSubmission: any = null;
+      // 1. Verificar si el creador existe en CreatorDB usando la plataforma principal
+      let creatorDBCheck: any = null;
       try {
-        creatorDBSubmission = await CreatorDBService.submitCreators(mainPlatform, [newRecord.creator_id]);
+        creatorDBCheck = await CreatorDBService.checkIdExists(mainPlatform, newRecord.creator_id);
+        if (creatorDBCheck.exists) {
+          // Si existe en CreatorDB, no continuar con la creación
+          return {
+            success: false,
+            duplicate: true,
+            existsInCreatorDB: true,
+            creatorDBData: creatorDBCheck.data,
+            message: `El creador ${newRecord.creator_id} ya existe en CreatorDB para ${mainPlatform}`,
+          };
+        }
       } catch (e: any) {
-        console.warn('[CreatorDB] submitCreators failed:', e?.message || e);
+        console.warn('[CreatorDB] checkIdExists failed:', e?.message || e);
+        // No bloquear si falla la verificación
       }
 
-      // Verificación de duplicado por (creator_id, main_social_platform)
+      // 2. Verificación de duplicado en Supabase por (creator_id, main_social_platform)
       const { data: existing, error: fetchError } = await supabase
         .from('influencers')
         .select('*')
@@ -1198,8 +1209,15 @@ export class InfluencerService {
           duplicate: true,
           existingInfluencer: existing,
           message: `Ya existe un influencer ${newRecord.creator_id} en ${newRecord.main_social_platform}`,
-          creatorDBSubmission
         };
+      }
+
+      // 3. Intentar enviar a CreatorDB usando solo la plataforma principal y creator_id (no bloquear si falla)
+      let creatorDBSubmission: any = null;
+      try {
+        creatorDBSubmission = await CreatorDBService.submitCreators(mainPlatform, [newRecord.creator_id]);
+      } catch (e: any) {
+        console.warn('[CreatorDB] submitCreators failed:', e?.message || e);
       }
 
       // Insertar nuevo influencer
