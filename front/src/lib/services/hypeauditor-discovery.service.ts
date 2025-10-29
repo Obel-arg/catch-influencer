@@ -24,8 +24,11 @@ export interface HypeAuditorDiscoveryFilters {
   sortOrder?: 'asc' | 'desc';
   // Filtros de audiencia
   audienceGender?: { gender: 'male' | 'female' | 'any'; percentage: number };
-  audienceAge?: { minAge: number; maxAge: number; percentage: number };
-  audienceGeo?: { countries: { [key: string]: number }; cities: { [key: string]: number } };
+  audienceAge?: { groups: string[]; prc: number };
+  audienceGeo?: { 
+    countries: Array<{ id: string; prc: number }>; 
+    cities: Array<{ id: number; prc: number }> 
+  };
   // Categorías del taxonomy de HypeAuditor
   taxonomyCategories?: {
     include: string[];
@@ -133,14 +136,78 @@ class HypeAuditorDiscoveryService {
   private readonly baseUrl = '/hypeauditor/discovery';
 
   /**
+   * Transforma solo los nuevos filtros (audience_geo y audience_age) al formato del backend
+   * y los agrega al objeto de filtros existente
+   */
+  private transformNewFilters(filters: HypeAuditorDiscoveryFilters): any {
+    const transformedFilters: any = { ...filters };
+
+    // Transform audience_age - keep the same format (groups array + prc)
+    if (filters.audienceAge?.groups && filters.audienceAge.groups.length > 0) {
+      transformedFilters.audience_age = {
+        groups: filters.audienceAge.groups,
+        prc: filters.audienceAge.prc,
+      };
+      // Remove the old format
+      delete transformedFilters.audienceAge;
+    }
+
+    // Transform audience_geo - convert country codes to lowercase
+    if (filters.audienceGeo) {
+      const hasCountries = filters.audienceGeo.countries && filters.audienceGeo.countries.length > 0;
+      const hasCities = filters.audienceGeo.cities && filters.audienceGeo.cities.length > 0;
+      
+      if (hasCountries || hasCities) {
+        transformedFilters.audience_geo = {
+          countries: hasCountries
+            ? filters.audienceGeo.countries.map((country) => ({
+                id: country.id.toLowerCase(),
+                prc: country.prc,
+              }))
+            : [],
+          cities: hasCities
+            ? filters.audienceGeo.cities.map((city) => ({
+                id: city.id,
+                prc: city.prc,
+              }))
+            : [],
+        };
+      }
+
+      // Remove the old format
+      delete transformedFilters.audienceGeo;
+    }
+
+    return transformedFilters;
+  }
+
+  /**
    * Realiza una búsqueda de discovery usando HypeAuditor
    */
   async searchDiscovery(filters: HypeAuditorDiscoveryFilters): Promise<HypeAuditorDiscoveryResponse> {
     try {
-      const response = await httpApiClient.post<HypeAuditorDiscoveryResponse>(`${this.baseUrl}/search`, filters);
+      // Transform only the new filters (audience_geo and audience_age) and merge with existing filters
+      const transformedFilters = this.transformNewFilters(filters);
+      const response = await httpApiClient.post<HypeAuditorDiscoveryResponse>(`${this.baseUrl}/search`, transformedFilters);
       return response.data;
     } catch (error) {
       console.error('Error en búsqueda HypeAuditor:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Realiza una búsqueda de sugerencias de creadores por nombre
+   */
+  async searchSuggestion(search: string, st: string): Promise<HypeAuditorDiscoveryResponse> {
+    try {
+      const response = await httpApiClient.post<HypeAuditorDiscoveryResponse>(`${this.baseUrl}/search-suggestion`, {
+        search,
+        st
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error en búsqueda de sugerencias HypeAuditor:', error);
       throw error;
     }
   }
@@ -185,12 +252,25 @@ class HypeAuditorDiscoveryService {
   }
 
   /**
+   * Obtiene el reporte detallado de un creador desde HypeAuditor
+   */
+  async getCreatorReport(creatorId: string): Promise<any> {
+    try {
+      const response = await httpApiClient.get<any>(`${this.baseUrl}/creator-report/${creatorId}`);
+      return response.data;
+    } catch (error) {
+      console.error('❌ [HYPEAUDITOR DISCOVERY SERVICE] Error obteniendo reporte del creador:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Transforma los resultados de HypeAuditor al formato del Explorer
    */
   transformToExplorerFormat(hypeAuditorResponse: HypeAuditorDiscoveryResponse) {
     // La respuesta viene directamente con items en el nivel superior
     const results = hypeAuditorResponse.items || [];
-    
+
     return {
       success: hypeAuditorResponse.success,
       items: results, // Los items ya vienen transformados desde el backend

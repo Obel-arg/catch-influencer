@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { HypeAuditorDiscoveryController } from '../../controllers/hypeauditor/hypeauditor-discovery.controller';
 import { authenticateToken } from '../../middleware/auth';
+import { HypeAuditorController } from '../../controllers/hypeauditor/hypeauditor.controller';
 
 const router = Router();
 
 // Aplicar middleware de autenticación a todas las rutas
-router.use(authenticateToken);
+//router.use(authenticateToken);
 
 /**
  * @route POST /api/hypeauditor/discovery/search
@@ -13,7 +14,15 @@ router.use(authenticateToken);
  * @access Private
  */
 router.post('/search', HypeAuditorDiscoveryController.searchDiscovery);
+router.post(
+  '/search-suggestion',
+  HypeAuditorDiscoveryController.searchSuggestion,
+);
 
+router.get(
+  '/creator-report/:creatorId',
+  HypeAuditorController.getCreatorReport,
+);
 /**
  * @route POST /api/hypeauditor/discovery/search-direct
  * @desc Búsqueda directa usando parámetros de HypeAuditor (para casos avanzados)
@@ -33,7 +42,10 @@ router.get('/taxonomy', HypeAuditorDiscoveryController.getTaxonomy);
  * @desc Buscar posts por keywords
  * @access Private
  */
-router.get('/search-keywords-posts', HypeAuditorDiscoveryController.searchKeywordsPosts);
+router.get(
+  '/search-keywords-posts',
+  HypeAuditorDiscoveryController.searchKeywordsPosts,
+);
 
 /**
  * @route POST /api/hypeauditor/discovery/smart-search

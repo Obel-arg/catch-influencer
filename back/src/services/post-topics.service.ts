@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase';
 import { openAITopicsService, HybridTopicResult } from './analysis/openai-topics.service';
 import { IntelligentTopicAnalysisService, IntelligentTopicResult } from './analysis/intelligent-topic-analysis.service';
 import { postgresCacheService } from './cache/postgres-cache.service';
+import { CreatorDBService } from './creator/creator.service';
 
 export interface PostTopicsStats {
   totalComments: number;
@@ -593,7 +594,6 @@ export class PostTopicsService {
    */
   async getTopicNicheCategories(platform: string = 'instagram'): Promise<any> {
     try {
-      const { CreatorDBService } = await import('../creator/creator.service');
       const response = await CreatorDBService.getTopicTable(platform);
 
       if (!response.success || !response.data) {

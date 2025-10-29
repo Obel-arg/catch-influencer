@@ -229,16 +229,16 @@ export class OrganizationService {
         throw profileError;
       }
 
-      // 5. Eliminar de auth.users (usando Supabase Admin)  
-      try {
-        const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
-        if (authError) {
-          
+      // 5. Eliminar de auth.users (usando Supabase Admin)
+      if (supabaseAdmin) {
+        try {
+          const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+          if (authError) {
+            throw authError;
+          }
+        } catch (authError) {
           throw authError;
         }
-      } catch (authError) {
-        
-        throw authError;
       }
 
     } catch (error) {

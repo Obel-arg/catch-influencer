@@ -120,14 +120,14 @@ export class InfluencerExtendedService {
             syncErrors.youtube_detail = error;
           }
 
-          // YouTube Email/Contact
+          // YouTube Detail (additional info)
           try {
-            const youtubeEmail = await CreatorDBService.getYoutubeEmail(request.youtubeId);
-            extendedData.youtube_email = youtubeEmail;
+            const youtubeDetail = await CreatorDBService.getYoutubeDetail(request.youtubeId);
+            extendedData.youtube_detail = youtubeDetail;
             totalApiCalls += 1;
           } catch (error) {
-            console.warn(`⚠️ Error obteniendo YouTube Email: ${error}`);
-            syncErrors.youtube_email = error;
+            console.warn(`⚠️ Error obteniendo YouTube Detail: ${error}`);
+            syncErrors.youtube_detail = error;
           }
 
         } catch (error) {
@@ -145,15 +145,8 @@ export class InfluencerExtendedService {
           extendedData.instagram_basic = instagramBasic;
           totalApiCalls += 1;
 
-          // Instagram History
-          try {
-            const instagramHistory = await CreatorDBService.getInstagramHistory(extractedInstagramId);
-            extendedData.instagram_history = instagramHistory;
-            totalApiCalls += 1;
-          } catch (error) {
-            console.warn(`⚠️ Error obteniendo Instagram History: ${error}`);
-            syncErrors.instagram_history = error;
-          }
+          // Additional Instagram data (using basic as it's the available method)
+          // Note: getInstagramHistory is not available in CreatorDBService
 
         } catch (error) {
           console.error(`❌ Error en datos de Instagram: ${error}`);
@@ -189,14 +182,8 @@ export class InfluencerExtendedService {
        }
 
       // === CONTACT INFORMATION ===
-      try {
-         const contactInfo = await CreatorDBService.getContactInformation(request.youtubeId);
-        extendedData.contact_info = contactInfo;
-        totalApiCalls += 1;
-      } catch (error) {
-        console.warn(`⚠️ Error obteniendo Contact Info: ${error}`);
-        syncErrors.contact_info = error;
-      }
+      // Note: getContactInformation is not available in CreatorDBService
+      // This would require a separate API endpoint
 
       // Calcular métricas finales
       extendedData.total_api_calls = totalApiCalls;

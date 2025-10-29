@@ -137,15 +137,33 @@ function ProtectedLayoutContent({ children }: ProtectedLayoutProps) {
     }
   }, [isInitialized, authLoading]); // Removido 'user' y 'router' de las dependencias
 
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const stored = localStorage.getItem('nav:collapsed');
+    return stored === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('nav:collapsed', String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
+
   return (
     <RoleProvider>
       <InfluencersProvider>
         <UsersProvider>
           <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-            <MainSidebar />
-            <div className="flex-1 ml-56">
-              <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-white/80 backdrop-blur-md px-4 md:px-6 shadow-sm">
+            <MainSidebar collapsed={sidebarCollapsed} />
+            <div className={sidebarCollapsed ? "flex-1 ml-16" : "flex-1 ml-56"}>
+              <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-white/80 backdrop-blur-md px-4 md:px-6 shadow-sm">
                 <div className="ml-auto flex gap-2 items-center">
+                  <button
+                    onClick={() => setSidebarCollapsed((v) => !v)}
+                    className="px-3 py-1.5 text-sm border rounded-md hover:bg-gray-50"
+                    aria-label="Toggle navigation sidebar"
+                    title="Toggle navigation sidebar"
+                  >
+                    {sidebarCollapsed ? 'Expandir' : 'Colapsar'}
+                  </button>
                   <FeedbackSystem userEmail={userEmail} />
                   {/* <NotificationsPopover /> */}
                   <UserProfileDropdown />

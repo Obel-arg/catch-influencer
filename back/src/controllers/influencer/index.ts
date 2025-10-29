@@ -1,12 +1,12 @@
 import { Request, Response } from 'express';
 import { InfluencerService } from '../../services/influencer';
-import { 
-  InfluencerCreateDTO, 
+import {
+  InfluencerCreateDTO,
   InfluencerUpdateDTO,
   InfluencerTeamCreateDTO,
   InfluencerTeamUpdateDTO,
   InfluencerCampaignCreateDTO,
-  InfluencerCampaignUpdateDTO
+  InfluencerCampaignUpdateDTO,
 } from '../../models/influencer/influencer.model';
 
 export class InfluencerController {
@@ -20,7 +20,9 @@ export class InfluencerController {
     try {
       const influencerData = req.body;
 
-      const result = await this.influencerService.createInfluencer(influencerData);
+      const result = await this.influencerService.createInfluencer(
+        influencerData,
+      );
 
       if (result.duplicate) {
         // Si es un duplicado, retornar 409 Conflict con información del influencer existente
@@ -28,7 +30,7 @@ export class InfluencerController {
           success: false,
           duplicate: true,
           existingInfluencer: result.existingInfluencer,
-          message: result.message
+          message: result.message,
         });
       }
 
@@ -37,15 +39,35 @@ export class InfluencerController {
         success: true,
         duplicate: false,
         influencer: result.influencer,
-        message: result.message
+        message: result.message,
       });
-
     } catch (error: any) {
       console.error('❌ [CONTROLLER] Error al crear influencer:', error);
       res.status(500).json({
         success: false,
-        error: error.message || 'Error interno del servidor'
+        error: error.message || 'Error interno del servidor',
       });
+    }
+  }
+
+  async createInfluencerFromHypeAuditor(req: Request, res: Response) {
+    try {
+      const influencerData = req.body;
+      const main_platform = req.body.main_social_platform;
+
+      const result =
+        await this.influencerService.createInfluencerFromHypeAuditor(
+          influencerData,
+        );
+      res.json(result);
+    } catch (error: any) {
+      console.error(
+        '❌ [CONTROLLER] Error al crear influencer desde HypeAuditor:',
+        error,
+      );
+      res
+        .status(500)
+        .json({ error: 'Error al crear influencer desde HypeAuditor' });
     }
   }
 
@@ -53,7 +75,7 @@ export class InfluencerController {
     try {
       const { id } = req.params;
       const influencer = await this.influencerService.getById(id);
-      
+
       if (!influencer) {
         return res.status(404).json({ error: 'Influencer no encontrado' });
       }
@@ -105,7 +127,7 @@ export class InfluencerController {
       const { teamId } = req.params;
       const teamData: InfluencerTeamCreateDTO = {
         ...req.body,
-        team_id: teamId
+        team_id: teamId,
       };
       // TODO: Implement addToTeam in service
       res.status(501).json({ error: 'Team management not implemented yet' });
@@ -143,10 +165,12 @@ export class InfluencerController {
       const { campaignId } = req.params;
       const campaignData: InfluencerCampaignCreateDTO = {
         ...req.body,
-        campaign_id: campaignId
+        campaign_id: campaignId,
       };
       // TODO: Implement addToCampaign in service
-      res.status(501).json({ error: 'Campaign management not implemented yet' });
+      res
+        .status(501)
+        .json({ error: 'Campaign management not implemented yet' });
     } catch (error) {
       console.error('Error al agregar a campaña:', error);
       res.status(500).json({ error: 'Error al agregar a campaña' });
@@ -158,7 +182,9 @@ export class InfluencerController {
       const { campaignId, influencerId } = req.params;
       const updateData: InfluencerCampaignUpdateDTO = req.body;
       // TODO: Implement updateCampaignStatus in service
-      res.status(501).json({ error: 'Campaign management not implemented yet' });
+      res
+        .status(501)
+        .json({ error: 'Campaign management not implemented yet' });
     } catch (error) {
       console.error('Error al actualizar estado en campaña:', error);
       res.status(500).json({ error: 'Error al actualizar estado en campaña' });
@@ -169,7 +195,9 @@ export class InfluencerController {
     try {
       const { campaignId, influencerId } = req.params;
       // TODO: Implement removeFromCampaign in service
-      res.status(501).json({ error: 'Campaign management not implemented yet' });
+      res
+        .status(501)
+        .json({ error: 'Campaign management not implemented yet' });
     } catch (error) {
       console.error('Error al remover de campaña:', error);
       res.status(500).json({ error: 'Error al remover de campaña' });
@@ -214,35 +242,43 @@ export class InfluencerController {
       });
 
       if (!data) {
-        return res.status(404).json({ error: 'No se encontraron datos de plataformas' });
+        return res
+          .status(404)
+          .json({ error: 'No se encontraron datos de plataformas' });
       }
 
       res.json(data);
     } catch (error) {
       console.error('Error al obtener datos básicos de plataformas:', error);
-      res.status(500).json({ error: 'Error al obtener datos básicos de plataformas' });
+      res
+        .status(500)
+        .json({ error: 'Error al obtener datos básicos de plataformas' });
     }
   }
 
   async getFullInfluencerData(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { instagramId, tiktokId } = req.query;
+      const { instagramId, tiktokId, socialPlatform } = req.query;
 
-      // Determinar el tipo de ID y extraer los otros IDs
+      console.log('id', id);
+      console.log('req.query', req.query);
+      console.log('instagramId', instagramId);
+      console.log('tiktokId', tiktokId);
+
       let youtubeId: string | undefined;
       let extractedInstagramId: string | undefined;
       let extractedTiktokId: string | undefined;
 
-      if (this.isYouTubeId(id)) {
+      if (socialPlatform === 'youtube') {
         youtubeId = id;
         extractedInstagramId = instagramId as string;
         extractedTiktokId = tiktokId as string;
-      } else if (this.isInstagramId(id)) {
+      } else if (socialPlatform === 'instagram') {
         extractedInstagramId = id;
         youtubeId = req.query.youtubeId as string;
         extractedTiktokId = tiktokId as string;
-      } else if (this.isTikTokId(id)) {
+      } else if (socialPlatform === 'tiktok') {
         extractedTiktokId = id;
         youtubeId = req.query.youtubeId as string;
         extractedInstagramId = instagramId as string;
@@ -253,12 +289,17 @@ export class InfluencerController {
         extractedTiktokId = tiktokId as string;
       }
 
+      console.log('youtubeId', youtubeId);
+      console.log('extractedInstagramId', extractedInstagramId);
+      console.log('extractedTiktokId', extractedTiktokId);
+
       const data = await this.influencerService.getFullInfluencerData({
         youtubeId,
         instagramId: extractedInstagramId,
         tiktokId: extractedTiktokId,
       });
 
+      console.log('data', data);
       if (!data) {
         return res.status(404).json({ error: 'Influencer no encontrado' });
       }
@@ -266,7 +307,9 @@ export class InfluencerController {
       res.json(data);
     } catch (error) {
       console.error('Error al obtener datos completos del influencer:', error);
-      res.status(500).json({ error: 'Error al obtener datos completos del influencer' });
+      res
+        .status(500)
+        .json({ error: 'Error al obtener datos completos del influencer' });
     }
   }
 
@@ -277,39 +320,48 @@ export class InfluencerController {
   async refreshInfluencerData(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      
+
       const result = await this.influencerService.refreshInfluencerData(id);
-      
+
       res.json({
         success: true,
         data: result,
-        message: 'Datos del influencer actualizados exitosamente'
+        message: 'Datos del influencer actualizados exitosamente',
       });
-      
     } catch (error: any) {
-      console.error('❌ [CONTROLLER] Error al refrescar datos del influencer:', error);
-      
+      console.error(
+        '❌ [CONTROLLER] Error al refrescar datos del influencer:',
+        error,
+      );
+
       res.status(500).json({
         success: false,
-        error: error.message || 'Error interno del servidor'
+        error: error.message || 'Error interno del servidor',
       });
     }
   }
-  
+
   // 🔧 FUNCIONES AUXILIARES PARA DETECTAR TIPO DE ID
   private isYouTubeId(id: string): boolean {
     // YouTube IDs suelen ser 24 caracteres alfanuméricos
     return /^[a-zA-Z0-9_-]{24}$/.test(id) || /^UC[a-zA-Z0-9_-]{22}$/.test(id);
   }
-  
+
   private isInstagramId(id: string): boolean {
     // Instagram usernames suelen ser palabras sin espacios, guiones o puntos
-    return /^[a-zA-Z0-9._]{1,30}$/.test(id) && !this.isYouTubeId(id) && !this.isTikTokId(id);
+    return (
+      /^[a-zA-Z0-9._]{1,30}$/.test(id) &&
+      !this.isYouTubeId(id) &&
+      !this.isTikTokId(id)
+    );
   }
-  
+
   private isTikTokId(id: string): boolean {
     // TikTok usernames suelen empezar con @ o ser nombres simples
-    return id.startsWith('@') || (/^[a-zA-Z0-9._]{1,24}$/.test(id) && !this.isYouTubeId(id));
+    return (
+      id.startsWith('@') ||
+      (/^[a-zA-Z0-9._]{1,24}$/.test(id) && !this.isYouTubeId(id))
+    );
   }
 
   async getAllInfluencers(req: Request, res: Response) {
@@ -361,4 +413,4 @@ export class InfluencerController {
       res.status(500).json({ error: 'Error searching influencers' });
     }
   }
-} 
+}

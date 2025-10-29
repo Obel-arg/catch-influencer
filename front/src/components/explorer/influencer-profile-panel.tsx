@@ -168,7 +168,7 @@ const NoExtendedDataMessage = ({ influencer }: { influencer: any }) => {
                     <div key={index} className="ml-2 bg-gray-50 p-2 rounded">
                       <div><strong>Plataforma:</strong> {social.platform}</div>
                       <div><strong>Username:</strong> {social.username}</div>
-                      <div><strong>Seguidores:</strong> {social.followers?.toLocaleString('es-ES') || 'N/A'}</div>
+                      <div suppressHydrationWarning><strong>Seguidores:</strong> {social.followers?.toLocaleString('es-ES') || 'N/A'}</div>
                       <div><strong>Engagement:</strong> {social.engagement ? `${social.engagement}%` : 'N/A'}</div>
                     </div>
                   ))}
@@ -197,7 +197,7 @@ const NoExtendedDataMessage = ({ influencer }: { influencer: any }) => {
               <div className="text-xs font-semibold text-gray-600 mb-2">📝 OTROS CAMPOS</div>
               <div className="text-xs space-y-1">
                 <div><strong>Content Niches:</strong> {influencer.contentNiches?.length > 0 ? influencer.contentNiches.join(', ') : 'N/A'}</div>
-                <div><strong>Followers Count:</strong> {influencer.followersCount?.toLocaleString('es-ES') || 'N/A'}</div>
+                <div suppressHydrationWarning><strong>Followers Count:</strong> {influencer.followersCount?.toLocaleString('es-ES') || 'N/A'}</div>
                 <div><strong>Average Engagement Rate:</strong> {influencer.averageEngagementRate ? `${(influencer.averageEngagementRate * 100).toFixed(2)}%` : 'N/A'}</div>
                 <div><strong>Main Social Platform:</strong> {influencer.mainSocialPlatform || 'N/A'}</div>
               </div>
@@ -441,8 +441,6 @@ export function InfluencerProfilePanel({
     if (platform === "Threads" && pdata.basicThreads) return pdata.basicThreads;
     return pdata;
   };
-
-  const [mounted, setMounted] = useState(false)
   
   // ✨ ESTADO PARA AVATAR PROCESADO
   const [processedAvatar, setProcessedAvatar] = useState<string>('');
@@ -537,7 +535,6 @@ export function InfluencerProfilePanel({
   };
 
   useEffect(() => {
-    setMounted(true);
     if (isOpen) {
       document.body.style.overflow = "hidden";
       setActivePlatform(influencer.platform || availablePlatforms[0] || 'YouTube');
@@ -610,8 +607,6 @@ export function InfluencerProfilePanel({
     }
   }, [activePlatform, platformData]);
 
-  if (!mounted) return null;
-
   // Los datos de la plataforma activa deben calcularse después de la comprobación de `mounted` y `platformData`
   
   // Icon helper definido arriba
@@ -660,18 +655,18 @@ export function InfluencerProfilePanel({
 
       {/* Panel */}
       <div
-        className={`fixed top-0 right-0 h-full w-full md:w-[550px] lg:w-[650px] bg-white shadow-xl z-50 overflow-y-auto transition-transform duration-300 ease-in-out ${
-          isOpen ? "translate-x-0" : "translate-x-full"
+        className={`fixed top-0 left-0 h-full w-full md:w-[550px] lg:w-[650px] bg-white shadow-xl z-50 overflow-y-auto transition-transform duration-300 ease-in-out ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b bg-white">
+        <div className="sticky top-0 z-10 flex items-center justify-between p-6 pb-4 border-b bg-white">
           <h2 className="text-lg font-semibold">Detalles del Influencer</h2>
           <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
             <X className="h-4 w-4" />
           </Button>
         </div>
 
-        <div className="p-4 space-y-4">
+        <div className="p-6 pt-4 space-y-4">
           {/* 🎯 LÓGICA CONDICIONAL DE RENDERIZADO */}
           {isLoading ? (
             // ⏳ SKELETON MIENTRAS CARGA

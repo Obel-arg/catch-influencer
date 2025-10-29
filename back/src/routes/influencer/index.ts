@@ -10,6 +10,7 @@ router.get('/search/local', authenticateToken, influencerController.searchLocal.
 
 // Rutas principales de influencers
 router.post('/', authenticateToken, influencerController.createInfluencer.bind(influencerController));
+router.post('/new', authenticateToken, influencerController.createInfluencerFromHypeAuditor.bind(influencerController));
 router.get('/:id', authenticateToken, influencerController.getInfluencerById.bind(influencerController));
 router.put('/:id', authenticateToken, influencerController.updateInfluencer.bind(influencerController));
 router.delete('/:id', authenticateToken, influencerController.deleteInfluencer.bind(influencerController));

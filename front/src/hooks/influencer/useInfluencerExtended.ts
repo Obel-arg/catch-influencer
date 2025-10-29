@@ -62,8 +62,6 @@ export const useInfluencerExtended = (creatorId: string | null, influencerId?: s
     try {
       setError(null);
       
-
-      
       // Solo leer datos existentes - NO hacer peticiones duplicadas
       const response = await InfluencerExtendedService.readExistingExtendedData(creatorId);
       
