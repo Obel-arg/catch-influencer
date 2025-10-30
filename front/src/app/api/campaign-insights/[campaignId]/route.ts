@@ -24,6 +24,7 @@ export async function POST(
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
     const targetUrl = `${backendUrl}/campaign-insights/${campaignId}`;
 
+    console.log('🔍 [INSIGHTS] Calling backend:', targetUrl);
 
     // Hacer la llamada al backend con el token
     const response = await fetch(targetUrl, {
@@ -51,11 +52,16 @@ export async function POST(
     return NextResponse.json(data);
     
   } catch (error) {
-    console.error('❌ Proxy error:', error);
+    console.error('❌ [INSIGHTS] Proxy error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorDetails = error instanceof Error && 'cause' in error ? error.cause : null;
     return NextResponse.json(
       { 
-        success: false, 
-        error: 'Internal server error' 
+        success: false,
+        error: 'Internal server error',
+        details: errorMessage,
+        backendUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api',
+        cause: errorDetails
       },
       { status: 500 }
     );

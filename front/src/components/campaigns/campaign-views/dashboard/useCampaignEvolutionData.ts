@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useCampaignContext } from '@/contexts/CampaignContext';
+import { getApiBaseUrl } from '@/lib/services/apiBase';
 
 export interface MetricEvolution {
   date: string;
@@ -203,8 +204,9 @@ const getAllMetricsEvolution = async (campaignId: string, posts: any[]): Promise
     // Obtener el token de autorización
     const token = localStorage.getItem('token');
     
-    // Obtener todas las métricas de todos los posts de la campaña
-    const apiUrl = `/api/influencer-posts/campaign/${campaignId}/all-metrics`;
+    // Llamar directamente al backend
+    const backendUrl = getApiBaseUrl();
+    const apiUrl = `${backendUrl}/influencer-posts/campaign/${campaignId}/all-metrics`;
     
     const response = await fetch(apiUrl, {
       headers: {

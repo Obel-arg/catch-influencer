@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { getApiBaseUrl } from '@/lib/services/apiBase';
 import { MessageSquare, CheckCircle, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -45,7 +46,8 @@ export function PendingFeedbackCounter({ userEmail }: PendingFeedbackCounterProp
 
   const fetchPendingCount = async () => {
     try {
-      const response = await fetch('/api/feedback/pending-count', {
+      const backendUrl = getApiBaseUrl();
+      const response = await fetch(`${backendUrl}/feedback/pending-count`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -63,7 +65,8 @@ export function PendingFeedbackCounter({ userEmail }: PendingFeedbackCounterProp
   const fetchAllFeedback = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch('/api/feedback/all', {
+      const backendUrl = getApiBaseUrl();
+      const response = await fetch(`${backendUrl}/feedback/all`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -82,7 +85,8 @@ export function PendingFeedbackCounter({ userEmail }: PendingFeedbackCounterProp
 
   const handleResolveFeedback = async (feedbackId: string) => {
     try {
-      const response = await fetch(`/api/feedback/${feedbackId}`, {
+      const backendUrl = getApiBaseUrl();
+      const response = await fetch(`${backendUrl}/feedback/${feedbackId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -102,7 +106,8 @@ export function PendingFeedbackCounter({ userEmail }: PendingFeedbackCounterProp
 
   const handleDeleteFeedback = async (feedbackId: string) => {
     try {
-      const response = await fetch(`/api/feedback/${feedbackId}`, {
+      const backendUrl = getApiBaseUrl();
+      const response = await fetch(`${backendUrl}/feedback/${feedbackId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`

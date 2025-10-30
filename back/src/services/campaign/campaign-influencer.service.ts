@@ -67,34 +67,10 @@ export class CampaignInfluencerService {
 
    
 
-    // Hacer el JOIN principal usando solo columnas que existen
+    // Get data without implicit relationship selects (avoid FK requirement)
     const { data: campaignInfluencers, error } = await client
       .from('campaign_influencers')
-      .select(`
-        *,
-        influencers:influencer_id (
-          id,
-          name,
-          location,
-          categories,
-          status,
-          created_by,
-          created_at,
-          updated_at,
-          deleted_at,
-          metadata,
-          creator_id,
-          main_social_platform,
-          followers_count,
-          average_engagement_rate,
-          content_niches,
-          social_platforms,
-          platform_info,
-          avatar,
-          is_verified,
-          language
-        )
-      `)
+      .select('*')
       .eq('campaign_id', campaignId)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
@@ -106,8 +82,14 @@ export class CampaignInfluencerService {
       throw error;
     }
 
-    // Filtrar solo los que tienen influencer válido
-    const validCampaignInfluencers = campaignInfluencers?.filter(ci => ci.influencers !== null) || [];
+    // Merge influencer details manually from existingInfluencers
+    const influencerMap = new Map((existingInfluencers || []).map((inf: any) => [inf.id, inf]));
+    const validCampaignInfluencers = (campaignInfluencers || [])
+      .map(ci => ({
+        ...ci,
+        influencers: influencerMap.get(ci.influencer_id) || null
+      }))
+      .filter(ci => ci.influencers !== null);
     
     
     // Si no hay influencers válidos, mostrar información útil

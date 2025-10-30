@@ -189,7 +189,7 @@ export class FeedbackService {
     try {
       const { data, error } = await supabase
         .from('feedback')
-        .select('id', { count: 'exact' })
+        .select('id')
         .eq('status', 'pending');
 
       if (error) throw error;

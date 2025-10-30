@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { Campaign } from '@/types/campaign';
+import { getApiBaseUrl } from '@/lib/services/apiBase';
 
 export interface CampaignInsight {
   title: string;
@@ -53,8 +54,9 @@ export const useCampaignInsights = (): UseCampaignInsightsReturn => {
         throw new Error('No se encontró el token de autenticación. Por favor, inicia sesión nuevamente.');
       }
 
-      // Forzar la ruta sin /v1 ni variables de entorno
-      const response = await fetch(`/api/campaign-insights/${campaignId}`, {
+      // Llamar directamente al backend
+      const backendUrl = getApiBaseUrl();
+      const response = await fetch(`${backendUrl}/campaign-insights/${campaignId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

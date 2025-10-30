@@ -133,7 +133,8 @@ export const generateCampaignInsights = async (req: Request, res: Response) => {
     console.error('❌ Error generando insights de campaña:', error);
     res.status(500).json({
       success: false,
-      error: 'Error interno del servidor durante la generación de insights'
+      error: 'Error interno del servidor durante la generación de insights',
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 };

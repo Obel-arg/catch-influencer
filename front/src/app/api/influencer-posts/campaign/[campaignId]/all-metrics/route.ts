@@ -13,7 +13,11 @@ export async function GET(
     
     // Hacer la llamada al backend
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
-    const response = await fetch(`${backendUrl}/influencer-posts/campaign/${campaignId}/all-metrics`, {
+    const targetUrl = `${backendUrl}/influencer-posts/campaign/${campaignId}/all-metrics`;
+    
+    console.log('🔍 [METRICS] Calling backend:', targetUrl);
+    
+    const response = await fetch(targetUrl, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -22,6 +26,7 @@ export async function GET(
 
     if (!response.ok) {
       const errorText = await response.text();
+      console.error('❌ [METRICS] Backend error:', response.status, errorText);
       throw new Error(`Backend responded with status: ${response.status} - ${errorText}`);
     }
 
@@ -29,9 +34,16 @@ export async function GET(
     return NextResponse.json(data);
     
   } catch (error) {
-    console.error('Error in all-metrics API route:', error);
+    console.error('❌ [METRICS] Error in all-metrics API route:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorDetails = error instanceof Error && 'cause' in error ? error.cause : null;
     return NextResponse.json(
-      { error: 'Failed to fetch metrics', details: error instanceof Error ? error.message : 'Unknown error' },
+      { 
+        error: 'Failed to fetch metrics', 
+        details: errorMessage,
+        backendUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api',
+        cause: errorDetails
+      },
       { status: 500 }
     );
   }

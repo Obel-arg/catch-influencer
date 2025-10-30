@@ -11,7 +11,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/feedback/all`, {
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+    const response = await fetch(`${backendUrl}/feedback/all`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`

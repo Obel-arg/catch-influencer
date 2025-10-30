@@ -222,9 +222,15 @@ export class InfluencerPostsController {
       const postIds = influencerPosts.map(post => post.id);
 
       // Get ALL metrics for these posts using the service
-      const allMetricsPromises = postIds.map(postId => 
-        this.postMetricsService.getPostMetricsByPostId(postId)
-      );
+      // Use Promise.allSettled to handle individual failures gracefully
+      const allMetricsPromises = postIds.map(async (postId) => {
+        try {
+          return await this.postMetricsService.getPostMetricsByPostId(postId);
+        } catch (error) {
+          console.warn(`⚠️ [ALL-METRICS] Error fetching metrics for post ${postId}:`, error);
+          return []; // Return empty array on error
+        }
+      });
       
       const allMetricsResults = await Promise.all(allMetricsPromises);
       const allMetrics = allMetricsResults.flat();

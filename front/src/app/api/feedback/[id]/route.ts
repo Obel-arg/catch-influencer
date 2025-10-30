@@ -25,7 +25,8 @@ export async function PUT(
       );
     }
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/feedback/${feedbackId}`, {
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+    const response = await fetch(`${backendUrl}/feedback/${feedbackId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -68,7 +69,8 @@ export async function DELETE(
       );
     }
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/feedback/${feedbackId}`, {
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+    const response = await fetch(`${backendUrl}/feedback/${feedbackId}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`

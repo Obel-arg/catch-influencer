@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { getApiBaseUrl } from '@/lib/services/apiBase';
 import { MessageSquare, Send, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -34,7 +35,8 @@ export function FeedbackButton({ userEmail }: FeedbackButtonProps) {
 
     setIsSubmitting(true)
     try {
-      const response = await fetch('/api/feedback', {
+      const backendUrl = getApiBaseUrl();
+      const response = await fetch(`${backendUrl}/feedback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

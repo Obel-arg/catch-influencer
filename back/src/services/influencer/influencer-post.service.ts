@@ -147,22 +147,10 @@ export class InfluencerPostService {
   }
 
   async getInfluencerPostsWithMetrics(campaignId: string, limit: number = 50, offset: number = 0): Promise<any[]> {
-    // First, get the influencer posts
+    // First, get the influencer posts (avoid implicit relationship selects that require FKs)
     const { data: influencerPosts, error: postsError } = await supabase
       .from('influencer_posts')
-      .select(`
-        *,
-        influencers:influencer_id (
-          id,
-          name,
-          avatar,
-          platform_info
-        ),
-        campaigns:campaign_id (
-          id,
-          name
-        )
-      `)
+      .select('*')
       .eq('campaign_id', campaignId)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -202,7 +190,7 @@ export class InfluencerPostService {
       }
     });
 
-    // Combine posts with their metrics
+    // Combine posts with their metrics (related influencer/campaign data can be resolved client-side or via separate calls)
     const transformedPosts = influencerPosts.map(post => ({
       ...post,
       post_metrics: metricsMap.get(post.id) || null

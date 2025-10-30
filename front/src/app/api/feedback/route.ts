@@ -21,7 +21,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/feedback`, {
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+    const response = await fetch(`${backendUrl}/feedback`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
