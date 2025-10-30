@@ -149,8 +149,11 @@ export default function Explorer() {
 
   // Estado para paginado y filtros
   const [page, setPage] = useState(1);
-  const [size] = useState(10); // 🎯 UI: 6 influencers por página (para mantener tamaño)
+  const [size] = useState(10); // 🎯 UI: 10 influencers por página
   const [totalResultsPerPage] = useState(20); // 🚀 HypeAuditor: 20 resultados por página
+  const [backendPage, setBackendPage] = useState(1); // 🎯 NUEVO: Página actual del backend
+  const [backendTotalPages, setBackendTotalPages] = useState(1); // 🎯 NUEVO: Total de páginas del backend
+  const [lastSearchFilters, setLastSearchFilters] = useState<any>(null); // 🎯 NUEVO: Guardar filtros de última búsqueda
 
   // 🎯 MEJORA: Influencers con persistencia de datos previos
   const [influencers, setInfluencers] = useState<any[]>([]);
@@ -322,7 +325,7 @@ export default function Explorer() {
   // 🗑️ ELIMINADOS: pagesCached y cacheExpiresAt - cache ahora es automático en el backend
 
   // 🚀 NUEVA FUNCIÓN PARA BÚSQUEDA CON HYPEAUDITOR
-  const handleHypeAuditorSearch = async () => {
+  const handleHypeAuditorSearch = async (pageNumber: number = 1) => {
     try {
       // Búsqueda iniciada
 
@@ -336,7 +339,7 @@ export default function Explorer() {
         // 🎯 Sin searchQuery, usar endpoint de búsqueda regular con filtros
         const filters: HypeAuditorDiscoveryFilters = {
           platform: platform === "all" ? "instagram" : platform, // Por defecto Instagram
-          page: 1,
+          page: pageNumber, // 🎯 CAMBIADO: Usar el parámetro de página
         };
 
         if (minFollowers > 0) {
@@ -417,14 +420,23 @@ export default function Explorer() {
 
         // Realizar búsqueda con HypeAuditor
         result = await searchHypeAuditorInfluencers(filters);
+
+        // 🎯 NUEVO: Guardar filtros de última búsqueda para paginación
+        setLastSearchFilters(filters);
       }
 
       if (result && result.success) {
         setInfluencers(result.items || []);
         setTotalCount(result.totalCount || 0);
+
+        // 🎯 NUEVO: Guardar información de paginación del backend
+        setBackendPage(result.currentPage || pageNumber);
+        setBackendTotalPages(result.totalPages || 1);
       } else {
         setInfluencers([]);
         setTotalCount(0);
+        setBackendPage(1);
+        setBackendTotalPages(1);
         // Sin resultados encontrados
       }
     } catch (error: any) {
@@ -449,9 +461,10 @@ export default function Explorer() {
 
     // Reiniciar paginación
     setPage(1);
+    setBackendPage(1);
 
     try {
-      await handleHypeAuditorSearch();
+      await handleHypeAuditorSearch(1);
     } catch (error: any) {
       console.error("❌ Error en búsqueda:", error);
       setInfluencers([]);
@@ -469,12 +482,37 @@ export default function Explorer() {
     }
   };
 
-  // 🎯 PAGINACIÓN INTERNA (solo HypeAuditor)
+  // 🎯 PAGINACIÓN CON BACKEND (HypeAuditor)
   const handlePageChange = async (newPage: number) => {
-    // 🚀 PAGINACIÓN INTERNA: Solo cambiar página local
+    // 🎯 Calcular qué página del backend necesitamos
+    // Si mostramos 10 por página y el backend devuelve 20:
+    // Frontend page 1-2 = Backend page 1
+    // Frontend page 3-4 = Backend page 2
+    const itemsPerBackendPage = 20; // HypeAuditor devuelve 20 items
+    const itemsPerFrontendPage = size; // Mostramos 10 items
+    const requiredBackendPage = Math.ceil((newPage * itemsPerFrontendPage) / itemsPerBackendPage);
+
     setPage(newPage);
-    setLoadingInfluencers(false);
-    setIsSearchActive(false);
+
+    // 🎯 Si necesitamos una página diferente del backend, hacer la petición
+    if (requiredBackendPage !== backendPage && lastSearchFilters) {
+      setLoadingInfluencers(true);
+      setIsSearchActive(true);
+
+      try {
+        await handleHypeAuditorSearch(requiredBackendPage);
+      } catch (error: any) {
+        console.error("❌ Error al cambiar de página:", error);
+        toast({
+          title: "Error",
+          description: "Error al cargar la página",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingInfluencers(false);
+        setIsSearchActive(false);
+      }
+    }
   };
 
   // 🎯 Sistema simplificado: Solo HypeAuditor
@@ -841,14 +879,6 @@ export default function Explorer() {
         return null;
     }
     return <img src={iconSrc} alt={`${platform} icon`} className={iconClass} />;
-  };
-
-  const toggleSaved = (id: string) => {
-    if (savedInfluencers.includes(id)) {
-      setSavedInfluencers(savedInfluencers.filter((savedId) => savedId !== id));
-    } else {
-      setSavedInfluencers([...savedInfluencers, id]);
-    }
   };
 
   const adaptFullInfluencerForPanel = (inf: any) => {
@@ -1237,9 +1267,26 @@ export default function Explorer() {
     );
   };
 
+  // 🎯 Función helper para obtener los datos visibles de la página actual
+  const getVisibleData = () => {
+    // El backend devuelve 20 items por página
+    // El frontend muestra 10 items por página
+    // Necesitamos calcular qué slice de los 20 items mostrar
+    const itemsPerBackendPage = 20;
+    const itemsPerFrontendPage = size; // 10
+
+    // Determinar qué páginas del frontend corresponden a la página actual del backend
+    // Backend page 1 = Frontend pages 1-2
+    // Backend page 2 = Frontend pages 3-4
+    const firstFrontendPageForBackend = (backendPage - 1) * 2 + 1;
+    const offsetWithinBackendPage = (page - firstFrontendPageForBackend) * itemsPerFrontendPage;
+
+    return limitedInfluencers.slice(offsetWithinBackendPage, offsetWithinBackendPage + itemsPerFrontendPage);
+  };
+
   // 🎯 NUEVA: Función para seleccionar/deseleccionar todos los influencers visibles
   const handleSelectAll = () => {
-    const dataToShow = limitedInfluencers.slice((page - 1) * size, page * size);
+    const dataToShow = getVisibleData();
     const visibleIds = dataToShow.map((inf) => inf.creatorId);
     const allSelected = visibleIds.every((id) =>
       selectedInfluencers.includes(id)
@@ -2121,8 +2168,8 @@ export default function Explorer() {
   return (
     <div className="flex px-4 gap-4 ">
       {/* Panel de filtros (izquierda) */}
-      {showFilters && (
-        <div className="w-[360px] flex-shrink-0 order-2">
+      <div className={`overflow-hidden transition-all duration-300 ${showFilters ? 'w-[360px] opacity-100' : 'w-0 opacity-0'} flex-shrink-0 order-2`}>
+        <div className={`${showFilters ? 'translate-x-0' : '-translate-x-2'} transition-transform duration-300`}>
           <HypeAuditorFilters
             platform={platform}
             setPlatform={setPlatform}
@@ -2166,7 +2213,7 @@ export default function Explorer() {
             isLoading={loadingInfluencers}
           />
         </div>
-      )}
+      </div>
 
       {/* Panel de debug del skeleton desactivado */}
 
@@ -2180,15 +2227,6 @@ export default function Explorer() {
           <div className="px-6 py-4 border-b border-gray-100 bg-white">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowFilters((prev) => !prev)}
-                  className="gap-2"
-                >
-                  <Filter className="h-4 w-4" />
-                  {showFilters ? "Ocultar filtros" : "Mostrar filtros"}
-                </Button>
                 <h2 className="text-lg font-semibold text-gray-900">
                   Resultados de búsqueda
                 </h2>
@@ -2208,136 +2246,15 @@ export default function Explorer() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                {/* 🚀 MINI DEBUG PANEL */}
-                <details className="bg-gray-50 border border-gray-200 rounded-lg">
-                  <summary className="text-xs font-medium text-gray-700 cursor-pointer hover:text-gray-900 px-3 py-2">
-                    🔍 Debug Explorer
-                  </summary>
-                  <div className="p-3 space-y-2 text-xs text-left max-w-md">
-                    <div className="bg-white p-2 rounded border">
-                      <div className="font-semibold text-gray-600 mb-1">
-                        📊 ESTADO ACTUAL
-                      </div>
-                      <div>
-                        <strong>Provider:</strong> HypeAuditor
-                      </div>
-                      <div>
-                        <strong>Has Ever Searched:</strong>{" "}
-                        {hasEverSearched ? "✅ Sí" : "❌ No"}
-                      </div>
-                      <div>
-                        <strong>Loading:</strong>{" "}
-                        {loadingInfluencers ? "⏳ Sí" : "✅ No"}
-                      </div>
-                      <div>
-                        <strong>Total Results:</strong> {totalCount}
-                      </div>
-                      <div>
-                        <strong>Current Page:</strong> {page}
-                      </div>
-                      <div>
-                        <strong>Influencers Loaded:</strong>{" "}
-                        {limitedInfluencers.length}
-                      </div>
-                      <div>
-                        <strong>UI Size:</strong> {size} per page
-                      </div>
-                      <div>
-                        <strong>HypeAuditor Size:</strong> {totalResultsPerPage}{" "}
-                        per page
-                      </div>
-                      <div>
-                        <strong>Available in Current Page:</strong>{" "}
-                        {Math.min(
-                          limitedInfluencers.length,
-                          totalResultsPerPage
-                        )}
-                      </div>
-                      <div>
-                        <strong>Pagination Mode:</strong> 🔄 Interna
-                        (HypeAuditor)
-                      </div>
-                      <div>
-                        <strong>Total Pages Available:</strong>{" "}
-                        {Math.ceil(limitedInfluencers.length / size)}
-                      </div>
-                    </div>
-
-                    <div className="bg-white p-2 rounded border">
-                      <div className="font-semibold text-gray-600 mb-1">
-                        🔧 FILTROS ACTIVOS
-                      </div>
-                      <div>
-                        <strong>Platform:</strong> {platform}
-                      </div>
-                      <div>
-                        <strong>Search:</strong> {searchQuery || "N/A"}
-                      </div>
-                      <div>
-                        <strong>Location:</strong> {location}
-                      </div>
-                      <div>
-                        <strong>Min Followers:</strong>{" "}
-                        <NumberDisplay value={minFollowers} format="short" />
-                      </div>
-                      <div>
-                        <strong>Max Followers:</strong>{" "}
-                        <NumberDisplay value={maxFollowers} format="short" />
-                      </div>
-                      <div>
-                        <strong>Min Engagement:</strong> {minEngagement}%
-                      </div>
-                      <div>
-                        <strong>Max Engagement:</strong> {maxEngagement}%
-                      </div>
-                    </div>
-
-                    {limitedInfluencers.length > 0 && (
-                      <div className="bg-white p-2 rounded border">
-                        <div className="font-semibold text-gray-600 mb-1">
-                          📋 PRIMER INFLUENCER
-                        </div>
-                        <div>
-                          <strong>ID:</strong>{" "}
-                          {limitedInfluencers[0].id ||
-                            limitedInfluencers[0].creatorId}
-                        </div>
-                        <div>
-                          <strong>Name:</strong> {limitedInfluencers[0].name}
-                        </div>
-                        <div>
-                          <strong>PlatformInfo:</strong>{" "}
-                          {limitedInfluencers[0].platformInfo
-                            ? Object.keys(
-                                limitedInfluencers[0].platformInfo
-                              ).join(", ")
-                            : "none"}
-                        </div>
-                        <div>
-                          <strong>SocialPlatforms:</strong>{" "}
-                          {limitedInfluencers[0].socialPlatforms?.length || 0}
-                        </div>
-                        <div>
-                          <strong>Followers:</strong>{" "}
-                          <NumberDisplay
-                            value={limitedInfluencers[0].followersCount || 0}
-                            format="short"
-                          />
-                        </div>
-                        <div suppressHydrationWarning>
-                          <strong>Engagement:</strong>{" "}
-                          {limitedInfluencers[0].averageEngagementRate
-                            ? `${(
-                                limitedInfluencers[0].averageEngagementRate *
-                                100
-                              ).toFixed(2)}%`
-                            : "N/A"}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </details>
-
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowFilters((prev) => !prev)}
+                  className="gap-2"
+                >
+                  <Filter className="h-4 w-4" />
+                  {showFilters ? "Ocultar filtros" : "Mostrar filtros"}
+                </Button>
                 {!selectMode ? (
                   <button
                     onClick={handleToggleSelectMode}
@@ -2478,10 +2395,7 @@ export default function Explorer() {
                           type="checkbox"
                           className="sr-only"
                           checked={(() => {
-                            const dataToShow = limitedInfluencers.slice(
-                              (page - 1) * size,
-                              page * size
-                            );
+                            const dataToShow = getVisibleData();
                             const visibleIds = dataToShow.map(
                               (inf) => inf.creatorId
                             );
@@ -2496,10 +2410,7 @@ export default function Explorer() {
                         />
                         <div
                           className={`w-5 h-5 rounded border-2 transition-all duration-200 flex items-center justify-center ${(() => {
-                            const dataToShow = limitedInfluencers.slice(
-                              (page - 1) * size,
-                              page * size
-                            );
+                            const dataToShow = getVisibleData();
                             const visibleIds = dataToShow.map(
                               (inf) => inf.creatorId
                             );
@@ -2514,10 +2425,7 @@ export default function Explorer() {
                           })()}`}
                         >
                           {(() => {
-                            const dataToShow = limitedInfluencers.slice(
-                              (page - 1) * size,
-                              page * size
-                            );
+                            const dataToShow = getVisibleData();
                             const visibleIds = dataToShow.map(
                               (inf) => inf.creatorId
                             );
@@ -2600,10 +2508,7 @@ export default function Explorer() {
                   }
 
                   // 🎯 CAMBIO: Una vez que se haya buscado, siempre mostrar datos o mensaje de "no encontrados"
-                  const dataToShow = limitedInfluencers.slice(
-                    (page - 1) * size,
-                    page * size
-                  ); // Paginación interna
+                  const dataToShow = getVisibleData(); // Paginación con backend
 
                   return (
                     <>
@@ -2769,19 +2674,6 @@ export default function Explorer() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className={cn(
-                                    "h-8 w-8 p-0",
-                                    savedInfluencers.includes(influencer.id)
-                                      ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
-                                      : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
-                                  )}
-                                  onClick={() => toggleSaved(influencer.id)}
-                                >
-                                  <BookmarkIcon className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
                                   className="h-8 w-8 p-0 hover:bg-gray-50"
                                   onClick={() =>
                                     openInfluencerPanel(influencer)
@@ -2832,7 +2724,7 @@ export default function Explorer() {
               )}
           </div>
 
-          {/* 🎯 PAGINACIÓN MEJORADA - Solo mostrar cuando se ha buscado */}
+          {/* 🎯 PAGINACIÓN MEJORADA - Con datos reales del backend (máximo 50 páginas) */}
           {hasEverSearched && (
             <div className="px-6 py-4 border-t bg-white">
               <div className="flex justify-center items-center gap-3">
@@ -2848,9 +2740,7 @@ export default function Explorer() {
                 <span className="text-sm font-medium text-gray-700">
                   {loadingInfluencers
                     ? `Cargando página ${page}...`
-                    : `Página ${page} de ${Math.ceil(
-                        limitedInfluencers.length / size
-                      )}`}
+                    : `Página ${page} de ${Math.min(Math.ceil(totalCount / size), 50)} • ${Math.min(totalCount, 500).toLocaleString()} resultados`}
                 </span>
                 <Button
                   variant="outline"
@@ -2859,12 +2749,17 @@ export default function Explorer() {
                   onClick={() => handlePageChange(page + 1)}
                   disabled={
                     loadingInfluencers ||
-                    page * size >= limitedInfluencers.length
+                    page >= Math.min(Math.ceil(totalCount / size), 50)
                   }
                 >
                   →
                 </Button>
               </div>
+              {page >= 50 && (
+                <p className="text-xs text-center text-gray-500 mt-2">
+                  Mostrando hasta 500 resultados. Refina tu búsqueda para ver resultados más específicos.
+                </p>
+              )}
             </div>
           )}
         </div>

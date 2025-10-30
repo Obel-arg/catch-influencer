@@ -1,11 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import type React from "react";
 import { MainSidebar } from "@/components/layout/protected/main-sidebar";
-import { NotificationsPopover } from "@/components/account/notifications";
-import { UserProfileDropdown } from "@/components/account/user-profile-dropdown";
 import { FeedbackSystem } from "@/components/feedback/FeedbackSystem";
 import { useTokenValidator } from "@/hooks/auth/useTokenValidator";
 import { isTokenExpired } from "@/lib/http/tokenInterceptor";
@@ -99,6 +97,7 @@ const showSessionExpiredModal = () => {
 
 function ProtectedLayoutContent({ children }: ProtectedLayoutProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [userEmail, setUserEmail] = useState<string>("");
   const { user, isLoading: authLoading, isInitialized } = useAuthContext();
 
@@ -152,23 +151,26 @@ function ProtectedLayoutContent({ children }: ProtectedLayoutProps) {
       <InfluencersProvider>
         <UsersProvider>
           <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-            <MainSidebar collapsed={sidebarCollapsed} />
-            <div className={sidebarCollapsed ? "flex-1 ml-16" : "flex-1 ml-56"}>
-              <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-white/80 backdrop-blur-md px-4 md:px-6 shadow-sm">
-                <div className="ml-auto flex gap-2 items-center">
-                  <button
-                    onClick={() => setSidebarCollapsed((v) => !v)}
-                    className="px-3 py-1.5 text-sm border rounded-md hover:bg-gray-50"
-                    aria-label="Toggle navigation sidebar"
-                    title="Toggle navigation sidebar"
-                  >
-                    {sidebarCollapsed ? 'Expandir' : 'Colapsar'}
-                  </button>
-                  <FeedbackSystem userEmail={userEmail} />
-                  {/* <NotificationsPopover /> */}
-                  <UserProfileDropdown />
-                </div>
-              </header>
+            <MainSidebar collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed((v) => !v)} />
+            <div className={sidebarCollapsed ? "flex-1 ml-16 transition-all duration-300 ease-in-out" : "flex-1 ml-56 transition-all duration-300 ease-in-out"}>
+              {/* Hide topbar on Explorer route */}
+              {!pathname?.startsWith("/explorer") && (
+                <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-white/80 backdrop-blur-md px-4 md:px-6 shadow-sm">
+                  <div className="ml-auto flex gap-2 items-center">
+                    <button
+                      onClick={() => setSidebarCollapsed((v) => !v)}
+                      className="px-3 py-1.5 text-sm border rounded-md hover:bg-gray-50"
+                      aria-label="Toggle navigation sidebar"
+                      title="Toggle navigation sidebar"
+                    >
+                      {sidebarCollapsed ? 'Expandir' : 'Colapsar'}
+                    </button>
+                    <FeedbackSystem userEmail={userEmail} />
+                    {/* <NotificationsPopover /> */}
+                    {/* UserProfileDropdown moved to sidebar bottom */}
+                  </div>
+                </header>
+              )}
               <main className="flex-1 p-4 md:p-6">{children}</main>
             </div>
 

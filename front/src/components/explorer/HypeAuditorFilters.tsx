@@ -30,6 +30,7 @@ import {
   type HypeAuditorCategory,
 } from "@/constants/hypeauditor-categories";
 import { geonamesService, type GeonamesCity } from "@/lib/services/geonames.service";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 
 interface HypeAuditorFiltersProps {
   // Filtros básicos
@@ -422,7 +423,7 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-200 flex-shrink-0">
         <h3 className="text-lg font-semibold text-gray-900">
-          Filtros HypeAuditor
+          Filtros
         </h3>
         <button
           onClick={() => setIsExpanded(!isExpanded)}
@@ -837,8 +838,18 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
 
               {/* Búsqueda por contenido */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
                   Búsqueda por contenido
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="ml-1 text-gray-400 cursor-help">
+                          <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" /><path d="M12 8v2a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2m0 4h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent sideOffset={5}>Keywords to search in content</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </label>
                 <div className="flex space-x-2">
                   <input
@@ -879,8 +890,18 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
 
               {/* Búsqueda por descripción */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
                   Búsqueda por descripción
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="ml-1 text-gray-400 cursor-help">
+                          <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" /><path d="M12 8v2a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2m0 4h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent sideOffset={5}>Keywords to search in description</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </label>
                 <div className="flex space-x-2">
                   <input

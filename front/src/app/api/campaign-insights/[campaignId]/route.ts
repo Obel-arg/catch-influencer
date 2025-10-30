@@ -6,17 +6,31 @@ export async function POST(
 ) {
   try {
     const { campaignId } = params;
-    
+
+    // 🔐 Extraer el token de autorización
+    const token = request.headers.get('authorization')?.replace('Bearer ', '');
+
+    if (!token) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Token de autorización requerido'
+        },
+        { status: 401 }
+      );
+    }
+
     // URL del backend
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
     const targetUrl = `${backendUrl}/campaign-insights/${campaignId}`;
-    
-    
-    // Hacer la llamada al backend
+
+
+    // Hacer la llamada al backend con el token
     const response = await fetch(targetUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
     });
     
