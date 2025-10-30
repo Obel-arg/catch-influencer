@@ -16,7 +16,7 @@ import { useRouter } from "next/navigation";
 import { authService } from "@/lib/services/auth";
 import { useUserStorage } from "../../hooks/auth/useUserStorage";
 
-export function UserProfileDropdown() {
+export function UserProfileDropdown({ variant = "default" }: { variant?: "default" | "sidebar" }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const {
@@ -82,36 +82,71 @@ export function UserProfileDropdown() {
   // Mostrar una versión simplificada hasta que esté hidratado
   if (!isHydrated) {
     return (
-      <div className="relative z-50">
-        <button className="outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200 transition-all ml-6">
-          <Avatar className="h-10 w-10 border border-gray-200 transition-all hover:border-gray-300 bg-white shadow-lg rounded-xl">
-            <AvatarFallback className="bg-white text-gray-700 font-medium text-base">
-              U
-            </AvatarFallback>
-          </Avatar>
-        </button>
+      <div className="relative z-50 w-full">
+        {variant === "sidebar" ? (
+          <div className="w-full px-2">
+            <div className="flex items-center gap-3 w-full px-3 py-2 rounded-md bg-zinc-800/40 text-white">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-zinc-700 text-white text-sm">U</AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium truncate">Usuario</div>
+                <div className="text-[11px] text-zinc-400 truncate">Cargando…</div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <button className="outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200 transition-all ml-6">
+            <Avatar className="h-10 w-10 border border-gray-200 transition-all hover:border-gray-300 bg-white shadow-lg rounded-xl">
+              <AvatarFallback className="bg-white text-gray-700 font-medium text-base">
+                U
+              </AvatarFallback>
+            </Avatar>
+          </button>
+        )}
       </div>
     );
   }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <div className="relative z-50">
+      <div className="relative z-50 w-full">
         <PopoverTrigger asChild>
-          <button className="outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200 transition-all ml-6">
-            <Avatar className="h-10 w-10 border border-gray-200 transition-all hover:border-gray-300 bg-white shadow-lg rounded-xl">
-              {userAvatar ? (
-                <>
-                  <AvatarImage src={userAvatar} alt="Avatar" />
-                  <AvatarFallback>{userInitials}</AvatarFallback>
-                </>
-              ) : (
-                <AvatarFallback className="bg-white text-gray-700 font-medium text-base">
-                  {userInitials}
-                </AvatarFallback>
-              )}
-            </Avatar>
-          </button>
+          {variant === "sidebar" ? (
+            <button className="w-full px-2">
+              <div className="flex items-center gap-3 w-full px-3 py-2 rounded-md bg-zinc-800/40 hover:bg-zinc-800 text-white transition-colors">
+                <Avatar className="h-8 w-8">
+                  {userAvatar ? (
+                    <>
+                      <AvatarImage src={userAvatar} alt="Avatar" />
+                      <AvatarFallback>{userInitials}</AvatarFallback>
+                    </>
+                  ) : (
+                    <AvatarFallback className="bg-zinc-700 text-white text-sm">{userInitials}</AvatarFallback>
+                  )}
+                </Avatar>
+                <div className="flex-1 min-w-0 text-left">
+                  <div className="text-sm font-medium truncate">{userName || "Usuario"}</div>
+                  <div className="text-[11px] text-zinc-400 truncate">{userEmail || "No autenticado"}</div>
+                </div>
+              </div>
+            </button>
+          ) : (
+            <button className="outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200 transition-all ml-6">
+              <Avatar className="h-10 w-10 border border-gray-200 transition-all hover:border-gray-300 bg-white shadow-lg rounded-xl">
+                {userAvatar ? (
+                  <>
+                    <AvatarImage src={userAvatar} alt="Avatar" />
+                    <AvatarFallback>{userInitials}</AvatarFallback>
+                  </>
+                ) : (
+                  <AvatarFallback className="bg-white text-gray-700 font-medium text-base">
+                    {userInitials}
+                  </AvatarFallback>
+                )}
+              </Avatar>
+            </button>
+          )}
         </PopoverTrigger>
       </div>
       <PopoverContent

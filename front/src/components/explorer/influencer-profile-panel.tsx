@@ -1,13 +1,21 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useMemo, useRef } from "react"
-import { X, Loader2 } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { getInstagramThumbnailValidated, getOptimizedAvatarUrl } from "@/utils/instagram";
-import { getTikTokThumbnailValidated, getTikTokDefaultThumbnail, getSafeAvatarUrlForModal } from "@/utils/tiktok";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { X, Loader2 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { NumberDisplay } from "@/components/ui/NumberDisplay";
+import {
+  getInstagramThumbnailValidated,
+  getOptimizedAvatarUrl,
+} from "@/utils/instagram";
+import {
+  getTikTokThumbnailValidated,
+  getTikTokDefaultThumbnail,
+  getSafeAvatarUrlForModal,
+} from "@/utils/tiktok";
 import { CountryFlag } from "@/components/ui/country-flag";
 
 interface InfluencerProfilePanelProps {
@@ -84,7 +92,10 @@ const InfluencerProfileSkeleton = () => (
     {/* Tabs Skeleton */}
     <div className="flex gap-2">
       {[1, 2, 3].map((i) => (
-        <div key={i} className="h-8 bg-gray-200 rounded w-20 animate-pulse"></div>
+        <div
+          key={i}
+          className="h-8 bg-gray-200 rounded w-20 animate-pulse"
+        ></div>
       ))}
     </div>
 
@@ -93,150 +104,27 @@ const InfluencerProfileSkeleton = () => (
       <div className="text-sm font-semibold text-gray-700">Posts recientes</div>
       <div className="grid grid-cols-4 gap-2">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="aspect-square bg-gray-200 rounded-md animate-pulse"></div>
+          <div
+            key={i}
+            className="aspect-square bg-gray-200 rounded-md animate-pulse"
+          ></div>
         ))}
       </div>
     </div>
   </div>
 );
 
-// 🎯 COMPONENTE PARA MOSTRAR CUANDO NO HAY DATOS EXTENDIDOS
-const NoExtendedDataMessage = ({ influencer }: { influencer: any }) => {
-  
-  return (
-    <div className="text-center py-12 space-y-4">
-      <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center">
-        <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      </div>
-      <div className="space-y-2">
-        <h3 className="text-lg font-semibold text-gray-900">Datos Limitados Disponibles</h3>
-        <p className="text-sm text-gray-600 max-w-md mx-auto">
-          Solo tenemos información básica de este influencer. Los datos detallados no están disponibles en este momento.
-        </p>
-      </div>
-      
-      {/* 🚀 DEBUG PANEL - Mostrar estructura de datos */}
-      <div className="mt-6 max-w-4xl mx-auto">
-        <details className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-          <summary className="text-sm font-medium text-gray-700 cursor-pointer hover:text-gray-900">
-            🔍 Debug: Ver estructura de datos recibidos
-          </summary>
-          <div className="mt-3 space-y-3 text-left">
-            {/* Datos básicos */}
-            <div className="bg-white p-3 rounded border">
-              <div className="text-xs font-semibold text-gray-600 mb-2">📋 DATOS BÁSICOS</div>
-              <div className="text-xs space-y-1">
-                <div><strong>ID:</strong> {influencer.id || influencer.creatorId || 'N/A'}</div>
-                <div><strong>Nombre:</strong> {influencer.name || 'N/A'}</div>
-                <div><strong>Avatar:</strong> {influencer.avatar ? '✅ Presente' : '❌ Ausente'}</div>
-                <div><strong>País:</strong> {influencer.country || influencer.location || 'N/A'}</div>
-                <div><strong>Plataforma:</strong> {influencer.platform || influencer.mainSocialPlatform || 'N/A'}</div>
-                <div><strong>Verificado:</strong> {influencer.isVerified ? '✅ Sí' : '❌ No'}</div>
-              </div>
-            </div>
-
-            {/* PlatformInfo */}
-            <div className="bg-white p-3 rounded border">
-              <div className="text-xs font-semibold text-gray-600 mb-2">🔧 PLATFORM INFO</div>
-              {influencer.platformInfo ? (
-                <div className="text-xs space-y-1">
-                  <div><strong>Presente:</strong> ✅</div>
-                  <div><strong>Keys:</strong> {Object.keys(influencer.platformInfo).join(', ') || 'Ninguna'}</div>
-                  {Object.entries(influencer.platformInfo).map(([key, value]: [string, any]) => (
-                    <div key={key} className="ml-2">
-                      <strong>{key}:</strong> {value ? '✅ Datos' : '❌ Vacío'} 
-                      {value && typeof value === 'object' && (
-                        <span className="text-gray-500"> ({Object.keys(value).length} propiedades)</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-xs text-red-600">❌ No presente</div>
-              )}
-            </div>
-
-            {/* SocialPlatforms */}
-            <div className="bg-white p-3 rounded border">
-              <div className="text-xs font-semibold text-gray-600 mb-2">🌐 SOCIAL PLATFORMS</div>
-              {influencer.socialPlatforms?.length > 0 ? (
-                <div className="text-xs space-y-2">
-                  <div><strong>Cantidad:</strong> {influencer.socialPlatforms.length}</div>
-                  {influencer.socialPlatforms.map((social: any, index: number) => (
-                    <div key={index} className="ml-2 bg-gray-50 p-2 rounded">
-                      <div><strong>Plataforma:</strong> {social.platform}</div>
-                      <div><strong>Username:</strong> {social.username}</div>
-                      <div suppressHydrationWarning><strong>Seguidores:</strong> {social.followers?.toLocaleString('es-ES') || 'N/A'}</div>
-                      <div><strong>Engagement:</strong> {social.engagement ? `${social.engagement}%` : 'N/A'}</div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-xs text-red-600">❌ No presente</div>
-              )}
-            </div>
-
-            {/* Metadata */}
-            <div className="bg-white p-3 rounded border">
-              <div className="text-xs font-semibold text-gray-600 mb-2">📊 METADATA</div>
-              {influencer._metadata ? (
-                <div className="text-xs space-y-1">
-                  <div><strong>Source:</strong> {influencer._metadata.source || 'N/A'}</div>
-                  <div><strong>Has Extended Data:</strong> {influencer._metadata.hasExtendedData ? '✅ Sí' : '❌ No'}</div>
-                  <div><strong>Completeness Score:</strong> {influencer._metadata.completenessScore || 'N/A'}</div>
-                </div>
-              ) : (
-                <div className="text-xs text-red-600">❌ No presente</div>
-              )}
-            </div>
-
-            {/* Otros campos */}
-            <div className="bg-white p-3 rounded border">
-              <div className="text-xs font-semibold text-gray-600 mb-2">📝 OTROS CAMPOS</div>
-              <div className="text-xs space-y-1">
-                <div><strong>Content Niches:</strong> {influencer.contentNiches?.length > 0 ? influencer.contentNiches.join(', ') : 'N/A'}</div>
-                <div suppressHydrationWarning><strong>Followers Count:</strong> {influencer.followersCount?.toLocaleString('es-ES') || 'N/A'}</div>
-                <div><strong>Average Engagement Rate:</strong> {influencer.averageEngagementRate ? `${(influencer.averageEngagementRate * 100).toFixed(2)}%` : 'N/A'}</div>
-                <div><strong>Main Social Platform:</strong> {influencer.mainSocialPlatform || 'N/A'}</div>
-              </div>
-            </div>
-          </div>
-        </details>
-      </div>
-      
-      {/* Mostrar datos básicos disponibles */}
-      <div className="mt-6 grid grid-cols-2 gap-4 max-w-md mx-auto">
-        {influencer.name && (
-          <div className="bg-gray-50 p-3 rounded-lg">
-            <div className="text-xs text-gray-500 font-medium">Nombre</div>
-            <div className="text-sm font-semibold">{influencer.name}</div>
-          </div>
-        )}
-        {influencer.country && (
-          <div className="bg-gray-50 p-3 rounded-lg">
-            <div className="text-xs text-gray-500 font-medium">País</div>
-            <div className="text-sm font-semibold">{influencer.country}</div>
-          </div>
-        )}
-        {influencer.contentNiches?.length > 0 && (
-          <div className="bg-gray-50 p-3 rounded-lg col-span-2">
-            <div className="text-xs text-gray-500 font-medium">Categorías</div>
-            <div className="text-sm font-semibold">{influencer.contentNiches.join(', ')}</div>
-          </div>
-        )}
-      </div>
-      
-      <div className="mt-6 text-xs text-gray-400">
-        Para obtener datos completos, intenta sincronizar este influencer o contacta al soporte.
-      </div>
-    </div>
-  );
-};
 
 // 🎯 COMPONENTE DE IMAGEN CON LOADER Y BOTÓN DE RELOAD
-const ImageWithLoader = ({ src, alt, className }: { src: string; alt: string; className?: string }) => {
+const ImageWithLoader = ({
+  src,
+  alt,
+  className,
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+}) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
@@ -255,7 +143,7 @@ const ImageWithLoader = ({ src, alt, className }: { src: string; alt: string; cl
   const handleRetry = () => {
     setIsLoading(true);
     setHasError(false);
-    setRetryCount(prev => prev + 1);
+    setRetryCount((prev) => prev + 1);
     // Forzar recarga de la imagen agregando un timestamp
     const newSrc = `${src}?retry=${retryCount + 1}&t=${Date.now()}`;
     setCurrentSrc(newSrc);
@@ -280,18 +168,18 @@ const ImageWithLoader = ({ src, alt, className }: { src: string; alt: string; cl
           </div>
         </div>
       )}
-      
+
       {/* Imagen */}
       <img
         src={currentSrc}
         alt={alt}
         className={`w-full h-full object-cover rounded-md transition-all duration-300 ${
-          isLoading ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+          isLoading ? "opacity-0 scale-95" : "opacity-100 scale-100"
         }`}
         onLoad={handleLoad}
         onError={handleError}
       />
-      
+
       {/* Fallback para errores con botón de reload */}
       {hasError && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-50 rounded-md border border-gray-200">
@@ -311,7 +199,17 @@ const ImageWithLoader = ({ src, alt, className }: { src: string; alt: string; cl
 };
 
 // 🎯 COMPONENTE DE AVATAR CON LOADER Y BOTÓN DE RELOAD
-const AvatarWithLoader = ({ src, alt, fallback, className }: { src: string; alt: string; fallback: string; className?: string }) => {
+const AvatarWithLoader = ({
+  src,
+  alt,
+  fallback,
+  className,
+}: {
+  src: string;
+  alt: string;
+  fallback: string;
+  className?: string;
+}) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
@@ -330,7 +228,7 @@ const AvatarWithLoader = ({ src, alt, fallback, className }: { src: string; alt:
   const handleRetry = () => {
     setIsLoading(true);
     setHasError(false);
-    setRetryCount(prev => prev + 1);
+    setRetryCount((prev) => prev + 1);
     const newSrc = `${src}?retry=${retryCount + 1}&t=${Date.now()}`;
     setCurrentSrc(newSrc);
   };
@@ -351,21 +249,21 @@ const AvatarWithLoader = ({ src, alt, fallback, className }: { src: string; alt:
           <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
         </div>
       )}
-      
+
       {/* Avatar */}
       <Avatar className={className}>
-        <AvatarImage 
-          src={currentSrc} 
-          alt={alt} 
+        <AvatarImage
+          src={currentSrc}
+          alt={alt}
           className={`transition-all duration-300 ${
-            isLoading ? 'opacity-0' : 'opacity-100'
+            isLoading ? "opacity-0" : "opacity-100"
           }`}
           onLoad={handleLoad}
           onError={handleError}
         />
         <AvatarFallback>{fallback}</AvatarFallback>
       </Avatar>
-      
+
       {/* Botón de reload para errores */}
       {hasError && (
         <button
@@ -386,150 +284,169 @@ export function InfluencerProfilePanel({
   onClose,
   isLoading = false,
 }: InfluencerProfilePanelProps) {
-  
   // 🎯 FUNCIÓN PARA DETECTAR SI TIENE DATOS EXTENDIDOS
   const hasExtendedData = useMemo(() => {
     if (!influencer) return false;
-    
+
     // Verificar si tiene metadatos de fuente de datos
     if (influencer._metadata?.hasExtendedData) return true;
-    
+
     // Verificar si tiene datos detallados de plataformas
     const platformInfo = influencer.platformInfo || {};
-    
+
     // Buscar datos extendidos en cualquier plataforma
-    const hasYouTubeExtended = platformInfo.youtube && (
-      platformInfo.youtube.recentVideos?.length > 0 ||
-      platformInfo.youtube.subscribers > 0 ||
-      platformInfo.youtube.views > 0
-    );
-    
-    const hasInstagramExtended = platformInfo.instagram && (
-      platformInfo.instagram.basicInstagram?.followers > 0 ||
-      platformInfo.instagram.recentPosts?.length > 0 ||
-      platformInfo.instagram.basicInstagram?.engageRate > 0
-    );
-    
-    const hasTikTokExtended = platformInfo.tiktok && (
-      platformInfo.tiktok.basicTikTok?.followers > 0 ||
-      platformInfo.tiktok.recentVideos?.length > 0 ||
-      platformInfo.tiktok.basicTikTok?.engageRate > 0
-    );
+    const hasYouTubeExtended =
+      platformInfo.youtube &&
+      (platformInfo.youtube.recentVideos?.length > 0 ||
+        platformInfo.youtube.subscribers > 0 ||
+        platformInfo.youtube.views > 0);
 
-    const hasFacebookExtended = platformInfo.facebook && (
-      platformInfo.facebook.basicFacebook?.followers > 0 ||
-      platformInfo.facebook.recentPosts?.length > 0 ||
-      platformInfo.facebook.basicFacebook?.engageRate > 0
-    );
+    const hasInstagramExtended =
+      platformInfo.instagram &&
+      (platformInfo.instagram.basicInstagram?.followers > 0 ||
+        platformInfo.instagram.recentPosts?.length > 0 ||
+        platformInfo.instagram.basicInstagram?.engageRate > 0);
 
-    const hasThreadsExtended = platformInfo.threads && (
-      platformInfo.threads.basicThreads?.followers > 0 ||
-      platformInfo.threads.recentPosts?.length > 0 ||
-      platformInfo.threads.basicThreads?.gRateThreadsTabAvgLikes > 0
+    const hasTikTokExtended =
+      platformInfo.tiktok &&
+      (platformInfo.tiktok.basicTikTok?.followers > 0 ||
+        platformInfo.tiktok.recentVideos?.length > 0 ||
+        platformInfo.tiktok.basicTikTok?.engageRate > 0);
+
+    const hasFacebookExtended =
+      platformInfo.facebook &&
+      (platformInfo.facebook.basicFacebook?.followers > 0 ||
+        platformInfo.facebook.recentPosts?.length > 0 ||
+        platformInfo.facebook.basicFacebook?.engageRate > 0);
+
+    const hasThreadsExtended =
+      platformInfo.threads &&
+      (platformInfo.threads.basicThreads?.followers > 0 ||
+        platformInfo.threads.recentPosts?.length > 0 ||
+        platformInfo.threads.basicThreads?.gRateThreadsTabAvgLikes > 0);
+
+    return (
+      hasYouTubeExtended ||
+      hasInstagramExtended ||
+      hasTikTokExtended ||
+      hasFacebookExtended ||
+      hasThreadsExtended
     );
-    
-    return hasYouTubeExtended || hasInstagramExtended || hasTikTokExtended || hasFacebookExtended || hasThreadsExtended;
   }, [influencer]);
 
   // Nueva función para obtener los datos correctos de la plataforma
   const getPlatformData = (platform: string) => {
     const pdata = influencer.platformInfo[platform.toLowerCase()];
     if (!pdata) return null;
-    if (platform === "Instagram" && pdata.basicInstagram) return pdata.basicInstagram;
+    if (platform === "Instagram" && pdata.basicInstagram)
+      return pdata.basicInstagram;
     if (platform === "TikTok" && pdata.basicTikTok) return pdata.basicTikTok;
-    if (platform === "Facebook" && pdata.basicFacebook) return pdata.basicFacebook;
+    if (platform === "Facebook" && pdata.basicFacebook)
+      return pdata.basicFacebook;
     if (platform === "Threads" && pdata.basicThreads) return pdata.basicThreads;
     return pdata;
   };
-  
+
   // ✨ ESTADO PARA AVATAR PROCESADO
-  const [processedAvatar, setProcessedAvatar] = useState<string>('');
-  
+  const [processedAvatar, setProcessedAvatar] = useState<string>("");
+
   const availablePlatforms = useMemo(() => {
-    const platforms = [];
-    
+    const platforms: string[] = [];
+
     if (!influencer) {
       return platforms;
     }
-    
+
     // Verificar cada plataforma en platformInfo - más robusto
     const platformInfo = influencer.platformInfo;
-    
+
     // YouTube
-    if (platformInfo.youtube && (
-      platformInfo.youtube.subscribers > 0 ||
-      platformInfo.youtube.recentVideos?.length > 0 ||
-      platformInfo.youtube.views > 0 ||
-      Object.keys(platformInfo.youtube).length > 0
-    )) {
+    if (
+      platformInfo.youtube &&
+      (platformInfo.youtube.subscribers > 0 ||
+        platformInfo.youtube.recentVideos?.length > 0 ||
+        platformInfo.youtube.views > 0 ||
+        Object.keys(platformInfo.youtube).length > 0)
+    ) {
       platforms.push("YouTube");
     }
-    
+
     // Instagram
-    if (platformInfo.instagram && (
-      platformInfo.instagram.basicInstagram?.followers > 0 ||
-      platformInfo.instagram.recentPosts?.length > 0 ||
-      platformInfo.instagram.basicInstagram?.engageRate > 0 ||
-      Object.keys(platformInfo.instagram).length > 0
-    )) {
+    if (
+      platformInfo.instagram &&
+      (platformInfo.instagram.basicInstagram?.followers > 0 ||
+        platformInfo.instagram.recentPosts?.length > 0 ||
+        platformInfo.instagram.basicInstagram?.engageRate > 0 ||
+        Object.keys(platformInfo.instagram).length > 0)
+    ) {
       platforms.push("Instagram");
     }
-    
+
     // TikTok
-    if (platformInfo.tiktok && (
-      platformInfo.tiktok.basicTikTok?.followers > 0 ||
-      platformInfo.tiktok.recentVideos?.length > 0 ||
-      platformInfo.tiktok.basicTikTok?.engageRate > 0 ||
-      Object.keys(platformInfo.tiktok).length > 0
-    )) {
+    if (
+      platformInfo.tiktok &&
+      (platformInfo.tiktok.basicTikTok?.followers > 0 ||
+        platformInfo.tiktok.recentVideos?.length > 0 ||
+        platformInfo.tiktok.basicTikTok?.engageRate > 0 ||
+        Object.keys(platformInfo.tiktok).length > 0)
+    ) {
       platforms.push("TikTok");
     }
-    
+
     // Facebook
-    if (platformInfo.facebook && (
-      platformInfo.facebook.basicFacebook?.followers > 0 ||
-      platformInfo.facebook.recentPosts?.length > 0 ||
-      platformInfo.facebook.basicFacebook?.engageRate > 0 ||
-      Object.keys(platformInfo.facebook).length > 0
-    )) {
+    if (
+      platformInfo.facebook &&
+      (platformInfo.facebook.basicFacebook?.followers > 0 ||
+        platformInfo.facebook.recentPosts?.length > 0 ||
+        platformInfo.facebook.basicFacebook?.engageRate > 0 ||
+        Object.keys(platformInfo.facebook).length > 0)
+    ) {
       platforms.push("Facebook");
     }
-    
+
     // Threads
-    if (platformInfo.threads && (
-      platformInfo.threads.basicThreads?.followers > 0 ||
-      platformInfo.threads.recentPosts?.length > 0 ||
-      platformInfo.threads.basicThreads?.gRateThreadsTabAvgLikes > 0 ||
-      Object.keys(platformInfo.threads).length > 0
-    )) {
+    if (
+      platformInfo.threads &&
+      (platformInfo.threads.basicThreads?.followers > 0 ||
+        platformInfo.threads.recentPosts?.length > 0 ||
+        platformInfo.threads.basicThreads?.gRateThreadsTabAvgLikes > 0 ||
+        Object.keys(platformInfo.threads).length > 0)
+    ) {
       platforms.push("Threads");
     }
-      
+
     return platforms;
   }, [influencer]);
 
-  const [activePlatform, setActivePlatform] = useState(influencer.platform || 'YouTube');
+  const [activePlatform, setActivePlatform] = useState(
+    influencer.platform || "YouTube"
+  );
 
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
   const requestedThumbnails = useRef<Record<string, boolean>>({});
 
   // Función asíncrona para obtener y cachear thumbnails
-  const fetchAndCacheThumbnail = async (key: string, platform: string, post: any) => {
+  const fetchAndCacheThumbnail = async (
+    key: string,
+    platform: string,
+    post: any
+  ) => {
     if (requestedThumbnails.current[key]) return;
     requestedThumbnails.current[key] = true;
     let url = "";
     if (platform === "Instagram") {
       url = `https://www.instagram.com/p/${post.shortcode}`;
       const thumb = await getInstagramThumbnailValidated(url);
-      setThumbnails(prev => ({ ...prev, [key]: thumb }));
+      setThumbnails((prev) => ({ ...prev, [key]: thumb }));
     } else if (platform === "TikTok") {
       // Construir la URL del video de TikTok
-      const tiktokId = platformData?.tiktokId || influencer?.platformInfo?.tiktok?.tiktokId;
+      const tiktokId =
+        platformData?.tiktokId || influencer?.platformInfo?.tiktok?.tiktokId;
       const videoId = post.videoId;
       if (tiktokId && videoId) {
         const tiktokUrl = `https://www.tiktok.com/@${tiktokId}/video/${videoId}`;
         const thumb = await getTikTokThumbnailValidated(tiktokUrl);
-        setThumbnails(prev => ({ ...prev, [key]: thumb }));
+        setThumbnails((prev) => ({ ...prev, [key]: thumb }));
       }
     }
   };
@@ -537,7 +454,9 @@ export function InfluencerProfilePanel({
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
-      setActivePlatform(influencer.platform || availablePlatforms[0] || 'YouTube');
+      setActivePlatform(
+        influencer.platform || availablePlatforms[0] || "YouTube"
+      );
     }
     return () => {
       document.body.style.overflow = "";
@@ -547,13 +466,13 @@ export function InfluencerProfilePanel({
   // ✨ PROCESAR AVATAR CUANDO CAMBIE EL INFLUENCER
   useEffect(() => {
     if (influencer) {
-      const originalAvatar = influencer.avatar || influencer.image || '';
-      const influencerName = influencer.name || 'Influencer';
+      const originalAvatar = influencer.avatar || influencer.image || "";
+      const influencerName = influencer.name || "Influencer";
       const processed = getProcessedAvatar(originalAvatar, influencerName);
       setProcessedAvatar(processed);
     }
   }, [influencer]);
-  
+
   const platformData = useMemo(() => {
     if (!influencer?.platformInfo) return null;
     return getPlatformData(activePlatform);
@@ -562,37 +481,39 @@ export function InfluencerProfilePanel({
   const aggregatedData = useMemo(() => {
     // 🎯 MEJORADO: Manejar tanto datos básicos como extendidos
     if (!influencer) return { totalFollowers: 0 };
-    
+
     // 🚀 USAR LA NUEVA FUNCIÓN getPlatformData QUE MANEJA AMBAS ESTRUCTURAS
     let totalFollowers = 0;
-    
+
     // Obtener plataformas disponibles (ya maneja tanto platformInfo como socialPlatforms)
-    availablePlatforms.forEach(platform => {
+    availablePlatforms.forEach((platform) => {
       const pdata = getPlatformData(platform);
-      
+
       if (!pdata) {
         return;
       }
-      
+
       // Usar la misma lógica para ambas estructuras
       const followers = pdata.followers || pdata.subscribers || 0;
-      
-      
+
       totalFollowers += followers;
     });
-    
+
     return { totalFollowers };
   }, [influencer, availablePlatforms]);
 
   useEffect(() => {
     if (isOpen && influencer?.platformInfo) {
       // Preload thumbnails para todos los posts de Instagram y TikTok
-      ["Instagram", "TikTok"].forEach(platform => {
+      ["Instagram", "TikTok"].forEach((platform) => {
         const pdata = getPlatformData(platform);
         if (!pdata) return;
-        const posts = (pdata.recentPosts || pdata.recentVideos || []);
+        const posts = pdata.recentPosts || pdata.recentVideos || [];
         posts.forEach((post: any) => {
-          let key = platform === "Instagram" ? post.shortcode : post.videoId || post.tiktokId || post.id || post.url;
+          let key =
+            platform === "Instagram"
+              ? post.shortcode
+              : post.videoId || post.tiktokId || post.id || post.url;
           if (key && !thumbnails[key]) {
             fetchAndCacheThumbnail(key, platform, post);
           }
@@ -608,40 +529,42 @@ export function InfluencerProfilePanel({
   }, [activePlatform, platformData]);
 
   // Los datos de la plataforma activa deben calcularse después de la comprobación de `mounted` y `platformData`
-  
+
   // Icon helper definido arriba
-  
+
   const getPostImageUrl = (post: any, platform: string) => {
-    if (platform === 'YouTube') {
+    if (platform === "YouTube") {
       return `https://img.youtube.com/vi/${post.videoId}/hqdefault.jpg`;
     }
-    if (platform === 'Instagram') {
+    if (platform === "Instagram") {
       const key = post.shortcode;
       if (thumbnails[key]) return thumbnails[key];
       fetchAndCacheThumbnail(key, platform, post);
       return "/placeholder.svg";
     }
-    if (platform === 'TikTok') {
+    if (platform === "TikTok") {
       const key = post.videoId || post.tiktokId || post.id || post.url;
       if (thumbnails[key]) return thumbnails[key];
       fetchAndCacheThumbnail(key, platform, post);
       return getTikTokDefaultThumbnail();
     }
     return post.photoURL || post.cover || "/placeholder.svg";
-  }
+  };
 
   const getPostUrl = (post: any, platform: string) => {
     switch (platform) {
-      case 'Instagram':
+      case "Instagram":
         return `https://www.instagram.com/p/${post.shortcode}`;
-      case 'YouTube':
+      case "YouTube":
         return `https://www.youtube.com/watch?v=${post.videoId}`;
-      case 'TikTok':
+      case "TikTok":
         return `https://www.tiktok.com/@${platformData.tiktokId}/video/${post.videoId}`;
       default:
-        return '#';
+        return "#";
     }
-  }
+  };
+
+  console.log(influencer)
 
   return (
     <>
@@ -661,7 +584,12 @@ export function InfluencerProfilePanel({
       >
         <div className="sticky top-0 z-10 flex items-center justify-between p-6 pb-4 border-b bg-white">
           <h2 className="text-lg font-semibold">Detalles del Influencer</h2>
-          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="h-8 w-8"
+          >
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -671,133 +599,153 @@ export function InfluencerProfilePanel({
           {isLoading ? (
             // ⏳ SKELETON MIENTRAS CARGA
             <InfluencerProfileSkeleton />
-          ) : !hasExtendedData ? (
-            // ❓ SIN DATOS EXTENDIDOS - MOSTRAR MENSAJE CON DATOS BÁSICOS
-            <NoExtendedDataMessage influencer={influencer} />
           ) : (
-            // ✅ CON DATOS EXTENDIDOS - MOSTRAR PANEL COMPLETO
             <>
               <Card className="border rounded-md overflow-hidden">
                 <div className="p-4 flex items-center gap-4">
-                  <AvatarWithLoader 
-                    src={processedAvatar || influencer.avatar || influencer.image}
-                    alt={influencer.name || 'Influencer'}
-                    fallback={influencer.name?.charAt(0) || 'I'}
+                  <AvatarWithLoader
+                    src={
+                      processedAvatar || influencer.avatar || influencer.image
+                    }
+                    alt={influencer.name || "Influencer"}
+                    fallback={influencer.name?.charAt(0) || "I"}
                     className="h-16 w-16"
                   />
                   <div>
                     <h1 className="text-xl font-bold">{influencer.name}</h1>
                     <div className="text-sm text-gray-500">
-                      {influencer.location || influencer.country} • <NumberDisplay value={aggregatedData.totalFollowers} format="short" /> Seguidores Totales
+                      {influencer.location || influencer.country} •{" "}
+                      <NumberDisplay
+                        value={influencer?.followersCount}
+                        format="short"
+                      />{" "}
+                      Seguidores Totales
                     </div>
                     {/* 🎯 MOSTRAR FUENTE DE DATOS SI ESTÁ DISPONIBLE */}
                     {influencer._metadata?.source && (
                       <div className="text-xs text-blue-600 font-medium mt-1">
-                        📊 {influencer._metadata.source === 'local-database' ? 'Base de Datos' : 'API Externa'}
-                        {influencer._metadata.completenessScore && 
-                          ` • ${influencer._metadata.completenessScore}% completo`
-                        }
+                        📊{" "}
+                        {influencer._metadata.source === "local-database"
+                          ? "Base de Datos"
+                          : "API Externa"}
+                        {influencer._metadata.completenessScore &&
+                          ` • ${influencer._metadata.completenessScore}% completo`}
                       </div>
                     )}
                   </div>
                 </div>
               </Card>
-
-          {/* Overview de métricas de todas las plataformas */}
-          <Card className="border rounded-md overflow-hidden">
-            <div className="p-4 space-y-3">
-              <div className="text-sm font-semibold text-gray-700">Métricas por plataforma</div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {availablePlatforms.map(platform => {
-                  const pdata = getPlatformData(platform);
-                  if (!pdata) return null;
-                  const followers = pdata.followers || pdata.subscribers || 0;
-                  const engagement = (pdata.engageRate || pdata.engageRate1Y || 0) * 100;
-                  const isActive = activePlatform === platform;
-                  const followersLabel = platform === 'YouTube' ? 'Suscriptores' : 'Seguidores';
-                  return (
-                    <button
-                      type="button"
-                      key={platform}
-                      onClick={() => setActivePlatform(platform)}
-                      className={`w-full h-32 rounded-lg border px-4 py-3 text-left transition-colors ${
-                        isActive ? 'border-gray-400' : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="h-full flex flex-col justify-between">
-                        <div className="flex items-center gap-2 min-w-0">
-                          {getPlatformIcon(platform, 'h-5 w-5')}
-                          <span className="text-sm font-medium text-gray-800 truncate">{platform}</span>
-                        </div>
-                        <div className="text-left">
-                          <div className="text-2xl font-semibold text-gray-900 leading-none">
-                            <NumberDisplay value={followers} format="short" />
-                          </div>
-                          <div className="text-[12px] text-gray-500 mt-1">{followersLabel}</div>
-                          <div className="text-xs font-medium text-gray-600 mt-2">ER {engagement.toFixed(2)}%</div>
-                        </div>
+              {/* Redes sociales (desde platformInfo.socialNetworks) */}
+              {Array.isArray(influencer?.platformInfo?.socialNetworks) &&
+                influencer.platformInfo.socialNetworks.length > 0 && (
+                  <Card className="border rounded-md overflow-hidden">
+                    <div className="p-4 space-y-3">
+                      <div className="text-sm font-semibold text-gray-700">
+                        Redes sociales
                       </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </Card>
+                      <div className="flex flex-col gap-3">
+                        {influencer.platformInfo.socialNetworks.map(
+                          (sn: any, idx: number) => {
+                            const platformKey = String(
+                              sn.platform || ""
+                            ).toLowerCase();
+                            const platformLabel =
+                              platformKey === "instagram"
+                                ? "Instagram"
+                                : platformKey === "youtube"
+                                ? "YouTube"
+                                : platformKey === "tiktok"
+                                ? "TikTok"
+                                : platformKey === "facebook"
+                                ? "Facebook"
+                                : platformKey === "threads"
+                                ? "Threads"
+                                : sn.platform || "";
+                            const followers = Number(
+                              sn.followers || sn.followersCount || 0
+                            );
+                            const engagement =
+                              typeof sn.engagement === "number"
+                                ? sn.engagement
+                                : null; // ya viene en %
+                            const state = String(sn.state || "").toUpperCase();
 
-          <Tabs value={activePlatform} onValueChange={setActivePlatform} className="w-full">
-            <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${availablePlatforms.length || 1}, 1fr)`}}>
-              {availablePlatforms.map(platform => (
-                <TabsTrigger
-                  key={platform}
-                  value={platform}
-                  className="data-[state=active]:bg-blue-600 data-[state=active]:text-white gap-2"
-                >
-                  {getPlatformIcon(platform, "h-4 w-4")}
-                  <span>{platform}</span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+                            const stateClasses =
+                              state === "READY"
+                                ? "bg-green-100 text-green-700 border-green-200"
+                                : state === "PENDING"
+                                ? "bg-yellow-100 text-yellow-700 border-yellow-200"
+                                : state === "ERROR"
+                                ? "bg-red-100 text-red-700 border-red-200"
+                                : "bg-gray-100 text-gray-700 border-gray-200";
 
-          {platformData && (
-            <Card className="border rounded-md overflow-hidden">
-              <div className="p-4 space-y-4">
-                <div className="text-sm font-semibold text-gray-700">Posts recientes</div>
-                <div className="grid grid-cols-4 gap-2">
-                  {(platformData.recentPosts || platformData.recentVideos)?.slice(0, 4).map((post: any) => (
-                    <a
-                      key={post.videoId || post.shortcode}
-                      href={getPostUrl(post, activePlatform)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block hover:opacity-80 transition-opacity duration-200"
-                    >
-                      <ImageWithLoader
-                        src={getPostImageUrl(post, activePlatform)}
-                        alt={post.title || "Post thumbnail"}
-                      />
-                    </a>
-                  ))}
-                  {/* Mostrar placeholders si no hay suficientes posts */}
-                  {(!platformData.recentPosts && !platformData.recentVideos || 
-                    (platformData.recentPosts || platformData.recentVideos)?.length < 4) && 
-                    Array.from({ length: 4 - ((platformData.recentPosts || platformData.recentVideos)?.length || 0) }).map((_, index) => (
-                      <div key={`placeholder-${index}`} className="aspect-square bg-gray-50 rounded-md border border-gray-200 flex items-center justify-center">
-                        <div className="text-center text-gray-400">
-                          <div className="text-xs">Sin posts</div>
-                        </div>
+                            return (
+                              <div
+                                key={`${platformKey}-${idx}`}
+                                className="rounded-lg border border-gray-200 p-3"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    {getPlatformIcon(platformLabel, "h-4 w-4")}
+                                    <span className="text-sm font-medium text-gray-800 truncate">
+                                      {platformLabel}
+                                    </span>
+                                  </div>
+                                  {state && (
+                                    <span
+                                      className={`text-[11px] px-2 py-0.5 rounded border ${stateClasses}`}
+                                    >
+                                      {state}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="mt-2 space-y-1">
+                                  {sn.username && (
+                                    <div className="text-sm text-gray-900 truncate">
+                                      @{sn.username}
+                                    </div>
+                                  )}
+                                  {sn.title && (
+                                    <div className="text-xs text-gray-500 truncate">
+                                      {sn.title}
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="mt-3 flex items-center gap-4 text-sm">
+                                  <div className="flex flex-col">
+                                    <span className="text-gray-500">
+                                      {platformLabel === "YouTube"
+                                        ? "Suscriptores"
+                                        : "Seguidores"}
+                                    </span>
+                                    <span className="font-semibold text-gray-900">
+                                      {formatNumber(followers)}
+                                    </span>
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="text-gray-500">ER</span>
+                                    <span className="font-semibold text-gray-900">
+                                      {engagement !== null
+                                        ? `${engagement.toFixed(2)}%`
+                                        : "—"}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+                        )}
                       </div>
-                    ))
-                  }
-                </div>
-              </div>
-            </Card>
-          )}
+                    </div>
+                  </Card>
+                )}
+
             </>
           )}
         </div>
       </div>
     </>
-  )
+  );
 }
-

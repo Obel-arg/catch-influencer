@@ -843,14 +843,6 @@ export default function Explorer() {
     return <img src={iconSrc} alt={`${platform} icon`} className={iconClass} />;
   };
 
-  const toggleSaved = (id: string) => {
-    if (savedInfluencers.includes(id)) {
-      setSavedInfluencers(savedInfluencers.filter((savedId) => savedId !== id));
-    } else {
-      setSavedInfluencers([...savedInfluencers, id]);
-    }
-  };
-
   const adaptFullInfluencerForPanel = (inf: any) => {
     if (!inf) return null;
 
@@ -2208,136 +2200,6 @@ export default function Explorer() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                {/* 🚀 MINI DEBUG PANEL */}
-                <details className="bg-gray-50 border border-gray-200 rounded-lg">
-                  <summary className="text-xs font-medium text-gray-700 cursor-pointer hover:text-gray-900 px-3 py-2">
-                    🔍 Debug Explorer
-                  </summary>
-                  <div className="p-3 space-y-2 text-xs text-left max-w-md">
-                    <div className="bg-white p-2 rounded border">
-                      <div className="font-semibold text-gray-600 mb-1">
-                        📊 ESTADO ACTUAL
-                      </div>
-                      <div>
-                        <strong>Provider:</strong> HypeAuditor
-                      </div>
-                      <div>
-                        <strong>Has Ever Searched:</strong>{" "}
-                        {hasEverSearched ? "✅ Sí" : "❌ No"}
-                      </div>
-                      <div>
-                        <strong>Loading:</strong>{" "}
-                        {loadingInfluencers ? "⏳ Sí" : "✅ No"}
-                      </div>
-                      <div>
-                        <strong>Total Results:</strong> {totalCount}
-                      </div>
-                      <div>
-                        <strong>Current Page:</strong> {page}
-                      </div>
-                      <div>
-                        <strong>Influencers Loaded:</strong>{" "}
-                        {limitedInfluencers.length}
-                      </div>
-                      <div>
-                        <strong>UI Size:</strong> {size} per page
-                      </div>
-                      <div>
-                        <strong>HypeAuditor Size:</strong> {totalResultsPerPage}{" "}
-                        per page
-                      </div>
-                      <div>
-                        <strong>Available in Current Page:</strong>{" "}
-                        {Math.min(
-                          limitedInfluencers.length,
-                          totalResultsPerPage
-                        )}
-                      </div>
-                      <div>
-                        <strong>Pagination Mode:</strong> 🔄 Interna
-                        (HypeAuditor)
-                      </div>
-                      <div>
-                        <strong>Total Pages Available:</strong>{" "}
-                        {Math.ceil(limitedInfluencers.length / size)}
-                      </div>
-                    </div>
-
-                    <div className="bg-white p-2 rounded border">
-                      <div className="font-semibold text-gray-600 mb-1">
-                        🔧 FILTROS ACTIVOS
-                      </div>
-                      <div>
-                        <strong>Platform:</strong> {platform}
-                      </div>
-                      <div>
-                        <strong>Search:</strong> {searchQuery || "N/A"}
-                      </div>
-                      <div>
-                        <strong>Location:</strong> {location}
-                      </div>
-                      <div>
-                        <strong>Min Followers:</strong>{" "}
-                        <NumberDisplay value={minFollowers} format="short" />
-                      </div>
-                      <div>
-                        <strong>Max Followers:</strong>{" "}
-                        <NumberDisplay value={maxFollowers} format="short" />
-                      </div>
-                      <div>
-                        <strong>Min Engagement:</strong> {minEngagement}%
-                      </div>
-                      <div>
-                        <strong>Max Engagement:</strong> {maxEngagement}%
-                      </div>
-                    </div>
-
-                    {limitedInfluencers.length > 0 && (
-                      <div className="bg-white p-2 rounded border">
-                        <div className="font-semibold text-gray-600 mb-1">
-                          📋 PRIMER INFLUENCER
-                        </div>
-                        <div>
-                          <strong>ID:</strong>{" "}
-                          {limitedInfluencers[0].id ||
-                            limitedInfluencers[0].creatorId}
-                        </div>
-                        <div>
-                          <strong>Name:</strong> {limitedInfluencers[0].name}
-                        </div>
-                        <div>
-                          <strong>PlatformInfo:</strong>{" "}
-                          {limitedInfluencers[0].platformInfo
-                            ? Object.keys(
-                                limitedInfluencers[0].platformInfo
-                              ).join(", ")
-                            : "none"}
-                        </div>
-                        <div>
-                          <strong>SocialPlatforms:</strong>{" "}
-                          {limitedInfluencers[0].socialPlatforms?.length || 0}
-                        </div>
-                        <div>
-                          <strong>Followers:</strong>{" "}
-                          <NumberDisplay
-                            value={limitedInfluencers[0].followersCount || 0}
-                            format="short"
-                          />
-                        </div>
-                        <div suppressHydrationWarning>
-                          <strong>Engagement:</strong>{" "}
-                          {limitedInfluencers[0].averageEngagementRate
-                            ? `${(
-                                limitedInfluencers[0].averageEngagementRate *
-                                100
-                              ).toFixed(2)}%`
-                            : "N/A"}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </details>
-
                 {!selectMode ? (
                   <button
                     onClick={handleToggleSelectMode}
@@ -2766,19 +2628,6 @@ export default function Explorer() {
                             </td>
                             <td className="py-4 px-6">
                               <div className="flex justify-center gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className={cn(
-                                    "h-8 w-8 p-0",
-                                    savedInfluencers.includes(influencer.id)
-                                      ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
-                                      : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
-                                  )}
-                                  onClick={() => toggleSaved(influencer.id)}
-                                >
-                                  <BookmarkIcon className="h-4 w-4" />
-                                </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"
