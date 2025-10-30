@@ -2113,8 +2113,8 @@ export default function Explorer() {
   return (
     <div className="flex px-4 gap-4 ">
       {/* Panel de filtros (izquierda) */}
-      {showFilters && (
-        <div className="w-[360px] flex-shrink-0 order-2">
+      <div className={`overflow-hidden transition-all duration-300 ${showFilters ? 'w-[360px] opacity-100' : 'w-0 opacity-0'} flex-shrink-0 order-2`}>
+        <div className={`${showFilters ? 'translate-x-0' : '-translate-x-2'} transition-transform duration-300`}>
           <HypeAuditorFilters
             platform={platform}
             setPlatform={setPlatform}
@@ -2158,7 +2158,7 @@ export default function Explorer() {
             isLoading={loadingInfluencers}
           />
         </div>
-      )}
+      </div>
 
       {/* Panel de debug del skeleton desactivado */}
 
@@ -2172,15 +2172,6 @@ export default function Explorer() {
           <div className="px-6 py-4 border-b border-gray-100 bg-white">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowFilters((prev) => !prev)}
-                  className="gap-2"
-                >
-                  <Filter className="h-4 w-4" />
-                  {showFilters ? "Ocultar filtros" : "Mostrar filtros"}
-                </Button>
                 <h2 className="text-lg font-semibold text-gray-900">
                   Resultados de búsqueda
                 </h2>
@@ -2200,6 +2191,15 @@ export default function Explorer() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowFilters((prev) => !prev)}
+                  className="gap-2"
+                >
+                  <Filter className="h-4 w-4" />
+                  {showFilters ? "Ocultar filtros" : "Mostrar filtros"}
+                </Button>
                 {!selectMode ? (
                   <button
                     onClick={handleToggleSelectMode}
