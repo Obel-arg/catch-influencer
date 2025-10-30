@@ -46,11 +46,19 @@ export const useCampaignInsights = (): UseCampaignInsightsReturn => {
     try {
 
 
+      // 🔐 Obtener el token de autenticación
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        throw new Error('No se encontró el token de autenticación. Por favor, inicia sesión nuevamente.');
+      }
+
       // Forzar la ruta sin /v1 ni variables de entorno
       const response = await fetch(`/api/campaign-insights/${campaignId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
       });
 

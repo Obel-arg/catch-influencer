@@ -278,42 +278,81 @@ export default function InfluencerDashboard({ id }: InfluencerDashboardProps) {
           {tab === "networks" && (
             <div className="mt-4 pb-8">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {creatorData.social_networks?.map((network: any, idx: number) => (
-                  <div
-                    key={idx}
-                    className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="font-semibold text-gray-900">
-                          {network.title}
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          @{network.username}
-                        </p>
-                      </div>
-                      <span className="text-xs font-semibold px-2 py-1 bg-blue-100 text-blue-700 rounded">
-                        {network.platform}
-                      </span>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Seguidores:</span>
-                        <span className="font-semibold text-gray-900">
-                          {(network.subscribers_count || 0).toLocaleString()}
+                {creatorData.social_networks?.map((network: any, idx: number) => {
+                  // Platform color mapping
+                  const getPlatformColor = (platform: string) => {
+                    const platformLower = platform?.toLowerCase() || '';
+                    switch (platformLower) {
+                      case 'youtube':
+                        return 'bg-red-100 text-red-700';
+                      case 'instagram':
+                        return 'bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700';
+                      case 'twitter':
+                      case 'x':
+                        return 'bg-sky-100 text-sky-700';
+                      case 'tiktok':
+                        return 'bg-gray-900 text-white';
+                      case 'twitch':
+                        return 'bg-purple-100 text-purple-700';
+                      case 'facebook':
+                        return 'bg-blue-100 text-blue-700';
+                      default:
+                        return 'bg-gray-100 text-gray-700';
+                    }
+                  };
+
+                  // Platform name mapping
+                  const getPlatformName = (platform: string) => {
+                    const platformLower = platform?.toLowerCase() || '';
+                    const nameMap: Record<string, string> = {
+                      'youtube': 'YouTube',
+                      'instagram': 'Instagram',
+                      'twitter': 'Twitter',
+                      'x': 'X',
+                      'tiktok': 'TikTok',
+                      'twitch': 'Twitch',
+                      'facebook': 'Facebook',
+                    };
+                    return nameMap[platformLower] || platform;
+                  };
+
+                  return (
+                    <div
+                      key={idx}
+                      className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h3 className="font-semibold text-gray-900">
+                            {network.title}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            @{network.username}
+                          </p>
+                        </div>
+                        <span className={`text-xs font-semibold px-2 py-1 rounded ${getPlatformColor(network.platform)}`}>
+                          {getPlatformName(network.platform)}
                         </span>
                       </div>
-                      {network.er > 0 && (
+                      <div className="space-y-2">
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">ER:</span>
+                          <span className="text-gray-600">Seguidores:</span>
                           <span className="font-semibold text-gray-900">
-                            {network.er.toFixed(2)}%
+                            {(network.subscribers_count || 0).toLocaleString()}
                           </span>
                         </div>
-                      )}
+                        {network.er > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">ER:</span>
+                            <span className="font-semibold text-gray-900">
+                              {network.er.toFixed(2)}%
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
