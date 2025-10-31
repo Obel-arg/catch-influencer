@@ -62,10 +62,11 @@ export class CampaignInfluencerService {
     const influencerIds = campaignInfluencersBasic.map(ci => ci.influencer_id);
     const { data: existingInfluencers, error: influencersError } = await client
       .from('influencers')
-      .select('id, name, location')
+      .select('*')
       .in('id', influencerIds);
 
    
+    console.log(existingInfluencers);
 
     // Get data without implicit relationship selects (avoid FK requirement)
     const { data: campaignInfluencers, error } = await client
@@ -75,8 +76,7 @@ export class CampaignInfluencerService {
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
-   
-
+  
     if (error) {
       console.error('❌ [SERVICE] Error getting campaign influencers:', error);
       throw error;
@@ -91,6 +91,7 @@ export class CampaignInfluencerService {
       }))
       .filter(ci => ci.influencers !== null);
     
+    console.log(validCampaignInfluencers);
     
     // Si no hay influencers válidos, mostrar información útil
     if (validCampaignInfluencers.length === 0 && campaignInfluencers && campaignInfluencers.length > 0) {

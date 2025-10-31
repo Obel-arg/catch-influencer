@@ -1558,14 +1558,14 @@ export default function Explorer() {
           }
 
           // We need to call the extended InfluencerExtendedService to get the extended data
-          const extendedData = await InfluencerExtendedService.getExtendedData({
-            youtubeId: influencerId,
-          });
-          if (extendedData.success) {
-            console.log(extendedData);
-          } else {
-            throw new Error(extendedData.message || "No se pudo obtener los datos extendidos");
-          }
+          // const extendedData = await InfluencerExtendedService.getExtendedData({
+          //   youtubeId: influencerId,
+          // });
+          // if (extendedData.success) {
+          //   console.log(extendedData);
+          // } else {
+          //   throw new Error(extendedData.message || "No se pudo obtener los datos extendidos");
+          // }
         } catch (err) {
           console.error(
             `Error creando/leyendo influencer ${influencerId}:`,
