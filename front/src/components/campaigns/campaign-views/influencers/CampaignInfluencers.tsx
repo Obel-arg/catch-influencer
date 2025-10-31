@@ -48,6 +48,7 @@ export const CampaignInfluencers = ({ campaign }: CampaignInfluencersProps) => {
     } catch {}
   }, [influencers]);
   
+  console.log(influencers);
   // Hook para manejar operaciones de campaña
   const { removeInfluencerFromCampaign } = useCampaigns();
   
