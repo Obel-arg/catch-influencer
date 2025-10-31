@@ -134,12 +134,12 @@ export class OrganizationService {
     // Calcular totales
     const total = filteredData.length;
     const totalPages = Math.ceil(total / limit);
-    
-    // Aplicar paginado - obtener la página actual + una extra
+
+    // Aplicar paginado - obtener solo la página solicitada
     const startIndex = offset;
-    const endIndex = offset + (limit * 2); // Obtener 2 páginas
+    const endIndex = offset + limit;
     const paginatedData = filteredData.slice(startIndex, endIndex);
-    
+
     return {
       members: paginatedData,
       total,
@@ -182,9 +182,9 @@ export class OrganizationService {
   }
 
   async removeMemberFromOrganization(organizationId: string, userId: string): Promise<void> {
-    
     try {
-      // 1. Eliminar de organization_members
+      // Only remove from organization_members
+      // Don't delete the user's profile or auth account
       const { error: orgError } = await supabase
         .from('organization_members')
         .delete()
@@ -192,57 +192,13 @@ export class OrganizationService {
         .eq('user_id', userId);
 
       if (orgError) {
-        
+        console.error('Error removing member from organization:', orgError);
         throw orgError;
       }
 
-      // 2. Eliminar de campaign_members (si existe)
-      const { error: campaignError } = await supabase
-        .from('campaign_members')
-        .delete()
-        .eq('user_id', userId);
-
-      if (campaignError) {
-        
-      } else {
-      }
-
-      // 3. Eliminar de team_members (si existe)
-      const { error: teamError } = await supabase
-        .from('team_members')
-        .delete()
-        .eq('user_id', userId);
-
-      if (teamError) {
-        
-      } else {
-      }
-
-      // 4. Eliminar de user_profiles
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .delete()
-        .eq('user_id', userId);
-
-      if (profileError) {
-        
-        throw profileError;
-      }
-
-      // 5. Eliminar de auth.users (usando Supabase Admin)
-      if (supabaseAdmin) {
-        try {
-          const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
-          if (authError) {
-            throw authError;
-          }
-        } catch (authError) {
-          throw authError;
-        }
-      }
-
+      console.log(`✅ User ${userId} removed from organization ${organizationId}`);
     } catch (error) {
-      
+      console.error('Error in removeMemberFromOrganization:', error);
       throw error;
     }
   }
