@@ -115,17 +115,17 @@ export const UsersProvider: React.FC<UsersProviderProps> = ({
       try {
         setLoading(true);
         setError(null);
-        
+
         const response = await usersService.getOrganizationMembers(organizationId);
         const items = response.members || [];
-        
+
         setMembers(items);
         setIsInitialized(true);
         setCurrentOrganizationId(organizationId);
-        
+
         // Guardar en cache
         setUsersCache(organizationId, items);
-        
+
         return items;
       } catch (err) {
         const errorMessage =
@@ -140,7 +140,7 @@ export const UsersProvider: React.FC<UsersProviderProps> = ({
         setLoading(false);
       }
     },
-    [showToast, isInitialized, members, currentOrganizationId]
+    [showToast]
   );
 
   const inviteUser = useCallback(
@@ -152,16 +152,20 @@ export const UsersProvider: React.FC<UsersProviderProps> = ({
       try {
         setLoading(true);
         await usersService.inviteUser(currentOrganizationId, userData);
-        
+
         showToast({
           title: "Éxito",
           description: `Invitación enviada a ${userData.email}`,
           variant: "default",
         });
-        
+
         // Limpiar cache y recargar
         clearUsersCache();
-        await getMembers(currentOrganizationId, true);
+        // No usar getMembers aquí para evitar dependencia circular
+        const response = await usersService.getOrganizationMembers(currentOrganizationId);
+        const items = response.members || [];
+        setMembers(items);
+        setUsersCache(currentOrganizationId, items);
       } catch (err) {
         handleHookError(err, setError, "Error al invitar usuario");
         throw err;
@@ -169,7 +173,7 @@ export const UsersProvider: React.FC<UsersProviderProps> = ({
         setLoading(false);
       }
     },
-    [currentOrganizationId, getMembers, showToast]
+    [currentOrganizationId, showToast]
   );
 
   const updateUserRole = useCallback(
@@ -181,16 +185,20 @@ export const UsersProvider: React.FC<UsersProviderProps> = ({
       try {
         setLoading(true);
         await usersService.updateUserRole(currentOrganizationId, userData);
-        
+
         showToast({
           title: "Éxito",
           description: "Rol actualizado correctamente",
           variant: "default",
         });
-        
+
         // Limpiar cache y recargar
         clearUsersCache();
-        await getMembers(currentOrganizationId, true);
+        // No usar getMembers aquí para evitar dependencia circular
+        const response = await usersService.getOrganizationMembers(currentOrganizationId);
+        const items = response.members || [];
+        setMembers(items);
+        setUsersCache(currentOrganizationId, items);
       } catch (err) {
         handleHookError(err, setError, "Error al actualizar rol");
         throw err;
@@ -198,7 +206,7 @@ export const UsersProvider: React.FC<UsersProviderProps> = ({
         setLoading(false);
       }
     },
-    [currentOrganizationId, getMembers, showToast]
+    [currentOrganizationId, showToast]
   );
 
   const updateUserName = useCallback(
@@ -210,16 +218,20 @@ export const UsersProvider: React.FC<UsersProviderProps> = ({
       try {
         setLoading(true);
         await usersService.updateUserName(currentOrganizationId, userId, fullName);
-        
+
         showToast({
           title: "Éxito",
           description: "Nombre actualizado correctamente",
           variant: "default",
         });
-        
+
         // Limpiar cache y recargar
         clearUsersCache();
-        await getMembers(currentOrganizationId, true);
+        // No usar getMembers aquí para evitar dependencia circular
+        const response = await usersService.getOrganizationMembers(currentOrganizationId);
+        const items = response.members || [];
+        setMembers(items);
+        setUsersCache(currentOrganizationId, items);
       } catch (err) {
         handleHookError(err, setError, "Error al actualizar nombre");
         throw err;
@@ -227,7 +239,7 @@ export const UsersProvider: React.FC<UsersProviderProps> = ({
         setLoading(false);
       }
     },
-    [currentOrganizationId, getMembers, showToast]
+    [currentOrganizationId, showToast]
   );
 
   const removeUser = useCallback(
@@ -236,21 +248,23 @@ export const UsersProvider: React.FC<UsersProviderProps> = ({
         throw new Error("No hay organización seleccionada");
       }
 
-      
       try {
         setLoading(true);
         await usersService.removeUser(currentOrganizationId, userId);
-        
-        
+
         showToast({
           title: "Éxito",
           description: "Usuario eliminado completamente de la organización",
           variant: "default",
         });
-        
+
         // Limpiar cache y recargar
         clearUsersCache();
-        await getMembers(currentOrganizationId, true);
+        // No usar getMembers aquí para evitar dependencia circular
+        const response = await usersService.getOrganizationMembers(currentOrganizationId);
+        const items = response.members || [];
+        setMembers(items);
+        setUsersCache(currentOrganizationId, items);
       } catch (err) {
         console.error('❌ UsersContext - Error eliminando usuario:', err);
         handleHookError(err, setError, "Error al eliminar usuario");
@@ -259,15 +273,19 @@ export const UsersProvider: React.FC<UsersProviderProps> = ({
         setLoading(false);
       }
     },
-    [currentOrganizationId, getMembers, showToast]
+    [currentOrganizationId, showToast]
   );
 
   const refreshMembers = useCallback(async () => {
     if (currentOrganizationId) {
       clearUsersCache();
-      await getMembers(currentOrganizationId, true);
+      // No usar getMembers aquí para evitar dependencia circular
+      const response = await usersService.getOrganizationMembers(currentOrganizationId);
+      const items = response.members || [];
+      setMembers(items);
+      setUsersCache(currentOrganizationId, items);
     }
-  }, [currentOrganizationId, getMembers]);
+  }, [currentOrganizationId]);
 
   const resetMembers = useCallback(() => {
     setMembers([]);

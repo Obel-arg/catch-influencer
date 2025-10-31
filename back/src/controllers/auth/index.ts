@@ -715,53 +715,95 @@ export class AuthController {
    */
   async handleInviteRedirect(req: Request, res: Response) {
     try {
-     
-      
       const { token, type, error, error_description } = req.query;
-      
+
       // Si hay error, redirigir al login con el error
       if (error) {
-       
         const frontendUrl = config.urls.frontend;
         const errorUrl = `${frontendUrl}/auth/login?error=invite_error&details=${encodeURIComponent(String(error_description || error))}`;
         return res.redirect(errorUrl);
       }
-      
+
       // Si no hay token, error
       if (!token || typeof token !== 'string') {
-       
         const frontendUrl = config.urls.frontend;
         const errorUrl = `${frontendUrl}/auth/login?error=no_token`;
         return res.redirect(errorUrl);
       }
-      
+
       // Verificar que supabaseAdmin esté disponible
       if (!supabaseAdmin) {
-       
         const frontendUrl = config.urls.frontend;
         const errorUrl = `${frontendUrl}/auth/login?error=admin_not_configured`;
         return res.redirect(errorUrl);
       }
-      
+
       // Obtener el usuario directamente usando el token
       const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(token);
-      
+
       if (userError || !user) {
         console.error('❌ Error obteniendo usuario:', userError);
         const frontendUrl = config.urls.frontend;
         const errorUrl = `${frontendUrl}/auth/login?error=invalid_token`;
         return res.redirect(errorUrl);
       }
-      
+
       // Verificar que el usuario existe en user_profiles
-      const userProfile = await this.userService.getUserByEmail(user.email!);
+      let userProfile = await this.userService.getUserByEmail(user.email!);
+
+      // Si el usuario no existe en user_profiles, crearlo
       if (!userProfile) {
-        console.error('❌ Usuario no encontrado en user_profiles:', user.email);
-        const frontendUrl = config.urls.frontend;
-        const errorUrl = `${frontendUrl}/auth/login?error=user_not_found`;
-        return res.redirect(errorUrl);
+        console.log('📝 Creando perfil de usuario para:', user.email);
+        try {
+          // Extraer datos del user_metadata si están disponibles
+          const metadata = user.user_metadata || {};
+          const fullName = metadata.full_name || user.email?.split('@')[0] || 'Usuario';
+          const avatarUrl = metadata.avatar_url || null;
+
+          // Crear el perfil del usuario
+          userProfile = await this.userService.createUserProfileForExistingAuth(user.id, {
+            email: user.email!,
+            full_name: fullName,
+            avatar_url: avatarUrl,
+            password: '', // No es necesario para usuarios invitados
+            role: 'member'
+          });
+          console.log('✅ Perfil de usuario creado:', userProfile.id);
+        } catch (profileError) {
+          console.error('❌ Error creando perfil de usuario:', profileError);
+          const frontendUrl = config.urls.frontend;
+          const errorUrl = `${frontendUrl}/auth/login?error=profile_creation_failed`;
+          return res.redirect(errorUrl);
+        }
       }
-      
+
+      // Obtener la organización ID del user_metadata si está disponible
+      const orgId = user.user_metadata?.organization_id;
+      if (orgId) {
+        try {
+          // Intentar agregar el usuario a la organización si se especificó
+          const role = user.user_metadata?.role || 'member';
+          const { error: memberError } = await supabase
+            .from('organization_members')
+            .insert([{
+              organization_id: orgId,
+              user_id: user.id,
+              role,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }]);
+
+          if (memberError && !memberError.message.includes('duplicate key')) {
+            console.warn('⚠️ Error agregando usuario a organización:', memberError);
+          } else if (!memberError) {
+            console.log('✅ Usuario agregado a la organización:', orgId);
+          }
+        } catch (error) {
+          console.warn('⚠️ Error procesando agregar usuario a organización:', error);
+          // No lanzamos error aquí, continuamos con el login
+        }
+      }
+
       // Crear sesión temporal para el usuario
       const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'magiclink',
@@ -770,32 +812,32 @@ export class AuthController {
           redirectTo: `${config.urls.frontend}/auth/invite-callback`
         }
       });
-      
+
       if (sessionError) {
         console.error('❌ Error generando sesión:', sessionError);
         const frontendUrl = config.urls.frontend;
         const errorUrl = `${frontendUrl}/auth/login?error=session_error`;
         return res.redirect(errorUrl);
       }
-      
+
       // Extraer tokens de la URL generada
       const url = new URL(sessionData.properties.action_link);
       const accessToken = url.searchParams.get('access_token');
       const refreshToken = url.searchParams.get('refresh_token');
-      
+
       if (!accessToken || !refreshToken) {
         console.error('❌ No se pudieron extraer tokens de la sesión');
         const frontendUrl = config.urls.frontend;
         const errorUrl = `${frontendUrl}/auth/login?error=token_extraction_error`;
         return res.redirect(errorUrl);
       }
-      
+
       // Redirigir al frontend con los tokens
       const frontendUrl = config.urls.frontend;
       const redirectUrl = `${frontendUrl}/auth/invite-callback?access_token=${encodeURIComponent(accessToken)}&refresh_token=${encodeURIComponent(refreshToken)}&type=invite`;
-      
+
       res.redirect(redirectUrl);
-      
+
     } catch (error) {
       console.error('❌ Error procesando redirección de invitación:', error);
       const frontendUrl = config.urls.frontend;

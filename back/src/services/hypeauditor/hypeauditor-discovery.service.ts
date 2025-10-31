@@ -847,18 +847,24 @@ export class HypeAuditorDiscoveryService {
       (item: any, index: number) => {
         // Mapear redes sociales desde social_networks
         const rawNetworks = item.social_networks || [];
-        const mappedNetworks = rawNetworks.map((n: any) => ({
-          platform: (n.type || '').toLowerCase(),
-          username: n.username || '',
-          followers: n.subscribers_count || 0,
-          engagement: typeof n.er === 'number' ? n.er : 0,
-          _raw: {
-            socialId: n.social_id,
-            title: n.title,
-            avatarUrl: n.avatar_url,
-            state: n.state,
-          },
-        }));
+        const mappedNetworks = rawNetworks
+          .filter((n: any) => {
+            // Filter to only include Instagram, TikTok, and YouTube
+            const platformType = (n.type || '').toLowerCase();
+            return ['instagram', 'tiktok', 'youtube'].includes(platformType);
+          })
+          .map((n: any) => ({
+            platform: (n.type || '').toLowerCase(),
+            username: n.username || '',
+            followers: n.subscribers_count || 0,
+            engagement: typeof n.er === 'number' ? n.er : 0,
+            _raw: {
+              socialId: n.social_id,
+              title: n.title,
+              avatarUrl: n.avatar_url,
+              state: n.state,
+            },
+          }));
 
         // Elegir plataforma principal por mayor cantidad de seguidores
         const sortedByFollowers = [...mappedNetworks].sort(
@@ -986,18 +992,24 @@ export class HypeAuditorDiscoveryService {
 
         // Mapear redes sociales completas desde features.social_networks
         const rawNetworks = item.features?.social_networks || [];
-        const mappedNetworks = rawNetworks.map((n) => ({
-          platform: (n.type || '').toLowerCase(),
-          username: n.username || '',
-          followers: n.subscribers_count || 0,
-          engagement: typeof n.er === 'number' ? n.er : 0,
-          _raw: {
-            socialId: n.social_id,
-            title: n.title,
-            avatarUrl: n.avatar_url,
-            state: n.state,
-          },
-        }));
+        const mappedNetworks = rawNetworks
+          .filter((n) => {
+            // Filter to only include Instagram, TikTok, and YouTube
+            const platformType = (n.type || '').toLowerCase();
+            return ['instagram', 'tiktok', 'youtube'].includes(platformType);
+          })
+          .map((n) => ({
+            platform: (n.type || '').toLowerCase(),
+            username: n.username || '',
+            followers: n.subscribers_count || 0,
+            engagement: typeof n.er === 'number' ? n.er : 0,
+            _raw: {
+              socialId: n.social_id,
+              title: n.title,
+              avatarUrl: n.avatar_url,
+              state: n.state,
+            },
+          }));
 
         // Elegir plataforma principal por mayor cantidad de seguidores
         const sortedByFollowers = [...mappedNetworks].sort(

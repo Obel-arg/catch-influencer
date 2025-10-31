@@ -1,5 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
-import { config } from "../../config/environment";
+import { createClient } from '@supabase/supabase-js';
+import { config } from '../../config/environment';
 import {
   Influencer,
   InfluencerCreateDTO,
@@ -10,25 +10,25 @@ import {
   InfluencerCampaign,
   InfluencerCampaignCreateDTO,
   InfluencerCampaignUpdateDTO,
-} from "../../models/influencer/influencer.model";
+} from '../../models/influencer/influencer.model';
 import {
   InfluencerYoutubeService,
   YoutubeBasic,
-} from "./influencer.youtube.service";
+} from './influencer.youtube.service';
 import {
   InfluencerInstagramService,
   InstagramBasic,
-} from "./influencer.instagram.service";
+} from './influencer.instagram.service';
 import {
   InfluencerTiktokService,
   TiktokBasic,
-} from "./influencer.tiktok.service";
-import { InfluencerCacheService } from "./influencer-cache.service";
-import { CreatorDBService } from "../creator/creator.service";
+} from './influencer.tiktok.service';
+import { InfluencerCacheService } from './influencer-cache.service';
+import { CreatorDBService } from '../creator/creator.service';
 
 const supabase = createClient(
-  config.supabase.url || "",
-  config.supabase.anonKey || ""
+  config.supabase.url || '',
+  config.supabase.anonKey || '',
 );
 
 export class InfluencerService {
@@ -42,7 +42,7 @@ export class InfluencerService {
    */
   async getFullInfluencerData(
     params: { youtubeId?: string; instagramId?: string; tiktokId?: string },
-    forceRefresh: boolean = false
+    forceRefresh: boolean = false,
   ): Promise<any> {
     const { youtubeId, instagramId, tiktokId } = params;
 
@@ -55,9 +55,9 @@ export class InfluencerService {
     try {
       // 1. Primero intentar obtener de la base de datos local
       const { data: localData, error: localError } = await supabase
-        .from("influencers")
-        .select("*")
-        .eq("creator_id", creatorId)
+        .from('influencers')
+        .select('*')
+        .eq('creator_id', creatorId)
         .single();
 
       // Si encontramos datos locales y no están desactualizados (menos de 24 horas) Y no se fuerza refresh
@@ -89,8 +89,8 @@ export class InfluencerService {
       if (currentInstagramId) {
         promises.push(
           InfluencerInstagramService.getBasic(currentInstagramId)
-            .then((result) => ({ platform: "instagram", data: result }))
-            .catch((error) => ({ platform: "instagram", error }))
+            .then((result) => ({ platform: 'instagram', data: result }))
+            .catch((error) => ({ platform: 'instagram', error })),
         );
       }
 
@@ -98,8 +98,8 @@ export class InfluencerService {
       if (currentYoutubeId) {
         promises.push(
           InfluencerYoutubeService.getBasic(currentYoutubeId)
-            .then((result) => ({ platform: "youtube", data: result }))
-            .catch((error) => ({ platform: "youtube", error }))
+            .then((result) => ({ platform: 'youtube', data: result }))
+            .catch((error) => ({ platform: 'youtube', error })),
         );
       }
 
@@ -107,8 +107,8 @@ export class InfluencerService {
       if (currentTiktokId) {
         promises.push(
           InfluencerTiktokService.getBasic(currentTiktokId)
-            .then((result) => ({ platform: "tiktok", data: result }))
-            .catch((error) => ({ platform: "tiktok", error }))
+            .then((result) => ({ platform: 'tiktok', data: result }))
+            .catch((error) => ({ platform: 'tiktok', error })),
         );
       }
 
@@ -117,30 +117,30 @@ export class InfluencerService {
 
       // Procesar resultados
       results.forEach((result) => {
-        if (result.status === "fulfilled") {
+        if (result.status === 'fulfilled') {
           const { platform, data, error } = result.value;
 
           if (data && !error) {
-            if (platform === "instagram") {
+            if (platform === 'instagram') {
               instagram = data;
               if (!basic) basic = data;
-            } else if (platform === "youtube") {
+            } else if (platform === 'youtube') {
               yt = data;
               if (!basic) basic = data;
-            } else if (platform === "tiktok") {
+            } else if (platform === 'tiktok') {
               tiktok = data;
               if (!basic) basic = data;
             }
           } else {
             console.warn(
               `⚠️ [INFLUENCER SERVICE] Error obteniendo datos de ${platform}:`,
-              error.message
+              error.message,
             );
           }
         } else {
           console.error(
             `❌ [INFLUENCER SERVICE] Error en petición:`,
-            result.reason
+            result.reason,
           );
         }
       });
@@ -158,7 +158,9 @@ export class InfluencerService {
         // Fallback: si no hay datos y tenemos nombre de YouTube, intentar buscar por nombre
         if (!tiktok && yt && (yt as any).youtubeName) {
           try {
-            tiktok = await InfluencerTiktokService.getBasic((yt as any).youtubeName);
+            tiktok = await InfluencerTiktokService.getBasic(
+              (yt as any).youtubeName,
+            );
           } catch (error) {}
         }
       }
@@ -166,14 +168,14 @@ export class InfluencerService {
       if (!instagram && currentInstagramId) {
         try {
           instagram = await InfluencerInstagramService.getBasic(
-            currentInstagramId
+            currentInstagramId,
           );
         } catch (error) {}
         // Fallback: si no hay datos y tenemos nombre de YouTube, intentar buscar por nombre
         if (!instagram && yt && (yt as any).youtubeName) {
           try {
             instagram = await InfluencerInstagramService.getBasic(
-              (yt as any).youtubeName
+              (yt as any).youtubeName,
             );
           } catch (error) {}
         }
@@ -197,7 +199,7 @@ export class InfluencerService {
       */
 
       // Crear el objeto unificado con mejor lógica para nombres y engagement
-      let influencerName = "Influencer";
+      let influencerName = 'Influencer';
 
       // Intentar diferentes variaciones de nombres para cada plataforma
       if (yt) {
@@ -231,7 +233,7 @@ export class InfluencerService {
       }
 
       // Fallback general si aún no se encontró un nombre válido
-      if (influencerName === "Influencer") {
+      if (influencerName === 'Influencer') {
         influencerName =
           (basic as any).youtubeName ||
           (basic as any).channelTitle ||
@@ -240,7 +242,7 @@ export class InfluencerService {
           (basic as any).username ||
           (basic as any).tiktokName ||
           (basic as any).displayName ||
-          "Influencer";
+          'Influencer';
       }
 
       // Determinar plataformas basado en datos reales, no solo IDs
@@ -256,21 +258,21 @@ export class InfluencerService {
         Object.keys(tiktok).length > 0;
 
       // Determinar main platform basado en qué plataforma tiene datos
-      let mainPlatform = "youtube"; // default
+      let mainPlatform = 'youtube'; // default
       if (hasInstagram && !hasYouTube) {
-        mainPlatform = "instagram";
+        mainPlatform = 'instagram';
       } else if (hasTikTok && !hasYouTube && !hasInstagram) {
-        mainPlatform = "tiktok";
+        mainPlatform = 'tiktok';
       } else if (hasYouTube) {
-        mainPlatform = "youtube";
+        mainPlatform = 'youtube';
       } else if (hasInstagram) {
-        mainPlatform = "instagram";
+        mainPlatform = 'instagram';
       } else if (hasTikTok) {
-        mainPlatform = "tiktok";
+        mainPlatform = 'tiktok';
       }
 
       // Obtener el mejor avatar disponible de cualquier plataforma
-      let bestAvatar = (basic as any)?.avatar || "";
+      let bestAvatar = (basic as any)?.avatar || '';
 
       // 🔧 CORREGIR: Manejar tanto wrapper como directo para todas las plataformas
       if (!bestAvatar && instagram) {
@@ -352,9 +354,9 @@ export class InfluencerService {
           return null;
         })(),
         socialPlatforms: [
-          hasYouTube ? "youtube" : null,
-          hasInstagram ? "instagram" : null,
-          hasTikTok ? "tiktok" : null,
+          hasYouTube ? 'youtube' : null,
+          hasInstagram ? 'instagram' : null,
+          hasTikTok ? 'tiktok' : null,
         ].filter(Boolean) as string[],
         mainSocialPlatform: mainPlatform || null,
         // ✅ EXTRAER: mainCategory de la plataforma principal
@@ -378,15 +380,17 @@ export class InfluencerService {
           let followers = 0;
 
           // Usar la plataforma principal determinada
-          if (mainPlatform === "youtube" && yt) {
+          if (mainPlatform === 'youtube' && yt) {
             const ytData = yt as any;
             followers = ytData.subscribers || ytData.followers || 0;
-          } else if (mainPlatform === "instagram" && instagram) {
+          } else if (mainPlatform === 'instagram' && instagram) {
             const igData = (instagram as any).basicInstagram || instagram;
-            followers = (igData as any).followers || (igData as any).subscribers || 0;
-          } else if (mainPlatform === "tiktok" && tiktok) {
+            followers =
+              (igData as any).followers || (igData as any).subscribers || 0;
+          } else if (mainPlatform === 'tiktok' && tiktok) {
             const tkData = (tiktok as any).basicTikTok || tiktok;
-            followers = (tkData as any).followers || (tkData as any).subscribers || 0;
+            followers =
+              (tkData as any).followers || (tkData as any).subscribers || 0;
           } else {
             // Fallback: intentar con cualquier plataforma disponible
             if (yt) {
@@ -394,10 +398,12 @@ export class InfluencerService {
               followers = ytData.subscribers || ytData.followers || 0;
             } else if (instagram) {
               const igData = (instagram as any).basicInstagram || instagram;
-              followers = (igData as any).followers || (igData as any).subscribers || 0;
+              followers =
+                (igData as any).followers || (igData as any).subscribers || 0;
             } else if (tiktok) {
               const tkData = (tiktok as any).basicTikTok || tiktok;
-              followers = (tkData as any).followers || (tkData as any).subscribers || 0;
+              followers =
+                (tkData as any).followers || (tkData as any).subscribers || 0;
             } else {
               // Fallback a basic
               followers =
@@ -413,17 +419,21 @@ export class InfluencerService {
           let engagement = 0;
 
           // Usar la plataforma principal determinada
-          if (mainPlatform === "youtube" && yt) {
+          if (mainPlatform === 'youtube' && yt) {
             const ytData = yt as any;
-            engagement = ytData.engageRate1Y || ytData.engageRate || ytData.engagement || 0;
-          } else if (mainPlatform === "instagram" && instagram) {
+            engagement =
+              ytData.engageRate1Y ||
+              ytData.engageRate ||
+              ytData.engagement ||
+              0;
+          } else if (mainPlatform === 'instagram' && instagram) {
             const igData = (instagram as any).basicInstagram || instagram;
             engagement =
               (igData as any).engageRate ||
               (igData as any).engagement ||
               (igData as any).engageRate1Y ||
               0;
-          } else if (mainPlatform === "tiktok" && tiktok) {
+          } else if (mainPlatform === 'tiktok' && tiktok) {
             const tkData = (tiktok as any).basicTikTok || tiktok;
             engagement =
               (tkData as any).engageRate ||
@@ -435,7 +445,10 @@ export class InfluencerService {
             if (yt) {
               const ytData = yt as any;
               engagement =
-                ytData.engageRate1Y || ytData.engageRate || ytData.engagement || 0;
+                ytData.engageRate1Y ||
+                ytData.engageRate ||
+                ytData.engagement ||
+                0;
             } else if (instagram) {
               const igData = instagram.basicInstagram || instagram;
               engagement =
@@ -470,7 +483,7 @@ export class InfluencerService {
       };
 
       // 3. Guardar/Actualizar en la base de datos local
-      const { error: upsertError } = await supabase.from("influencers").upsert(
+      const { error: upsertError } = await supabase.from('influencers').upsert(
         {
           creator_id: fullData.creatorId,
           name: fullData.name,
@@ -485,22 +498,22 @@ export class InfluencerService {
           platform_info: fullData.platformInfo,
           is_verified: fullData.isVerified,
           language: fullData.language,
-          created_by: "8e30ccde-d824-4db2-91f9-1f8ea43468da", // UUID del usuario actual
+          created_by: '8e30ccde-d824-4db2-91f9-1f8ea43468da', // UUID del usuario actual
           updated_at: new Date().toISOString(),
         },
         {
-          onConflict: "creator_id",
-        }
+          onConflict: 'creator_id',
+        },
       );
 
       if (upsertError) {
-        console.error("❌ [SERVICE] Error updating local cache:", upsertError);
+        console.error('❌ [SERVICE] Error updating local cache:', upsertError);
       } else {
       }
 
       return fullData;
     } catch (error) {
-      console.error("💥 [ERROR] Error getting full influencer data:", error);
+      console.error('💥 [ERROR] Error getting full influencer data:', error);
       throw error;
     }
   }
@@ -528,8 +541,8 @@ export class InfluencerService {
     if (instagramId) {
       promises.push(
         InfluencerInstagramService.getBasic(instagramId)
-          .then((result) => ({ platform: "instagram", data: result }))
-          .catch((error) => ({ platform: "instagram", error }))
+          .then((result) => ({ platform: 'instagram', data: result }))
+          .catch((error) => ({ platform: 'instagram', error })),
       );
     }
 
@@ -537,8 +550,8 @@ export class InfluencerService {
     if (youtubeId) {
       promises.push(
         InfluencerYoutubeService.getBasic(youtubeId)
-          .then((result) => ({ platform: "youtube", data: result }))
-          .catch((error) => ({ platform: "youtube", error }))
+          .then((result) => ({ platform: 'youtube', data: result }))
+          .catch((error) => ({ platform: 'youtube', error })),
       );
     }
 
@@ -546,8 +559,8 @@ export class InfluencerService {
     if (tiktokId) {
       promises.push(
         InfluencerTiktokService.getBasic(tiktokId)
-          .then((result) => ({ platform: "tiktok", data: result }))
-          .catch((error) => ({ platform: "tiktok", error }))
+          .then((result) => ({ platform: 'tiktok', data: result }))
+          .catch((error) => ({ platform: 'tiktok', error })),
       );
     }
 
@@ -562,7 +575,7 @@ export class InfluencerService {
     };
 
     results.forEach((result) => {
-      if (result.status === "fulfilled") {
+      if (result.status === 'fulfilled') {
         const { platform, data, error } = result.value;
 
         if (data && !error) {
@@ -622,45 +635,45 @@ export class InfluencerService {
   }) {
     try {
       let query = supabase
-        .from("influencers")
-        .select("*")
-        .is("deleted_at", null);
+        .from('influencers')
+        .select('*')
+        .is('deleted_at', null);
 
       // Aplicar filtros
-      if (filters.platform && filters.platform !== "all") {
+      if (filters.platform && filters.platform !== 'all') {
         query = query.eq(
-          "main_social_platform",
-          filters.platform.toLowerCase()
+          'main_social_platform',
+          filters.platform.toLowerCase(),
         );
       }
 
-      if (filters.location && filters.location !== "all") {
-        query = query.eq("location", filters.location);
+      if (filters.location && filters.location !== 'all') {
+        query = query.eq('location', filters.location);
       }
 
-      if (filters.category && filters.category !== "all") {
+      if (filters.category && filters.category !== 'all') {
         // ✅ CORREGIDO: Buscar en categories como array, no en main_category que no existe
-        query = query.contains("categories", [filters.category]);
+        query = query.contains('categories', [filters.category]);
       }
 
       if (filters.minFollowers) {
-        query = query.gte("followers_count", filters.minFollowers);
+        query = query.gte('followers_count', filters.minFollowers);
       }
 
       if (filters.maxFollowers) {
-        query = query.lte("followers_count", filters.maxFollowers);
+        query = query.lte('followers_count', filters.maxFollowers);
       }
 
       if (filters.minEngagement) {
-        query = query.gte("average_engagement_rate", filters.minEngagement);
+        query = query.gte('average_engagement_rate', filters.minEngagement);
       }
 
       if (filters.maxEngagement) {
-        query = query.lte("average_engagement_rate", filters.maxEngagement);
+        query = query.lte('average_engagement_rate', filters.maxEngagement);
       }
 
       if (filters.query) {
-        query = query.ilike("name", `%${filters.query}%`);
+        query = query.ilike('name', `%${filters.query}%`);
       }
 
       // Paginación
@@ -669,13 +682,13 @@ export class InfluencerService {
       const start = (page - 1) * size;
 
       query = query
-        .order("followers_count", { ascending: false })
+        .order('followers_count', { ascending: false })
         .range(start, start + size - 1);
 
       const { data, error, count } = await query;
 
       if (error) {
-        console.error("❌ [SERVICE] Error searching influencers:", error);
+        console.error('❌ [SERVICE] Error searching influencers:', error);
         throw error;
       }
 
@@ -689,16 +702,16 @@ export class InfluencerService {
         size,
       };
     } catch (error) {
-      console.error("Error searching influencers:", error);
+      console.error('Error searching influencers:', error);
       throw error;
     }
   }
 
   async getAll() {
     const { data, error } = await supabase
-      .from("influencers")
-      .select("*")
-      .is("deleted_at", null);
+      .from('influencers')
+      .select('*')
+      .is('deleted_at', null);
 
     if (error) throw error;
     return data;
@@ -708,26 +721,26 @@ export class InfluencerService {
     // Verificar si el ID es un UUID válido
     const isUUID =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-        id
+        id,
       );
 
     if (isUUID) {
       // Si es UUID, buscar por id
       const { data, error } = await supabase
-        .from("influencers")
-        .select("*")
-        .eq("id", id)
+        .from('influencers')
+        .select('*')
+        .eq('id', id)
         .single();
-      if (error && error.code !== "PGRST116") throw error; // PGRST116 = not found
+      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = not found
       return data;
     } else {
       // Si no es UUID, buscar por creator_id
       const { data, error } = await supabase
-        .from("influencers")
-        .select("*")
-        .eq("creator_id", id)
+        .from('influencers')
+        .select('*')
+        .eq('creator_id', id)
         .single();
-      if (error && error.code !== "PGRST116") throw error; // PGRST116 = not found
+      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = not found
       return data;
     }
   }
@@ -738,9 +751,9 @@ export class InfluencerService {
 
   async update(id: string, data: any) {
     const { data: updatedInfluencer, error } = await supabase
-      .from("influencers")
+      .from('influencers')
       .update(data)
-      .eq("id", id)
+      .eq('id', id)
       .select()
       .single();
 
@@ -761,10 +774,10 @@ export class InfluencerService {
     try {
       // 1. Buscar el influencer en la base de datos
       const { data: influencer, error: fetchError } = await supabase
-        .from("influencers")
-        .select("*")
-        .eq("id", influencerId)
-        .is("deleted_at", null)
+        .from('influencers')
+        .select('*')
+        .eq('id', influencerId)
+        .is('deleted_at', null)
         .single();
 
       if (fetchError || !influencer) {
@@ -792,11 +805,11 @@ export class InfluencerService {
 
       // Si no tiene platform_info o está vacío, usar creator_id según la plataforma principal
       if (!youtubeId && !instagramId && !tiktokId) {
-        if (influencer.main_social_platform === "youtube") {
+        if (influencer.main_social_platform === 'youtube') {
           youtubeId = influencer.creator_id;
-        } else if (influencer.main_social_platform === "instagram") {
+        } else if (influencer.main_social_platform === 'instagram') {
           instagramId = influencer.creator_id;
-        } else if (influencer.main_social_platform === "tiktok") {
+        } else if (influencer.main_social_platform === 'tiktok') {
           tiktokId = influencer.creator_id;
         }
       }
@@ -809,7 +822,7 @@ export class InfluencerService {
       });
 
       if (!fullData) {
-        throw new Error("No se pudieron obtener datos actualizados");
+        throw new Error('No se pudieron obtener datos actualizados');
       }
 
       // 4. Usar los IDs originales del influencer (no buscar IDs adicionales)
@@ -817,7 +830,7 @@ export class InfluencerService {
 
       // 5. Verificar duplicados antes de actualizar (usando IDs originales)
       const existingDuplicate = await this.checkForDuplicateInfluencer(
-        originalPlatformIds
+        originalPlatformIds,
       );
 
       if (existingDuplicate && existingDuplicate.id !== influencerId) {
@@ -839,24 +852,24 @@ export class InfluencerService {
         };
 
         const { data: updatedInfluencer, error: updateError } = await supabase
-          .from("influencers")
+          .from('influencers')
           .update(updateData)
-          .eq("id", existingDuplicate.id)
+          .eq('id', existingDuplicate.id)
           .select()
           .single();
 
         if (updateError) {
           throw new Error(
-            `Error actualizando influencer: ${updateError.message}`
+            `Error actualizando influencer: ${updateError.message}`,
           );
         }
 
         // Eliminar el influencer original si es diferente al duplicado
         if (existingDuplicate.id !== influencerId) {
           await supabase
-            .from("influencers")
+            .from('influencers')
             .update({ deleted_at: new Date().toISOString() })
-            .eq("id", influencerId);
+            .eq('id', influencerId);
         }
 
         return updatedInfluencer;
@@ -880,15 +893,15 @@ export class InfluencerService {
       };
 
       const { data: updatedInfluencer, error: updateError } = await supabase
-        .from("influencers")
+        .from('influencers')
         .update(updateData)
-        .eq("id", influencerId)
+        .eq('id', influencerId)
         .select()
         .single();
 
       if (updateError) {
         throw new Error(
-          `Error actualizando influencer: ${updateError.message}`
+          `Error actualizando influencer: ${updateError.message}`,
         );
       }
 
@@ -909,7 +922,7 @@ export class InfluencerService {
       tiktokId?: string;
     },
     visitedIds: Set<string> = new Set(),
-    forceRefresh: boolean = false
+    forceRefresh: boolean = false,
   ): Promise<any> {
     try {
       // Obtener datos básicos (forzar refresh si es necesario)
@@ -954,7 +967,7 @@ export class InfluencerService {
         const additionalData = await this.getFullInfluencerDataRecursive(
           unvisitedIds,
           visitedIds,
-          forceRefresh
+          forceRefresh,
         );
 
         if (additionalData) {
@@ -965,7 +978,7 @@ export class InfluencerService {
 
       return basicData;
     } catch (error) {
-      console.error("❌ [RECURSIVE] Error en búsqueda recursiva:", error);
+      console.error('❌ [RECURSIVE] Error en búsqueda recursiva:', error);
       return null;
     }
   }
@@ -1070,7 +1083,7 @@ export class InfluencerService {
         }
       }
     } catch (error) {
-      console.error("❌ [EXTRACT] Error extrayendo IDs:", error);
+      console.error('❌ [EXTRACT] Error extrayendo IDs:', error);
     }
 
     return ids;
@@ -1116,19 +1129,19 @@ export class InfluencerService {
     if (!data) return 0;
 
     const fields = [
-      "name",
-      "avatar",
-      "country",
-      "followersCount",
-      "averageEngagementRate",
-      "socialPlatforms",
+      'name',
+      'avatar',
+      'country',
+      'followersCount',
+      'averageEngagementRate',
+      'socialPlatforms',
     ];
     let completeness = 0;
 
     fields.forEach((field) => {
       if (
         data[field] &&
-        (typeof data[field] === "string" ? data[field].trim() : data[field])
+        (typeof data[field] === 'string' ? data[field].trim() : data[field])
       ) {
         completeness++;
       }
@@ -1139,9 +1152,9 @@ export class InfluencerService {
 
   async delete(id: string) {
     const { error } = await supabase
-      .from("influencers")
+      .from('influencers')
       .update({ deleted_at: new Date().toISOString() })
-      .eq("id", id);
+      .eq('id', id);
 
     if (error) throw error;
   }
@@ -1159,10 +1172,10 @@ export class InfluencerService {
       // Verificar creator_id (YouTube ID principal)
       if (platformIds.youtubeId) {
         const { data: existingByCreatorId, error: error1 } = await supabase
-          .from("influencers")
-          .select("*")
-          .eq("creator_id", platformIds.youtubeId)
-          .is("deleted_at", null)
+          .from('influencers')
+          .select('*')
+          .eq('creator_id', platformIds.youtubeId)
+          .is('deleted_at', null)
           .single();
 
         if (existingByCreatorId) {
@@ -1173,10 +1186,10 @@ export class InfluencerService {
       // Verificar en platform_info usando consultas separadas
       if (platformIds.youtubeId) {
         const { data: existingByYoutubeId, error: error2 } = await supabase
-          .from("influencers")
-          .select("*")
-          .eq("platform_info->youtube->youtubeId", platformIds.youtubeId)
-          .is("deleted_at", null)
+          .from('influencers')
+          .select('*')
+          .eq('platform_info->youtube->youtubeId', platformIds.youtubeId)
+          .is('deleted_at', null)
           .single();
 
         if (existingByYoutubeId) {
@@ -1186,12 +1199,12 @@ export class InfluencerService {
 
       if (platformIds.instagramId) {
         const { data: existingByInstagramId, error: error3 } = await supabase
-          .from("influencers")
-          .select("*")
+          .from('influencers')
+          .select('*')
           .or(
-            `platform_info->youtube->instagramId.eq.${platformIds.instagramId},platform_info->instagram->instagramId.eq.${platformIds.instagramId}`
+            `platform_info->youtube->instagramId.eq.${platformIds.instagramId},platform_info->instagram->instagramId.eq.${platformIds.instagramId}`,
           )
-          .is("deleted_at", null)
+          .is('deleted_at', null)
           .single();
 
         if (existingByInstagramId) {
@@ -1201,12 +1214,12 @@ export class InfluencerService {
 
       if (platformIds.tiktokId) {
         const { data: existingByTiktokId, error: error4 } = await supabase
-          .from("influencers")
-          .select("*")
+          .from('influencers')
+          .select('*')
           .or(
-            `platform_info->youtube->tiktokId.eq.${platformIds.tiktokId},platform_info->tiktok->tiktokId.eq.${platformIds.tiktokId}`
+            `platform_info->youtube->tiktokId.eq.${platformIds.tiktokId},platform_info->tiktok->tiktokId.eq.${platformIds.tiktokId}`,
           )
-          .is("deleted_at", null)
+          .is('deleted_at', null)
           .single();
 
         if (existingByTiktokId) {
@@ -1217,8 +1230,8 @@ export class InfluencerService {
       return null;
     } catch (error) {
       console.error(
-        "❌ [DUPLICATE CHECK] Error en verificación de duplicados:",
-        error
+        '❌ [DUPLICATE CHECK] Error en verificación de duplicados:',
+        error,
       );
       return null;
     }
@@ -1229,7 +1242,7 @@ export class InfluencerService {
    */
   async createInfluencer(influencerData: any): Promise<any> {
     try {
-      console.log("influencerData", influencerData);
+      console.log('influencerData', influencerData);
 
       // 1. Extraer IDs de plataformas del influencer a crear
       const platformIds = {
@@ -1246,7 +1259,7 @@ export class InfluencerService {
 
       // 2. Verificar si ya existe un influencer con alguno de estos IDs
       const existingInfluencer = await this.checkForDuplicateInfluencer(
-        platformIds
+        platformIds,
       );
 
       if (existingInfluencer) {
@@ -1258,17 +1271,17 @@ export class InfluencerService {
           message: `Ya existe un influencer con alguno de los IDs proporcionados: ${existingInfluencer.name} (ID: ${existingInfluencer.id})`,
         };
       }
-      console.log("influencerData", influencerData);
+      console.log('influencerData', influencerData);
       // 3. Si no hay duplicados, proceder con la creación normal
 
       const { data: newInfluencer, error } = await supabase
-        .from("influencers")
+        .from('influencers')
         .insert(influencerData)
         .select()
         .single();
 
       if (error) {
-        console.error("❌ [CREATE] Error creando influencer:", error);
+        console.error('❌ [CREATE] Error creando influencer:', error);
         throw error;
       }
 
@@ -1276,10 +1289,10 @@ export class InfluencerService {
         success: true,
         duplicate: false,
         influencer: newInfluencer,
-        message: "Influencer creado exitosamente",
+        message: 'Influencer creado exitosamente',
       };
     } catch (error) {
-      console.error("💥 [CREATE] Error en createInfluencer:", error);
+      console.error('💥 [CREATE] Error en createInfluencer:', error);
       throw error;
     }
   }
@@ -1290,7 +1303,7 @@ export class InfluencerService {
       const mainPlatform = (
         influencerData.main_social_platform ||
         influencerData.mainSocialPlatform ||
-        "instagram"
+        'instagram'
       ).toLowerCase();
       const creatorId =
         influencerData.creator_id ||
@@ -1299,17 +1312,17 @@ export class InfluencerService {
         influencerData.platformInfo?.socialId;
 
       if (!creatorId) {
-        throw new Error("creator_id (username) es requerido");
+        throw new Error('creator_id (username) es requerido');
       }
 
-      console.log("influencerData", influencerData);
+      console.log('influencerData', influencerData);
       // Construir registro consistente con nuestro esquema
       const newRecord = {
         creator_id: creatorId,
         name: influencerData.name || influencerData.title || creatorId,
-        avatar: influencerData.avatar || "",
+        avatar: influencerData.avatar || '',
         is_verified: Boolean(
-          influencerData.is_verified ?? influencerData.isVerified ?? false
+          influencerData.is_verified ?? influencerData.isVerified ?? false,
         ),
         main_social_platform: mainPlatform,
         followers_count:
@@ -1328,49 +1341,49 @@ export class InfluencerService {
           ? influencerData.social_platforms
           : Array.isArray(influencerData.socialPlatforms)
           ? influencerData.socialPlatforms
-              .map((p: any) => (typeof p === "string" ? p : p.platform))
+              .map((p: any) => (typeof p === 'string' ? p : p.platform))
               .filter(Boolean)
           : [mainPlatform],
         platform_info:
           influencerData.platform_info || influencerData.platformInfo || {},
-        metadata: influencerData.metadata || { source: "explorer" },
+        metadata: influencerData.metadata || { source: 'explorer' },
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       } as any;
 
       // 1. Verificar si el creador existe en CreatorDB usando la plataforma principal
-      let creatorDBCheck: any = null;
-      try {
-        console.log("CreatorDBService.checkIdExists");
-        console.log("mainPlatform", mainPlatform);
-        console.log("newRecord.creator_id", newRecord.creator_id);
-        creatorDBCheck = await CreatorDBService.checkIdExists(
-          mainPlatform,
-          newRecord.creator_id
-        );
-        console.log("creatorDBCheck", creatorDBCheck);
-        if (creatorDBCheck.exists) {
-          // Si existe en CreatorDB, no continuar con la creación
-          return {
-            success: false,
-            duplicate: true,
-            existsInCreatorDB: true,
-            creatorDBData: creatorDBCheck.data,
-            message: `El creador ${newRecord.creator_id} ya existe en CreatorDB para ${mainPlatform}`,
-          };
-        }
-      } catch (e: any) {
-        console.warn("[CreatorDB] checkIdExists failed:", e?.message || e);
-        // No bloquear si falla la verificación
-      }
+      // let creatorDBCheck: any = null;
+      // try {
+      //   console.log("CreatorDBService.checkIdExists");
+      //   console.log("mainPlatform", mainPlatform);
+      //   console.log("newRecord.creator_id", newRecord.creator_id);
+      //   creatorDBCheck = await CreatorDBService.checkIdExists(
+      //     mainPlatform,
+      //     newRecord.creator_id
+      //   );
+      //   console.log("creatorDBCheck", creatorDBCheck);
+      //   if (creatorDBCheck.exists) {
+      //     // Si existe en CreatorDB, no continuar con la creación
+      //     return {
+      //       success: false,
+      //       duplicate: true,
+      //       existsInCreatorDB: true,
+      //       creatorDBData: creatorDBCheck.data,
+      //       message: `El creador ${newRecord.creator_id} ya existe en CreatorDB para ${mainPlatform}`,
+      //     };
+      //   }
+      // } catch (e: any) {
+      //   console.warn("[CreatorDB] checkIdExists failed:", e?.message || e);
+      //   // No bloquear si falla la verificación
+      // }
 
       // 2. Verificación de duplicado en Supabase por (creator_id, main_social_platform)
       const { data: existing, error: fetchError } = await supabase
-        .from("influencers")
-        .select("*")
-        .eq("creator_id", newRecord.creator_id)
-        .eq("main_social_platform", newRecord.main_social_platform)
-        .is("deleted_at", null)
+        .from('influencers')
+        .select('*')
+        .eq('creator_id', newRecord.creator_id)
+        .eq('main_social_platform', newRecord.main_social_platform)
+        .is('deleted_at', null)
         .maybeSingle();
 
       if (fetchError) {
@@ -1386,46 +1399,45 @@ export class InfluencerService {
         };
       }
 
-      // 3. Intentar enviar a CreatorDB usando solo la plataforma principal y creator_id (no bloquear si falla)
-      let creatorDBSubmission: any = null;
-      console.log("CreatorDBService.submitCreators");
-      console.log("mainPlatform", mainPlatform);
-      console.log("newRecord.creator_id", newRecord.creator_id);
-      try {
-        creatorDBSubmission = await CreatorDBService.submitCreators(
-          mainPlatform,
-          [newRecord.creator_id]
-        );
-        console.log("creatorDBSubmission", creatorDBSubmission);
-      } catch (e: any) {
-        console.warn("[CreatorDB] submitCreators failed:", e?.message || e);
-      }
+      // // 3. Intentar enviar a CreatorDB usando solo la plataforma principal y creator_id (no bloquear si falla)
+      // let creatorDBSubmission: any = null;
+      // console.log("CreatorDBService.submitCreators");
+      // console.log("mainPlatform", mainPlatform);
+      // console.log("newRecord.creator_id", newRecord.creator_id);
+      // try {
+      //   creatorDBSubmission = await CreatorDBService.submitCreators(
+      //     mainPlatform,
+      //     [newRecord.creator_id]
+      //   );
+      //   console.log("creatorDBSubmission", creatorDBSubmission);
+      // } catch (e: any) {
+      //   console.warn("[CreatorDB] submitCreators failed:", e?.message || e);
+      // }
 
       // Insertar nuevo influencer
       console.log('supabase.from("influencers").insert(newRecord)');
-      console.log("newRecord", newRecord);
+      console.log('newRecord', newRecord);
       const { data: inserted, error } = await supabase
-        .from("influencers")
+        .from('influencers')
         .insert(newRecord)
         .select()
         .single();
       if (error) {
         throw error;
       }
-      console.log("inserted", inserted);
+      console.log('inserted', inserted);
       // creatorDB submission result included for visibility
 
       return {
         success: true,
         duplicate: false,
         influencer: inserted,
-        message: "Influencer creado exitosamente desde HypeAuditor/Explorer",
-        creatorDBSubmission,
+        message: 'Influencer creado exitosamente desde HypeAuditor/Explorer',
       };
     } catch (error) {
       console.error(
-        "💥 [CREATE] Error en createInfluencerFromHypeAuditor:",
-        error
+        '💥 [CREATE] Error en createInfluencerFromHypeAuditor:',
+        error,
       );
       throw error;
     }
@@ -1447,24 +1459,24 @@ export class InfluencerService {
       if (params.youtubeId) {
         promises.push(
           InfluencerYoutubeService.getBasic(params.youtubeId)
-            .then((data) => ({ platform: "youtube", data, error: null }))
-            .catch((error) => ({ platform: "youtube", data: null, error }))
+            .then((data) => ({ platform: 'youtube', data, error: null }))
+            .catch((error) => ({ platform: 'youtube', data: null, error })),
         );
       }
 
       if (params.instagramId) {
         promises.push(
           InfluencerInstagramService.getBasic(params.instagramId)
-            .then((data) => ({ platform: "instagram", data, error: null }))
-            .catch((error) => ({ platform: "instagram", data: null, error }))
+            .then((data) => ({ platform: 'instagram', data, error: null }))
+            .catch((error) => ({ platform: 'instagram', data: null, error })),
         );
       }
 
       if (params.tiktokId) {
         promises.push(
           InfluencerTiktokService.getBasic(params.tiktokId)
-            .then((data) => ({ platform: "tiktok", data, error: null }))
-            .catch((error) => ({ platform: "tiktok", data: null, error }))
+            .then((data) => ({ platform: 'tiktok', data, error: null }))
+            .catch((error) => ({ platform: 'tiktok', data: null, error })),
         );
       }
 
@@ -1479,7 +1491,7 @@ export class InfluencerService {
       };
 
       results.forEach((result) => {
-        if (result.status === "fulfilled") {
+        if (result.status === 'fulfilled') {
           const { platform, data, error } = result.value;
 
           if (data && !error) {
@@ -1522,17 +1534,17 @@ export class InfluencerService {
         Object.keys(platformData.tiktok).length > 0;
 
       // Determinar main platform basado en qué plataforma tiene datos
-      let mainPlatform = "youtube"; // default
+      let mainPlatform = 'youtube'; // default
       if (hasInstagram && !hasYouTube) {
-        mainPlatform = "instagram";
+        mainPlatform = 'instagram';
       } else if (hasTikTok && !hasYouTube && !hasInstagram) {
-        mainPlatform = "tiktok";
+        mainPlatform = 'tiktok';
       } else if (hasYouTube) {
-        mainPlatform = "youtube";
+        mainPlatform = 'youtube';
       } else if (hasInstagram) {
-        mainPlatform = "instagram";
+        mainPlatform = 'instagram';
       } else if (hasTikTok) {
-        mainPlatform = "tiktok";
+        mainPlatform = 'tiktok';
       }
 
       // Extraer información básica de los datos obtenidos usando la misma lógica que getFullInfluencerData
@@ -1545,7 +1557,7 @@ export class InfluencerService {
         response.avatar = response.avatar || platformData.youtube.avatar;
         response.country = response.country || platformData.youtube.country;
         response.language = response.language || platformData.youtube.lang;
-        response.socialPlatforms.push("youtube");
+        response.socialPlatforms.push('youtube');
       }
 
       if (platformData.instagram) {
@@ -1559,7 +1571,7 @@ export class InfluencerService {
         response.avatar = response.avatar || igData.avatar;
         response.country = response.country || igData.country;
         response.language = response.language || igData.lang;
-        response.socialPlatforms.push("instagram");
+        response.socialPlatforms.push('instagram');
       }
 
       if (platformData.tiktok) {
@@ -1569,23 +1581,23 @@ export class InfluencerService {
         response.avatar = response.avatar || tkData.avatar;
         response.country = response.country || tkData.country;
         response.language = response.language || tkData.lang;
-        response.socialPlatforms.push("tiktok");
+        response.socialPlatforms.push('tiktok');
       }
 
       // Usar la plataforma principal para extraer followers y engagement
       response.mainSocialPlatform = mainPlatform || null;
 
       // Extraer followers según la plataforma principal
-      if (mainPlatform === "youtube" && platformData.youtube) {
+      if (mainPlatform === 'youtube' && platformData.youtube) {
         response.followersCount =
           platformData.youtube.subscribers ||
           platformData.youtube.followers ||
           0;
-      } else if (mainPlatform === "instagram" && platformData.instagram) {
+      } else if (mainPlatform === 'instagram' && platformData.instagram) {
         const igData =
           platformData.instagram.basicInstagram || platformData.instagram;
         response.followersCount = igData.followers || igData.subscribers || 0;
-      } else if (mainPlatform === "tiktok" && platformData.tiktok) {
+      } else if (mainPlatform === 'tiktok' && platformData.tiktok) {
         const tkData = platformData.tiktok.basicTikTok || platformData.tiktok;
         response.followersCount = tkData.followers || tkData.subscribers || 0;
       } else {
@@ -1606,18 +1618,18 @@ export class InfluencerService {
       }
 
       // Extraer engagement según la plataforma principal
-      if (mainPlatform === "youtube" && platformData.youtube) {
+      if (mainPlatform === 'youtube' && platformData.youtube) {
         response.averageEngagementRate =
           platformData.youtube.engageRate1Y ||
           platformData.youtube.engageRate ||
           platformData.youtube.engagement ||
           0;
-      } else if (mainPlatform === "instagram" && platformData.instagram) {
+      } else if (mainPlatform === 'instagram' && platformData.instagram) {
         const igData =
           platformData.instagram.basicInstagram || platformData.instagram;
         response.averageEngagementRate =
           igData.engageRate || igData.engagement || igData.engageRate1Y || 0;
-      } else if (mainPlatform === "tiktok" && platformData.tiktok) {
+      } else if (mainPlatform === 'tiktok' && platformData.tiktok) {
         const tkData = platformData.tiktok.basicTikTok || platformData.tiktok;
         response.averageEngagementRate =
           tkData.engageRate || tkData.engagement || tkData.engageRate1Y || 0;
@@ -1643,7 +1655,7 @@ export class InfluencerService {
 
       return response;
     } catch (error) {
-      console.error("❌ [REFRESH DATA] Error obteniendo datos básicos:", error);
+      console.error('❌ [REFRESH DATA] Error obteniendo datos básicos:', error);
       throw error;
     }
   }
