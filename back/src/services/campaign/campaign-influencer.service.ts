@@ -65,9 +65,6 @@ export class CampaignInfluencerService {
       .select('*')
       .in('id', influencerIds);
 
-   
-    console.log(existingInfluencers);
-
     // Get data without implicit relationship selects (avoid FK requirement)
     const { data: campaignInfluencers, error } = await client
       .from('campaign_influencers')
@@ -90,8 +87,6 @@ export class CampaignInfluencerService {
         influencers: influencerMap.get(ci.influencer_id) || null
       }))
       .filter(ci => ci.influencers !== null);
-    
-    console.log(validCampaignInfluencers);
     
     // Si no hay influencers válidos, mostrar información útil
     if (validCampaignInfluencers.length === 0 && campaignInfluencers && campaignInfluencers.length > 0) {
