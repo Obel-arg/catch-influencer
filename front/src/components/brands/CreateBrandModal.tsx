@@ -151,36 +151,37 @@ export const CreateBrandModal = ({ open, onOpenChange, onCreated }: CreateBrandM
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl bg-white border-0 shadow-xl rounded-xl">
-        <DialogHeader className="pb-6">
-          <DialogTitle className="text-xl font-semibold text-gray-900 bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent mb-4">
-            Crear Nueva Marca
-          </DialogTitle>
-          
-          {/* Indicador de pasos */}
-          <div className="flex items-center justify-center space-x-4">
-            <div className={`flex items-center space-x-2 ${currentStep >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                currentStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
-              }`}>
-                1
+        <form onSubmit={handleSubmit}>
+          <DialogHeader className="pb-6">
+            <DialogTitle className="text-xl font-semibold text-gray-900 bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent mb-4">
+              Crear Nueva Marca
+            </DialogTitle>
+
+            {/* Indicador de pasos */}
+            <div className="flex items-center justify-center space-x-4">
+              <div className={`flex items-center space-x-2 ${currentStep >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  currentStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
+                }`}>
+                  1
+                </div>
+                <span className="text-sm font-medium">Información Básica</span>
               </div>
-              <span className="text-sm font-medium">Información Básica</span>
-            </div>
-            
-            <div className={`w-8 h-1 rounded-full ${currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
-            
-            <div className={`flex items-center space-x-2 ${currentStep >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                currentStep >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
-              }`}>
-                2
+
+              <div className={`w-8 h-1 rounded-full ${currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
+
+              <div className={`flex items-center space-x-2 ${currentStep >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  currentStep >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
+                }`}>
+                  2
+                </div>
+                <span className="text-sm font-medium">Detalles Adicionales</span>
               </div>
-              <span className="text-sm font-medium">Detalles Adicionales</span>
             </div>
-          </div>
-        </DialogHeader>
-        
-        <div className="space-y-6">
+          </DialogHeader>
+
+          <div className="space-y-6">
           {/* Paso 1: Información básica */}
           {currentStep === 1 && (
             <div className="space-y-6 min-h-[280px]">
@@ -399,20 +400,19 @@ export const CreateBrandModal = ({ open, onOpenChange, onCreated }: CreateBrandM
                     <ChevronRight className="w-4 h-4" />
                   </Button>
                 ) : (
-                  <form onSubmit={handleSubmit} className="inline">
-                    <Button
-                      type="submit"
-                      disabled={isCreating}
-                      className="bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium shadow-sm hover:from-blue-700 hover:to-blue-800 hover:shadow-md transition-all duration-200 px-6"
-                    >
-                      {isCreating ? 'Creando...' : 'Crear Marca'}
-                    </Button>
-                  </form>
+                  <Button
+                    type="submit"
+                    disabled={isCreating}
+                    className="bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium shadow-sm hover:from-blue-700 hover:to-blue-800 hover:shadow-md transition-all duration-200 px-6"
+                  >
+                    {isCreating ? 'Creando...' : 'Crear Marca'}
+                  </Button>
                 )}
               </div>
             </div>
           </DialogFooter>
-        </div>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
