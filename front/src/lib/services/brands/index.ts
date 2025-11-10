@@ -1,14 +1,15 @@
 import { api } from '../api';
-import { 
-  Brand, 
-  CreateBrandDto, 
-  UpdateBrandDto, 
-  BrandFilters, 
-  BrandCampaign, 
-  CreateBrandCampaignDto, 
-  UpdateBrandCampaignDto, 
-  BrandStats, 
-  BrandAnalytics 
+import { getApiBaseUrl } from '../apiBase';
+import {
+  Brand,
+  CreateBrandDto,
+  UpdateBrandDto,
+  BrandFilters,
+  BrandCampaign,
+  CreateBrandCampaignDto,
+  UpdateBrandCampaignDto,
+  BrandStats,
+  BrandAnalytics
 } from '@/types/brands';
 
 export const brandService = {
@@ -284,16 +285,16 @@ export const brandService = {
    */
   getProxiedImageUrl(externalUrl: string): string {
     if (!externalUrl) return '';
-    
+
     // Si ya es una URL del backend, devolverla tal como está
-    if (externalUrl.includes('localhost:5000')) {
+    const apiBaseUrl = getApiBaseUrl();
+    if (externalUrl.includes(apiBaseUrl)) {
       return externalUrl;
     }
-    
+
     // Convertir URL externa a URL del proxy
-    const baseUrl = "http://localhost:5001/api";
     const encodedUrl = encodeURIComponent(externalUrl);
-    return `${baseUrl}/proxy/image?url=${encodedUrl}`;
+    return `${apiBaseUrl}/proxy/image?url=${encodedUrl}`;
   },
 
   /**
@@ -301,12 +302,13 @@ export const brandService = {
    */
   async processLogoUrl(logoUrl: string, brandName: string, brandId?: string): Promise<string> {
     if (!logoUrl) return '';
-    
+
     // Si ya es una URL del backend, devolverla tal como está
-    if (logoUrl.includes('localhost:5000')) {
+    const apiBaseUrl = getApiBaseUrl();
+    if (logoUrl.includes(apiBaseUrl)) {
       return logoUrl;
     }
-    
+
     // Si es una URL externa, subirla usando el proxy
     try {
       return await this.uploadBrandLogo(logoUrl, brandName, brandId);

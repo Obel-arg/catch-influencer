@@ -2,15 +2,11 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse, AxiosH
 import { PaginationParams } from "@/types/common";
 import { setupTokenInterceptors } from './tokenInterceptor';
 import { setupRequestMonitoring } from './httpInterceptor';
+import { getApiBaseUrl } from '../services/apiBase';
 
 // URLs para el backend principal
-const API_AUTH_BASE_URL = process.env.NODE_ENV === "development"
-  ? "http://localhost:5001/api/auth"
-  : "https://catch-influencer-back.vercel.app/api/auth";
-
-const API_BASE_URL = process.env.NODE_ENV === "development"
-  ? "http://localhost:5001/api"
-  : "https://catch-influencer-back.vercel.app/api";
+const API_AUTH_BASE_URL = getApiBaseUrl().replace('/api', '/api/auth');
+const API_BASE_URL = getApiBaseUrl();
 
 export class HttpClient {
   private static instance: HttpClient;

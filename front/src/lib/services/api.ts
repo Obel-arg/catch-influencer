@@ -1,8 +1,9 @@
 import axios from 'axios';
 import { setupTokenInterceptors } from '../http/tokenInterceptor';
+import { getApiBaseUrl } from './apiBase';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5001/api', // FORZADO A LOCALHOST
+  baseURL: getApiBaseUrl(),
   timeout: 10000,
 });
 

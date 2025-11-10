@@ -1,4 +1,5 @@
 import { AxiosResponse, AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { getApiBaseUrl } from '../services/apiBase';
 
 let isRefreshing = false;
 let failedQueue: Array<{
@@ -195,7 +196,7 @@ export const setupTokenInterceptors = (axiosInstance: any) => {
           }
 
           // Intentar refrescar el token
-          const backendUrl = "http://localhost:5001/api/auth";
+          const backendUrl = getApiBaseUrl().replace('/api', '/api/auth');
 
           const response = await fetch(`${backendUrl}/refresh`, {
             method: 'POST',

@@ -1,3 +1,5 @@
+import { getApiBaseUrl } from './apiBase';
+
 export const getAdminApiBaseUrl = () => {
-  return 'http://localhost:5001/api/adminWRK';
+  return getApiBaseUrl().replace('/api', '/api/adminWRK');
 }; 

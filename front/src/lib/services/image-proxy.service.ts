@@ -1,7 +1,8 @@
 import { httpApiClient } from '@/lib/http';
+import { getApiBaseUrl } from './apiBase';
 
 // Obtener la URL base del API desde la configuración
-const backendUrl = "http://localhost:5001";
+const getBackendUrl = () => getApiBaseUrl().replace('/api', '');
 
 export class ImageProxyService {
   /**
@@ -18,9 +19,9 @@ export class ImageProxyService {
     }
 
     // Construir URL del proxy usando la URL base del API backend
-    const proxyUrl = new URL('/api/proxy/image', backendUrl);
+    const proxyUrl = new URL('/api/proxy/image', getBackendUrl());
     proxyUrl.searchParams.set('url', imageUrl);
-    
+
     return proxyUrl.toString();
   }
 
