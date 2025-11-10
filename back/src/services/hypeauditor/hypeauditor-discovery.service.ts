@@ -316,12 +316,17 @@ export class HypeAuditorDiscoveryService {
   private static instance: HypeAuditorDiscoveryService;
   private readonly baseUrl = 'https://hypeauditor.com';
 
-  // Credenciales de HypeAuditor
-  private readonly CLIENT_ID = '2694138';
-  private readonly API_TOKEN =
-    '$2y$04$27ZuGEARpPSjtwdBhJnf6OYuZKqTxKFkGi723IpY4MxJefff3Lgsa';
+  // Credenciales de HypeAuditor (usar env vars o fallback)
+  private readonly CLIENT_ID = process.env.HYPEAUDITOR_CLIENT_ID || '2694138';
+  private readonly API_TOKEN = process.env.HYPEAUDITOR_API_TOKEN || '$2y$04$27ZuGEARpPSjtwdBhJnf6OYuZKqTxKFkGi723IpY4MxJefff3Lgsa';
 
-  private constructor() {}
+  private constructor() {
+    console.log('[HypeAuditor Discovery] Initialized with:', {
+      clientId: this.CLIENT_ID,
+      hasToken: !!this.API_TOKEN,
+      tokenPreview: this.API_TOKEN?.substring(0, 20) + '...'
+    });
+  }
 
   // Función helper para hacer peticiones HTTPS
   private async makeHttpsRequest(endpoint: string, data?: any): Promise<any> {
@@ -341,6 +346,12 @@ export class HypeAuditorDiscoveryService {
         },
       };
 
+      console.log(`[HypeAuditor] Making request to: ${options.method} https://${options.hostname}${options.path}`);
+      console.log(`[HypeAuditor] Auth headers: X-Auth-Id=${this.CLIENT_ID}, X-Auth-Token=${this.API_TOKEN.substring(0, 20)}...`);
+      if (data) {
+        console.log(`[HypeAuditor] Request body:`, JSON.stringify(data, null, 2).substring(0, 500));
+      }
+
       const req = https.request(options, (res) => {
         let responseData = '';
         res.on('data', (chunk) => {
@@ -349,9 +360,21 @@ export class HypeAuditorDiscoveryService {
 
         res.on('end', () => {
           try {
+            // Log the response status and first 500 chars for debugging
+            console.log(`[HypeAuditor] Response status: ${res.statusCode}`);
+            console.log(`[HypeAuditor] Response headers:`, res.headers);
+            console.log(`[HypeAuditor] Response preview:`, responseData.substring(0, 500));
+
+            // Check if response is HTML (error page)
+            if (responseData.trim().startsWith('<!DOCTYPE') || responseData.trim().startsWith('<html')) {
+              reject(new Error(`HypeAuditor API returned HTML error page instead of JSON. Status: ${res.statusCode}. This usually means authentication failed or the API endpoint is incorrect.`));
+              return;
+            }
+
             const response = JSON.parse(responseData);
             resolve(response);
           } catch (error: any) {
+            console.error(`[HypeAuditor] Failed to parse response. Raw response:`, responseData.substring(0, 1000));
             reject(new Error(`Error parsing response: ${error.message}`));
           }
         });
