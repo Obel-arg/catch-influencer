@@ -307,12 +307,33 @@ export class HypeAuditorDiscoveryController {
    */
   static async healthCheck(req: Request, res: Response) {
     try {
+      const service = HypeAuditorDiscoveryController.getDiscoveryService();
+
+      // Test actual API connection
+      let apiTest = { working: false, error: null as any };
+      try {
+        const testResult = await service.searchDiscovery({
+          social_network: 'instagram',
+          page: 1,
+          subscribers_count: { from: 10000, to: 50000 }
+        });
+        apiTest.working = !!testResult;
+      } catch (error: any) {
+        apiTest.error = error.message;
+      }
+
       res.json({
         success: true,
         status: 'ok',
         message: 'HypeAuditor Discovery service is running',
         provider: "HypeAuditor Discovery",
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        apiTest,
+        env: {
+          hasClientId: !!process.env.HYPEAUDITOR_CLIENT_ID,
+          hasToken: !!process.env.HYPEAUDITOR_API_TOKEN,
+          nodeEnv: process.env.NODE_ENV
+        }
       });
     } catch (error: any) {
       res.status(500).json({
