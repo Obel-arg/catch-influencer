@@ -435,6 +435,18 @@ export const AddPostModal: React.FC<AddPostModalProps> = ({
   const handleImageUrlChange = async (url: string) => {
     updateFormData("image_url", url);
 
+    // Si es una URL de Instagram, usar proxy para evitar CORS
+    if (url && (url.includes('instagram.com') || url.includes('cdninstagram.com') || url.includes('fbcdn.net'))) {
+      try {
+        // Usar weserv.nl como proxy para Instagram
+        const proxiedUrl = `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=800&h=800&fit=cover&output=webp`;
+        updateFormData("image_url", proxiedUrl);
+        return;
+      } catch (error) {
+        console.error("❌ Error proxying Instagram URL:", error);
+      }
+    }
+
     // Si es una URL temporal, convertirla automáticamente
     if (url && ImageProxyService.isTemporaryUrl(url)) {
       try {
@@ -531,11 +543,18 @@ export const AddPostModal: React.FC<AddPostModalProps> = ({
       try {
         const thumbnail = await getInstagramThumbnailValidated(url);
         if (thumbnail) {
-          // Convertir inmediatamente a Data URL permanente
-          const permanentUrl = await ImageProxyService.convertTemporaryUrl(
-            thumbnail
-          );
-          updateFormData("image_url", permanentUrl);
+          // Si es una URL de Instagram, usar proxy para evitar CORS
+          let finalUrl = thumbnail;
+          if (thumbnail.includes('instagram.com') || thumbnail.includes('cdninstagram.com') || thumbnail.includes('fbcdn.net')) {
+            finalUrl = `https://images.weserv.nl/?url=${encodeURIComponent(thumbnail)}&w=800&h=800&fit=cover&output=webp`;
+          } else {
+            // Para otras URLs, intentar convertir con ImageProxyService
+            const permanentUrl = await ImageProxyService.convertTemporaryUrl(thumbnail);
+            if (permanentUrl && permanentUrl !== thumbnail) {
+              finalUrl = permanentUrl;
+            }
+          }
+          updateFormData("image_url", finalUrl);
         } else {
           console.warn("⚠️ No se pudo extraer miniatura de Instagram");
         }

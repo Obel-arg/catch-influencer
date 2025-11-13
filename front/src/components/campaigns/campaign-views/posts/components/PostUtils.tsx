@@ -506,12 +506,12 @@ const isBlobUrl = (url: string): boolean => {
 export const getImageUrl = async (post: any): Promise<string> => {
 
   if (post.platform?.toLowerCase() === 'instagram') {
-    // Para Instagram, priorizar la imagen almacenada en blob storage
-    if (post.image_url && isBlobUrl(post.image_url)) {
+    // Prioridad 1: Si hay image_url (puede ser blob, proxy o directa), usarla
+    if (post.image_url) {
       return post.image_url;
     }
-    
-    // Si no hay imagen en blob, intentar obtener del rawData como fallback
+
+    // Prioridad 2: Intentar obtener del rawData como fallback
     const rawDataImage = getInstagramImageFromRawData(post);
     if (rawDataImage) {
       try {
@@ -522,22 +522,22 @@ export const getImageUrl = async (post: any): Promise<string> => {
         }
       } catch (error) {
         console.error('❌ [getImageUrl] Error convirtiendo imagen de Instagram a blob:', error);
+        // Si falla la conversión, intentar usar la URL directamente con proxy
+        if (rawDataImage.includes('instagram.com') || rawDataImage.includes('fbcdn.net') || rawDataImage.includes('cdninstagram.com')) {
+          return `https://images.weserv.nl/?url=${encodeURIComponent(rawDataImage)}&w=800&h=800&fit=cover&output=webp`;
+        }
+        return rawDataImage;
       }
     }
-    
-    // Fallback final: usar image_url si existe
+
+    return '';
+  } else if (post.platform?.toLowerCase() === 'tiktok') {
+    // Prioridad 1: Si hay image_url (puede ser blob, proxy o directa), usarla
     if (post.image_url) {
       return post.image_url;
     }
-    
-    return '';
-  } else if (post.platform?.toLowerCase() === 'tiktok') {
-    // Para TikTok, priorizar la imagen almacenada en blob storage
-    if (post.image_url && isBlobUrl(post.image_url)) {
-      return post.image_url;
-    }
-    
-    // Si no hay imagen en blob, intentar obtener del rawData como fallback
+
+    // Prioridad 2: Intentar obtener del rawData como fallback
     const rawDataImage = getTikTokImageFromRawData(post);
     if (rawDataImage) {
       try {
@@ -548,50 +548,17 @@ export const getImageUrl = async (post: any): Promise<string> => {
         }
       } catch (error) {
         console.error('❌ [getImageUrl] Error convirtiendo imagen de TikTok a blob:', error);
+        return rawDataImage;
       }
     }
-    
-    // Fallback final: usar image_url si existe
-    if (post.image_url) {
-      return post.image_url;
-    }
-    
+
     return '';
   } else if (post.platform?.toLowerCase() === 'twitter') {
-    // Para Twitter, priorizar la imagen almacenada en blob storage
-    if (post.image_url && isBlobUrl(post.image_url)) {
-      return post.image_url;
-    }
-    
-    // Si no hay imagen en blob, intentar convertir image_url a blob storage
-    if (post.image_url) {
-      try {
-        
-        // Verificar si es una URL de ScreenshotOne
-        if (post.image_url.includes('api.screenshotone.com')) {
-          
-          // Convertir la imagen de ScreenshotOne a blob URL para almacenamiento permanente
-          const blobUrl = await ImageProxyService.getImageAsBlobUrl(post.image_url);
-          if (blobUrl) {
-            return blobUrl;
-          }
-        } else {
-          // Para otras URLs, intentar convertir también
-          const blobUrl = await ImageProxyService.getImageAsBlobUrl(post.image_url);
-          if (blobUrl) {
-            return blobUrl;
-          }
-        }
-      } catch (error) {
-        console.error('❌ [getImageUrl] Error convirtiendo imagen de Twitter a blob:', error);
-      }
-    }
-    
-    // Fallback final: usar image_url si existe
+    // Prioridad 1: Si hay image_url (puede ser blob, proxy o directa), usarla
     if (post.image_url) {
       return post.image_url;
     }
-    
+
     return '';
   } else {
     // Para otras plataformas, usar image_url directamente

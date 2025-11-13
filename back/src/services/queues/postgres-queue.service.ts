@@ -23,8 +23,23 @@ export interface QueueOptions {
 export class PostgresQueueService {
   private static instance: PostgresQueueService;
   private isConnected = true; // Always connected since we use Supabase
+  private static lastErrorLog: Map<string, number> = new Map();
+  private static ERROR_LOG_THROTTLE_MS = 60000; // Log errors max once per minute
 
   private constructor() {}
+
+  /**
+   * Throttled error logger to reduce spam
+   */
+  private logThrottledError(key: string, errorMsg: string, details?: any): void {
+    const now = Date.now();
+    const lastLog = PostgresQueueService.lastErrorLog.get(key) || 0;
+
+    if (now - lastLog > PostgresQueueService.ERROR_LOG_THROTTLE_MS) {
+      console.error(errorMsg, details || '');
+      PostgresQueueService.lastErrorLog.set(key, now);
+    }
+  }
 
   public static getInstance(): PostgresQueueService {
     if (!PostgresQueueService.instance) {
@@ -182,13 +197,16 @@ export class PostgresQueueService {
         
         // Manejar errores de conectividad específicamente
         if (error.message && error.message.includes('fetch failed')) {
-          console.error('❌ [POSTGRES-QUEUE] Database connection failed. Check Supabase configuration and network connectivity.');
-          console.error('❌ [POSTGRES-QUEUE] Error details:', {
-            message: error.message,
-            code: error.code,
-            details: error.details,
-            hint: error.hint
-          });
+          this.logThrottledError(
+            'fetch-failed',
+            '❌ [POSTGRES-QUEUE] Database connection failed. Check Supabase configuration and network connectivity.',
+            {
+              message: error.message,
+              code: error.code,
+              details: error.details?.substring(0, 200), // Truncate long error details
+              hint: error.hint
+            }
+          );
           return null;
         }
         
@@ -201,8 +219,11 @@ export class PostgresQueueService {
       // Manejar errores de red y conectividad
       if (error instanceof Error) {
         if (error.message.includes('fetch failed') || error.message.includes('network')) {
-          console.error('❌ [POSTGRES-QUEUE] Network error when claiming job. Check internet connection and Supabase configuration.');
-          console.error('❌ [POSTGRES-QUEUE] Error details:', error.message);
+          this.logThrottledError(
+            'network-error',
+            '❌ [POSTGRES-QUEUE] Network error when claiming job. Check internet connection and Supabase configuration.',
+            error.message
+          );
           return null;
         }
       }

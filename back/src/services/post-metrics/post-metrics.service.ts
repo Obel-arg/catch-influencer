@@ -276,14 +276,38 @@ export class PostMetricsService {
         performanceRating = 'poor';
       }
 
+      const updateData: any = {
+        likes_count: metrics.likes_count,
+        comments_count: metrics.comments_count,
+        performance_rating: performanceRating,
+        updated_at: new Date()
+      };
+
+      // Add caption if available (from title field in metrics)
+      if (metrics.title) {
+        updateData.caption = metrics.title;
+      }
+
+      // Add image URL if available from raw_response
+      let imageUrl = null;
+      if (metrics.raw_response?.data?.basicInstagramPost?.imageUrl) {
+        imageUrl = metrics.raw_response.data.basicInstagramPost.imageUrl;
+      } else if (metrics.raw_response?.data?.basicInstagramPost?.rawData?.displayUrl) {
+        imageUrl = metrics.raw_response.data.basicInstagramPost.rawData.displayUrl;
+      } else if (metrics.platform_data?.imageUrl) {
+        imageUrl = metrics.platform_data.imageUrl;
+      }
+
+      // For Instagram URLs, use proxy to avoid CORS issues
+      if (imageUrl && (imageUrl.includes('instagram.com') || imageUrl.includes('fbcdn.net') || imageUrl.includes('cdninstagram.com'))) {
+        updateData.image_url = `https://images.weserv.nl/?url=${encodeURIComponent(imageUrl)}&w=800&h=800&fit=cover&output=webp`;
+      } else if (imageUrl) {
+        updateData.image_url = imageUrl;
+      }
+
       const { error } = await supabase
         .from('influencer_posts')
-        .update({
-          likes_count: metrics.likes_count,
-          comments_count: metrics.comments_count,
-          performance_rating: performanceRating,
-          updated_at: new Date()
-        })
+        .update(updateData)
         .eq('id', postId);
 
       if (error) {
