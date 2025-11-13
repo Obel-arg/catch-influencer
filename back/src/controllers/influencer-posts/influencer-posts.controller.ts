@@ -370,4 +370,92 @@ export class InfluencerPostsController {
     if (topicsResult.topics.length > 0) {
     }
   }
+
+  /**
+   * Sync all existing post_metrics back to influencer_posts table
+   * This is a one-time migration endpoint
+   */
+  async syncAllMetricsToInfluencerPosts(req: Request, res: Response) {
+    try {
+      console.log('🔄 [SYNC] Starting bulk metrics sync to influencer_posts...');
+
+      // Get all post_metrics
+      const { data: allMetrics, error: metricsError } = await supabase
+        .from('post_metrics')
+        .select('post_id, likes_count, comments_count, engagement_rate');
+
+      if (metricsError) {
+        console.error('❌ [SYNC] Error fetching metrics:', metricsError);
+        return res.status(500).json({
+          success: false,
+          error: 'Error fetching metrics'
+        });
+      }
+
+      if (!allMetrics || allMetrics.length === 0) {
+        return res.json({
+          success: true,
+          message: 'No metrics found to sync',
+          synced: 0
+        });
+      }
+
+      console.log(`📊 [SYNC] Found ${allMetrics.length} metrics to sync`);
+
+      // Sync each metric to influencer_posts
+      let syncedCount = 0;
+      let errorCount = 0;
+
+      for (const metric of allMetrics) {
+        try {
+          // Calculate performance rating
+          let performanceRating = 'average';
+          if (metric.engagement_rate >= 0.05) {
+            performanceRating = 'excellent';
+          } else if (metric.engagement_rate >= 0.03) {
+            performanceRating = 'good';
+          } else if (metric.engagement_rate < 0.01) {
+            performanceRating = 'poor';
+          }
+
+          const { error: updateError } = await supabase
+            .from('influencer_posts')
+            .update({
+              likes_count: metric.likes_count,
+              comments_count: metric.comments_count,
+              performance_rating: performanceRating,
+              updated_at: new Date()
+            })
+            .eq('id', metric.post_id);
+
+          if (updateError) {
+            console.error(`❌ [SYNC] Error syncing post ${metric.post_id}:`, updateError);
+            errorCount++;
+          } else {
+            syncedCount++;
+          }
+        } catch (error) {
+          console.error(`❌ [SYNC] Error processing post ${metric.post_id}:`, error);
+          errorCount++;
+        }
+      }
+
+      console.log(`✅ [SYNC] Sync complete: ${syncedCount} synced, ${errorCount} errors`);
+
+      return res.json({
+        success: true,
+        message: 'Metrics sync completed',
+        total: allMetrics.length,
+        synced: syncedCount,
+        errors: errorCount
+      });
+
+    } catch (error) {
+      console.error('❌ [SYNC] Critical error in bulk sync:', error);
+      return res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
 } 

@@ -260,13 +260,50 @@ export class PostMetricsService {
   }
 
   /**
+   * Sync metrics back to influencer_posts table
+   */
+  private async syncMetricsToInfluencerPost(postId: string, metrics: UserPostMetrics): Promise<void> {
+    const supabase = require('../../config/supabase').default;
+
+    try {
+      // Calculate performance rating based on engagement rate
+      let performanceRating = 'average';
+      if (metrics.engagement_rate >= 0.05) {
+        performanceRating = 'excellent';
+      } else if (metrics.engagement_rate >= 0.03) {
+        performanceRating = 'good';
+      } else if (metrics.engagement_rate < 0.01) {
+        performanceRating = 'poor';
+      }
+
+      const { error } = await supabase
+        .from('influencer_posts')
+        .update({
+          likes_count: metrics.likes_count,
+          comments_count: metrics.comments_count,
+          performance_rating: performanceRating,
+          updated_at: new Date()
+        })
+        .eq('id', postId);
+
+      if (error) {
+        console.error(`❌ [SYNC] Error syncing metrics to influencer_posts:`, error);
+      } else {
+        console.log(`✅ [SYNC] Metrics synced to influencer_posts for post ${postId}`);
+      }
+    } catch (error) {
+      console.error(`❌ [SYNC] Critical error syncing metrics:`, error);
+    }
+  }
+
+  /**
    * Crear métricas usando la estructura de tabla del usuario
    * GARANTIZA UN SOLO REGISTRO POR POST
    */
   public async createUserPostMetrics(metrics: UserPostMetrics): Promise<UserPostMetrics> {
     const supabase = require('../../config/supabase').default;
-    
-    try {      
+
+    try {
       // Verificar si ya existe un registro para este post_id
       const { data: existingRecords, error: checkError } = await supabase
         .from('post_metrics')
@@ -331,6 +368,9 @@ export class PostMetricsService {
           throw error;
         }
 
+        // Sync metrics to influencer_posts table
+        await this.syncMetricsToInfluencerPost(metrics.post_id, metrics);
+
         return data;
         
       } else if (existingRecords && existingRecords.length === 1) {
@@ -362,6 +402,9 @@ export class PostMetricsService {
           console.error(`❌ [DB-SAVE] Error updating metrics:`, error);
           throw error;
         }
+
+        // Sync metrics to influencer_posts table
+        await this.syncMetricsToInfluencerPost(metrics.post_id, metrics);
 
         return data;
         
@@ -395,6 +438,9 @@ export class PostMetricsService {
           console.error(`❌ [DB-SAVE] Error saving new metrics:`, error);
           throw error;
         }
+
+        // Sync metrics to influencer_posts table
+        await this.syncMetricsToInfluencerPost(metrics.post_id, metrics);
 
         return data;
       }

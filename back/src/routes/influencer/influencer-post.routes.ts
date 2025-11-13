@@ -64,4 +64,7 @@ router.post('/:postId/screenshot', authenticateToken, upload.single('screenshot'
 // Ruta para subir imágenes personalizadas de posts
 router.post('/upload-image', authenticateToken, upload.single('image'), manualMetricsController.uploadPostImage.bind(manualMetricsController));
 
+// Ruta para sincronizar métricas a influencer_posts (una sola vez)
+router.post('/sync-metrics', authenticateToken, influencerPostsController.syncAllMetricsToInfluencerPosts.bind(influencerPostsController));
+
 export default router; 
