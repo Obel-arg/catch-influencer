@@ -180,22 +180,35 @@ export class PostMetricsService {
 
         } else if (platform.toLowerCase() === 'twitter') {
           // Usar Apify para tweets de Twitter/X
+          console.log(`🐦 [POST-METRICS] Extracting Twitter metrics for post ${postId}`);
+          console.log(`🐦 [POST-METRICS] Tweet URL: ${postUrl}`);
+
           const twitterResult = await this.twitterMetricsService.getTweetMetrics(postUrl);
-          
+
           if (!twitterResult.success) {
-            console.error(`❌ [POST-METRICS] Twitter API failed:`, twitterResult.error);
+            console.error(`❌ [POST-METRICS] Twitter API failed for post ${postId}:`, twitterResult.error);
+            console.error(`❌ [POST-METRICS] URL: ${postUrl}`);
             return {
               success: false,
               error: twitterResult.error
             };
           }
 
+          console.log(`✅ [POST-METRICS] Successfully extracted Twitter metrics for post ${postId}`);
+
           // Convertir a formato del sistema
           metricsData = this.twitterMetricsService.convertToSystemFormat(
-            postId, 
-            postUrl, 
+            postId,
+            postUrl,
             twitterResult.data!
           );
+
+          console.log(`✅ [POST-METRICS] Twitter metrics converted to system format:`, {
+            likes_count: metricsData.likes_count,
+            comments_count: metricsData.comments_count,
+            views_count: metricsData.views_count,
+            engagement_rate: metricsData.engagement_rate
+          });
 
         } else if (platform.toLowerCase() === 'instagram') {
           // Usar Apify para posts de Instagram

@@ -7,15 +7,15 @@
  */
 export function isTikTokUrl(url: string): boolean {
   if (!url) return false;
-  
+
   const tiktokPatterns = [
     /^https?:\/\/(www\.)?(tiktok\.com|vm\.tiktok\.com)/i,
     /^https?:\/\/(www\.)?tiktok\.com\/@[^\/]+\/video\/\d+/i,
     /^https?:\/\/(www\.)?tiktok\.com\/t\/[a-zA-Z0-9]+/i,
-    /^https?:\/\/vm\.tiktok\.com\/[a-zA-Z0-9]+/i
+    /^https?:\/\/vm\.tiktok\.com\/[a-zA-Z0-9]+/i,
   ];
-  
-  return tiktokPatterns.some(pattern => pattern.test(url));
+
+  return tiktokPatterns.some((pattern) => pattern.test(url));
 }
 
 /**
@@ -23,25 +23,25 @@ export function isTikTokUrl(url: string): boolean {
  */
 export function getTikTokVideoId(url: string): string | null {
   if (!isTikTokUrl(url)) return null;
-  
+
   // Patrón para URLs como: https://www.tiktok.com/@usuario/video/7509251387184647480
   const videoIdMatch = url.match(/\/video\/(\d+)/);
   if (videoIdMatch && videoIdMatch[1]) {
     return videoIdMatch[1];
   }
-  
+
   // Patrón para URLs cortas como: https://www.tiktok.com/t/ZTRoaBC7H/
   const shortIdMatch = url.match(/\/t\/([a-zA-Z0-9]+)/);
   if (shortIdMatch && shortIdMatch[1]) {
     return shortIdMatch[1];
   }
-  
+
   // Patrón para vm.tiktok.com
   const vmMatch = url.match(/vm\.tiktok\.com\/([a-zA-Z0-9]+)/);
   if (vmMatch && vmMatch[1]) {
     return vmMatch[1];
   }
-  
+
   return null;
 }
 
@@ -50,7 +50,7 @@ export function getTikTokVideoId(url: string): string | null {
  */
 export function getTikTokUsername(url: string): string | null {
   if (!isTikTokUrl(url)) return null;
-  
+
   const usernameMatch = url.match(/@([^\/]+)/);
   return usernameMatch ? usernameMatch[1] : null;
 }
@@ -69,7 +69,7 @@ export function getTikTokDefaultThumbnail(): string {
  */
 export function getTikTokThumbnail(url: string): string | null {
   if (!isTikTokUrl(url)) return null;
-  
+
   // Siempre retornar la imagen base64 específica para TikTok
   return getTikTokDefaultThumbnail();
 }
@@ -80,11 +80,13 @@ export function getTikTokThumbnail(url: string): string | null {
  */
 export function getTikTokThumbnailViaScreenshot(url: string): string | null {
   if (!isTikTokUrl(url)) return null;
-  
+
   // Usar un servicio de screenshot (ejemplo con screenshotapi.net)
   // Nota: Este servicio requiere API key en producción
-  const screenshotUrl = `https://shot.screenshotapi.net/screenshot?token=demo&url=${encodeURIComponent(url)}&width=400&height=600&file_type=png&wait_for_event=load`;
-  
+  const screenshotUrl = `https://shot.screenshotapi.net/screenshot?token=demo&url=${encodeURIComponent(
+    url,
+  )}&width=400&height=600&file_type=png&wait_for_event=load`;
+
   return screenshotUrl;
 }
 
@@ -94,7 +96,7 @@ export function getTikTokThumbnailViaScreenshot(url: string): string | null {
  */
 export function getTikTokThumbnailBest(url: string): string | null {
   if (!isTikTokUrl(url)) return null;
-  
+
   // Siempre retornar la imagen base64 específica para TikTok
   return getTikTokDefaultThumbnail();
 }
@@ -115,60 +117,60 @@ export async function isImageUrlValid(url: string): Promise<boolean> {
 /**
  * Obtiene la mejor miniatura disponible para TikTok usando la API del backend
  */
-export async function getTikTokThumbnailValidated(url: string): Promise<string> {
+export async function getTikTokThumbnailValidated(
+  url: string,
+): Promise<string> {
   if (!isTikTokUrl(url)) return getTikTokDefaultThumbnail();
-  
+
   try {
-   
-    
     // Determinar la URL base del backend
-    const backendUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://catch-influencer-back.vercel.app' // URL de producción en Vercel
-      : 'http://localhost:5001'; // URL local del backend (puerto correcto)
-    
+    const backendUrl =
+      process.env.NODE_ENV === 'production'
+        ? 'https://catch-influencer-back.vercel.app' // URL de producción en Vercel
+        : 'http://localhost:5001'; // URL local del backend (puerto correcto)
+
     // Llamar a la API del backend
-    const response = await fetch(`${backendUrl}/api/social/tiktok/thumbnail?url=${encodeURIComponent(url)}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
+    const response = await fetch(
+      `${backendUrl}/api/social/tiktok/thumbnail?url=${encodeURIComponent(
+        url,
+      )}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        // Agregar timeout manual
+        signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined,
       },
-      // Agregar timeout manual
-      signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined
-    });
-    
+    );
+
     if (!response.ok) {
-      throw new Error(`Error HTTP: ${response.status} - ${response.statusText}`);
+      throw new Error(
+        `Error HTTP: ${response.status} - ${response.statusText}`,
+      );
     }
-    
+
     const data = await response.json();
-    
+
     if (data.success && data.thumbnail) {
-      
-      
       // Validar que la imagen sea accesible (opcional, puede ser lento)
       try {
         const isValid = await isImageUrlValid(data.thumbnail);
         if (isValid) {
           return data.thumbnail;
         } else {
-          
           return data.thumbnail; // Usar de todas formas
         }
       } catch (validationError) {
-        
         return data.thumbnail; // Usar de todas formas
       }
     } else {
-      
     }
-    
-  } catch (error) {
-    
-  }
-  
+  } catch (error) {}
+
   // Fallback a imagen por defecto
-  
+
   return getTikTokDefaultThumbnail();
 }
 
@@ -182,21 +184,21 @@ export function getTikTokVideoInfo(url: string): {
   isValid: boolean;
 } {
   const isValid = isTikTokUrl(url);
-  
+
   if (!isValid) {
     return {
       videoId: null,
       username: null,
       thumbnail: null,
-      isValid: false
+      isValid: false,
     };
   }
-  
+
   return {
     videoId: getTikTokVideoId(url),
     username: getTikTokUsername(url),
     thumbnail: getTikTokThumbnailBest(url),
-    isValid: true
+    isValid: true,
   };
 }
 
@@ -205,12 +207,12 @@ export function getTikTokVideoInfo(url: string): {
  */
 export function normalizeTikTokUrl(url: string): string | null {
   if (!isTikTokUrl(url)) return null;
-  
+
   const videoId = getTikTokVideoId(url);
   const username = getTikTokUsername(url);
-  
+
   if (!videoId || !username) return url; // Retornar URL original si no se puede parsear
-  
+
   // Formato normalizado
   return `https://www.tiktok.com/@${username}/video/${videoId}`;
 }
@@ -225,32 +227,32 @@ export async function getTikTokMetadata(url: string): Promise<{
   description?: string;
 } | null> {
   if (!isTikTokUrl(url)) return null;
-  
+
   try {
     // TikTok oEmbed endpoint
-    const oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`;
+    const oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(
+      url,
+    )}`;
     const response = await fetch(oembedUrl);
-    
+
     if (!response.ok) throw new Error('oEmbed not available');
-    
+
     const data = await response.json();
-    
+
     return {
       title: data.title || 'Video de TikTok',
       author: data.author_name || getTikTokUsername(url) || 'Usuario TikTok',
       thumbnail: data.thumbnail_url || getTikTokThumbnailBest(url) || undefined,
-      description: data.title || ''
+      description: data.title || '',
     };
   } catch (error) {
-
-    
     // Fallback con información básica
     const thumbnailUrl = getTikTokThumbnailBest(url);
     return {
       title: 'Video de TikTok',
       author: getTikTokUsername(url) || 'Usuario TikTok',
       thumbnail: thumbnailUrl || undefined,
-      description: `Video de TikTok de @${getTikTokUsername(url) || 'usuario'}`
+      description: `Video de TikTok de @${getTikTokUsername(url) || 'usuario'}`,
     };
   }
 }
@@ -275,32 +277,32 @@ export async function getTikTokVideoInfoFromAPI(url: string): Promise<{
   };
 } | null> {
   if (!isTikTokUrl(url)) return null;
-  
+
   try {
-    
-    
     // Determinar la URL base del backend
-    const backendUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://catch-influencer-back.vercel.app' // URL de producción en Vercel
-      : 'http://localhost:5001'; // URL local del backend (puerto correcto)
-    
-    const response = await fetch(`${backendUrl}/api/social/tiktok/video-info?url=${encodeURIComponent(url)}`);
-    
+    const backendUrl =
+      process.env.NODE_ENV === 'production'
+        ? 'https://catch-influencer-back.vercel.app' // URL de producción en Vercel
+        : 'http://localhost:5001'; // URL local del backend (puerto correcto)
+
+    const response = await fetch(
+      `${backendUrl}/api/social/tiktok/video-info?url=${encodeURIComponent(
+        url,
+      )}`,
+    );
+
     if (!response.ok) {
       throw new Error(`Error HTTP: ${response.status}`);
     }
-    
+
     const result = await response.json();
-    
+
     if (result.success && result.data) {
-      
       return result.data;
     }
-    
+
     return null;
-    
   } catch (error) {
-    
     return null;
   }
 }
@@ -308,32 +310,32 @@ export async function getTikTokVideoInfoFromAPI(url: string): Promise<{
 /**
  * Obtiene videos trending desde la API del backend (para pruebas)
  */
-export async function getTikTokTrendingVideos(count: number = 10): Promise<any[]> {
+export async function getTikTokTrendingVideos(
+  count: number = 10,
+): Promise<any[]> {
   try {
-    
-    
     // Determinar la URL base del backend
-    const backendUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://catch-influencer-back.vercel.app' // URL de producción en Vercel
-      : 'http://localhost:5001'; // URL local del backend (puerto correcto)
-    
-    const response = await fetch(`${backendUrl}/api/social/tiktok/trending?count=${count}`);
-    
+    const backendUrl =
+      process.env.NODE_ENV === 'production'
+        ? 'https://catch-influencer-back.vercel.app' // URL de producción en Vercel
+        : 'http://localhost:5001'; // URL local del backend (puerto correcto)
+
+    const response = await fetch(
+      `${backendUrl}/api/social/tiktok/trending?count=${count}`,
+    );
+
     if (!response.ok) {
       throw new Error(`Error HTTP: ${response.status}`);
     }
-    
+
     const result = await response.json();
-    
+
     if (result.success && result.data) {
-      
       return result.data;
     }
-    
+
     return [];
-    
   } catch (error) {
-    
     return [];
   }
 }
@@ -342,32 +344,26 @@ export async function getTikTokTrendingVideos(count: number = 10): Promise<any[]
  * Función de debug para probar la nueva API
  */
 export async function debugTikTokAPI(url: string) {
-  
-  
   // Probar thumbnail
-  
+
   const thumbnail = await getTikTokThumbnailValidated(url);
 
-  
   // Probar información completa
-  
+
   const videoInfo = await getTikTokVideoInfoFromAPI(url);
-  
-  
+
   // Probar trending (solo algunos videos)
-  
+
   const trending = await getTikTokTrendingVideos(3);
-  
-  
+
   const result = {
     url,
     thumbnail,
     videoInfo,
     trending,
-    success: !!thumbnail && thumbnail !== getTikTokDefaultThumbnail()
+    success: !!thumbnail && thumbnail !== getTikTokDefaultThumbnail(),
   };
-  
-  
+
   return result;
 }
 
@@ -375,13 +371,16 @@ export async function debugTikTokAPI(url: string) {
 if (typeof window !== 'undefined') {
   (window as any).debugTikTok = debugTikTokAPI;
   (window as any).testTikTokThumbnail = getTikTokThumbnailValidated;
-} 
+}
 
 /**
  * Función segura para procesar avatares específicamente para el modal de influencer profile
  * Maneja URLs malformadas y errores de encoding de manera segura
  */
-export function getSafeAvatarUrlForModal(avatarUrl: string, influencerName: string = ''): string {
+export function getSafeAvatarUrlForModal(
+  avatarUrl: string,
+  influencerName: string = '',
+): string {
   // Función auxiliar para crear un nombre seguro
   const getSafeName = (name: string): string => {
     try {
@@ -404,29 +403,37 @@ export function getSafeAvatarUrlForModal(avatarUrl: string, influencerName: stri
   try {
     // Validar que la URL sea válida antes de procesarla
     const url = new URL(avatarUrl);
-    
+
     // Instagram: Necesita proxy
-    if (url.hostname.includes('fbcdn.net') || url.hostname.includes('cdninstagram.com') || url.hostname.includes('instagram')) {
+    if (
+      url.hostname.includes('fbcdn.net') ||
+      url.hostname.includes('cdninstagram.com') ||
+      url.hostname.includes('instagram')
+    ) {
       const safeUrl = encodeURIComponent(avatarUrl);
       const safeName = getSafeName(influencerName);
       return `https://images.weserv.nl/?url=${safeUrl}&w=128&h=128&fit=cover&a=smart&output=webp&default=https://ui-avatars.com/api/?name=${safeName}&background=6366f1&color=fff&size=128`;
     }
-    
+
     // YouTube, TikTok: Funcionan directamente
-    if (url.hostname.includes('ytimg.com') || url.hostname.includes('ggpht.com') || url.hostname.includes('googleusercontent.com') ||
-        url.hostname.includes('tiktokcdn.com') || url.hostname.includes('muscdn.com')) {
+    if (
+      url.hostname.includes('ytimg.com') ||
+      url.hostname.includes('ggpht.com') ||
+      url.hostname.includes('googleusercontent.com') ||
+      url.hostname.includes('tiktokcdn.com') ||
+      url.hostname.includes('muscdn.com')
+    ) {
       return avatarUrl;
     }
-    
+
     // Otros: Usar proxy por seguridad
     const safeUrl = encodeURIComponent(avatarUrl);
     const safeName = getSafeName(influencerName);
     return `https://images.weserv.nl/?url=${safeUrl}&w=128&h=128&fit=cover&a=smart&output=webp&default=https://ui-avatars.com/api/?name=${safeName}&background=6366f1&color=fff&size=128`;
-    
   } catch (error) {
     // Si la URL es inválida, devolver avatar por defecto
     console.warn('❌ URL de avatar inválida:', avatarUrl, error);
     const safeName = getSafeName(influencerName);
     return `https://ui-avatars.com/api/?name=${safeName}&background=6366f1&color=fff&size=128`;
   }
-} 
+}

@@ -54,22 +54,28 @@ export class InfluencerPostsController {
    */
   private async initiateBackgroundProcessing(postId: string, postUrl: string, platform: string) {
     try {
+      console.log(`🔄 [BACKGROUND] Initiating background processing for post ${postId}`);
+      console.log(`🔄 [BACKGROUND] Platform: ${platform}, URL: ${postUrl.substring(0, 50)}...`);
+
       // Omitir procesamiento automático para historias de Instagram
       if (platform.toLowerCase() === 'instagram' && /instagram\.com\/stories\//i.test(postUrl)) {
-       
+        console.log(`⏭️ [BACKGROUND] Skipping metrics for Instagram story: ${postId}`);
         return;
       }
 
       // 1. Extraer métricas de CreatorDB (más rápido)
+      console.log(`📊 [BACKGROUND] Queuing metrics extraction job for post ${postId}`);
       await postgresQueueService.send('metrics', {
         type: 'extract-metrics',
         postId,
         postUrl,
         platform
       });
+      console.log(`✅ [BACKGROUND] Metrics extraction job queued successfully for post ${postId}`);
 
       // 2. Extraer comentarios y análisis de sentimientos (paralelo)
       if (this.shouldAutoScrape(platform, postUrl)) {
+        console.log(`💬 [BACKGROUND] Queuing comment extraction job for post ${postId}`);
         await postgresQueueService.send('comment-fetch', {
           type: 'extract-comments',
           postId,
@@ -78,10 +84,17 @@ export class InfluencerPostsController {
           maxComments: 500, // Reducido para velocidad
           includeSentiment: true
         });
+        console.log(`✅ [BACKGROUND] Comment extraction job queued successfully for post ${postId}`);
+      } else {
+        console.log(`⏭️ [BACKGROUND] Skipping comment extraction for platform: ${platform}`);
       }
 
     } catch (error) {
       console.error(`❌ [BACKGROUND] Error iniciando procesamiento para post ${postId}:`, error);
+      console.error(`❌ [BACKGROUND] Error details:`, {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack?.split('\n').slice(0, 3).join('\n') : 'N/A'
+      });
     }
   }
 

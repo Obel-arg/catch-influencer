@@ -106,6 +106,7 @@ async function initializeMetricsConfig() {
 }
 
 async function processMetricsJob(job: any): Promise<void> {
+  console.log(`🔄 [METRICS_WORKER] Processing metrics job ${job.id || 'unknown'}`);
 
   // Verificar que job.data existe y es válido
   if (!job.data || typeof job.data !== 'object') {
@@ -114,6 +115,12 @@ async function processMetricsJob(job: any): Promise<void> {
   }
 
   const { postId, postUrl, platform } = job.data;
+
+  console.log(`📋 [METRICS_WORKER] Job details:`, {
+    postId,
+    platform,
+    postUrl: postUrl?.substring(0, 50) + '...'
+  });
   
   // Validar datos de entrada con calidad
   const validation = validateMetricsJobData(job.data);
@@ -133,23 +140,28 @@ async function processMetricsJob(job: any): Promise<void> {
     }, ['data_quality', 'metrics']);
   }
   
-  try {        
+  try {
+    console.log(`🚀 [METRICS_WORKER] Starting metrics extraction for ${platform} post ${postId}`);
+
     // Crear proveedores de fallback
     const providers = await createMetricsProviders(postId, postUrl, platform);
-    
+    console.log(`📦 [METRICS_WORKER] Created ${providers.length} fallback providers`);
+
     // Ejecutar con fallbacks y timeout
     const fallbackPromise = fallbackManager.executeWithFallbacks(
       'metrics_extraction',
       providers,
       `metrics:${postId}`
     );
-    
+
     // Timeout de 2 minutos para evitar jobs colgados
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error('Metrics extraction timeout after 2 minutes')), 120000);
     });
-    
+
+    console.log(`⏱️ [METRICS_WORKER] Racing extraction vs timeout (2 min)...`);
     const result = await Promise.race([fallbackPromise, timeoutPromise]);
+    console.log(`✅ [METRICS_WORKER] Metrics extraction completed successfully for post ${postId}`);
     
     // Validar respuesta
     const validationResult = await responseValidator.validateResponse(
@@ -174,11 +186,18 @@ async function processMetricsJob(job: any): Promise<void> {
     creatorDBLimiter.recordSuccess();
             
   } catch (error) {
-    console.error(`❌ [METRICS_WORKER] Failed to extract metrics for ${platform} post ${postId}:`, error);
-    
+    console.error(`❌ [METRICS_WORKER] Failed to extract metrics for ${platform} post ${postId}`);
+    console.error(`❌ [METRICS_WORKER] Error details:`, {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack?.split('\n').slice(0, 5).join('\n') : 'N/A',
+      postUrl,
+      platform,
+      postId
+    });
+
     // Registrar fallo en rate limiter
     creatorDBLimiter.recordFailure();
-    
+
     // Evaluar alertas de fallo
     await alertManager.evaluateData('metrics_worker', {
       postId,
@@ -187,7 +206,7 @@ async function processMetricsJob(job: any): Promise<void> {
       error: error instanceof Error ? error.message : 'Unknown error',
       attempts: job.attempts || 1
     }, ['worker_failure', 'metrics']);
-    
+
     throw error;
   }
 }

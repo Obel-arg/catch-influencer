@@ -81,17 +81,31 @@ export class TwitterMetricsService {
    */
   public async getTweetMetrics(twitterUrl: string): Promise<TwitterMetricsResult> {
     try {
-      
+      console.log(`🐦 [TWITTER-METRICS] Starting metrics extraction for: ${twitterUrl}`);
+
       // Validar URL y extraer ID
       const tweetId = this.extractTwitterTweetId(twitterUrl);
       if (!tweetId) {
-        throw new Error('URL de Twitter/X inválida. Debe contener un ID de tweet válido.');
+        const errorMsg = 'URL de Twitter/X inválida. Debe contener un ID de tweet válido.';
+        console.error(`❌ [TWITTER-METRICS] ${errorMsg}`);
+        throw new Error(errorMsg);
+      }
+
+      console.log(`📝 [TWITTER-METRICS] Tweet ID extracted: ${tweetId}`);
+
+      // Verificar que el API token esté configurado
+      if (!this.apiToken) {
+        const errorMsg = 'APIFY_API_TOKEN no está configurado. Verifica las variables de entorno.';
+        console.error(`❌ [TWITTER-METRICS] ${errorMsg}`);
+        throw new Error(errorMsg);
       }
 
       // Configurar input para el nuevo actor
       const input = {
         url: twitterUrl
       };
+
+      console.log(`🚀 [TWITTER-METRICS] Calling Apify actor: ${this.actorId}`);
 
       // Llamar al actor de forma síncrona para obtener los datos directamente
       const response = await axios.post(
@@ -111,28 +125,51 @@ export class TwitterMetricsService {
         }
       );
 
+      console.log(`📊 [TWITTER-METRICS] Apify response status: ${response.status}`);
+      console.log(`📊 [TWITTER-METRICS] Results count: ${response.data?.length || 0}`);
+
       const results = response.data || [];
-      
+
       if (!results || results.length === 0) {
-        throw new Error('No se obtuvieron resultados del actor de Twitter');
+        const errorMsg = 'No se obtuvieron resultados del actor de Twitter';
+        console.error(`❌ [TWITTER-METRICS] ${errorMsg}`);
+        console.error(`❌ [TWITTER-METRICS] Response data:`, JSON.stringify(response.data, null, 2).substring(0, 500));
+        throw new Error(errorMsg);
       }
 
       // Procesar el primer resultado (debería ser el tweet principal)
       const tweetData = results[0];
+      console.log(`✅ [TWITTER-METRICS] Processing tweet data for ID: ${tweetData.id || tweetId}`);
+
       const metrics = this.processTweetData(tweetData, twitterUrl);
 
-      
+      console.log(`✅ [TWITTER-METRICS] Successfully extracted metrics:`, {
+        likes: metrics.likes,
+        retweets: metrics.retweets,
+        replies: metrics.replies,
+        views: metrics.views,
+        engagementRate: metrics.engagementRate
+      });
+
       return {
         success: true,
         data: metrics
       };
 
     } catch (error: any) {
-      console.error('❌ [TWITTER-METRICS] Error getting tweet metrics:', error.response?.data || error.message);
-      
+      const errorMessage = error.response?.data?.error?.message || error.message || 'Error desconocido al obtener métricas de Twitter';
+
+      console.error('❌ [TWITTER-METRICS] Error getting tweet metrics:', {
+        url: twitterUrl,
+        error: errorMessage,
+        statusCode: error.response?.status,
+        responseData: error.response?.data ? JSON.stringify(error.response.data).substring(0, 500) : 'N/A',
+        stack: error.stack?.split('\n').slice(0, 3).join('\n')
+      });
+
       return {
         success: false,
-        error: error.response?.data?.error?.message || error.message || 'Error desconocido al obtener métricas de Twitter'
+        error: errorMessage
       };
     }
   }
