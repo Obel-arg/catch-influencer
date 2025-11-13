@@ -284,7 +284,7 @@ export class YouTubeAnalysisService {
     const videoInfo = await this.getVideoInfo(videoId);
 
     
-    const comments = await this.extractComments(videoId, 1000);
+    const comments = await this.extractComments(videoId, 100);
 
     if (comments.length === 0) {
       return this.createEmptyResult(videoId, videoInfo.title, 'youtube', videoInfo.commentCount);
@@ -319,7 +319,7 @@ export class YouTubeAnalysisService {
     const cached = await postgresCacheService.get<OptimizedAnalysisResult>(cacheKey);
     if (cached) return { ...cached, source: 'cache' };
     
-    const tiktokResult = await apifyTikTokService.extractTikTokComments(postUrl, 1000);
+    const tiktokResult = await apifyTikTokService.extractTikTokComments(postUrl, 100);
     if (tiktokResult.comments.length === 0) return this.createEmptyResult(tiktokResult.videoId, tiktokResult.videoTitle, 'tiktok');
     
     const comments = this.convertTikTokToYouTubeFormat(tiktokResult.comments);
@@ -349,7 +349,7 @@ export class YouTubeAnalysisService {
     const cached = await postgresCacheService.get<OptimizedAnalysisResult>(cacheKey);
     if (cached) return { ...cached, source: 'cache' };
     
-    const twitterResult = await apifyTwitterService.extractTwitterComments(postUrl, 1000);
+    const twitterResult = await apifyTwitterService.extractTwitterComments(postUrl, 100);
     if (twitterResult.comments.length === 0) return this.createEmptyResult(twitterResult.tweetId, twitterResult.tweetText, 'twitter');
     
     const comments = this.convertTwitterToYouTubeFormat(twitterResult.comments);
