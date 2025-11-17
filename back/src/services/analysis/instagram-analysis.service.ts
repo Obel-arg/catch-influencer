@@ -703,7 +703,8 @@ export class InstagramAnalysisService {
       }
       
 
-      const { comments, totalComments } = await this.extractComments(postUrl, 10000);
+      // Limit to 50 comments for faster processing (Instagram scraping is slow)
+      const { comments, totalComments } = await this.extractComments(postUrl, 50);
       if (comments.length === 0) {
         return this.createEmptyResult(postId, postUrl);
       }

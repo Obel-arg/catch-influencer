@@ -73,62 +73,60 @@ export const AnalysisSidebar: React.FC<AnalysisSidebarProps> = React.memo(({
   // Memoizar las funciones para evitar re-creaciones innecesarias
   const loadAnalysis = useCallback(async () => {
     if (!postId) return;
-    
+
     // No cargar análisis automático para historias de Instagram
     if (isInstagramStory) {
       setLoading(false);
       setAnalysisData(null);
       return;
     }
-    
+
     // Guardar el postId actual para evitar race conditions
     const currentRequestPostId = postId;
-    
+
     try {
       setLoading(true);
       setError(null);
-      
+
       // Limpiar timeout anterior si existe
       if (loadingTimeoutRef.current) {
         clearTimeout(loadingTimeoutRef.current);
       }
-      
-      // Timeout de seguridad: si después de 30 segundos sigue cargando, forzar stop
-      const timeout = setTimeout(() => {
-        if (currentPostId === currentRequestPostId && loading) {
-          console.warn('⚠️ Timeout de carga alcanzado, forzando stop');
-          setLoading(false);
-          setError('Timeout: La carga tomó demasiado tiempo');
+
+      // Poll for analysis data with timeout
+      const maxAttempts = 6; // 6 attempts * 5 seconds = 30 seconds max
+      let attempts = 0;
+      let result = null;
+
+      while (attempts < maxAttempts && currentPostId === currentRequestPostId) {
+        result = await SentimentAnalysisService.getSentimentAnalysisByPostId(postId);
+
+        if (result) {
+          // Found data, break the loop
+          break;
         }
-      }, 30000);
-      
-      loadingTimeoutRef.current = timeout;
-      
-      const result = await SentimentAnalysisService.getSentimentAnalysisByPostId(postId);
-      
-      // Limpiar timeout si la petición se completó exitosamente
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-        loadingTimeoutRef.current = null;
+
+        // No data yet, wait and try again
+        attempts++;
+        if (attempts < maxAttempts) {
+          console.log(`⏳ Attempt ${attempts}/${maxAttempts}: No analysis data yet, retrying in 5 seconds...`);
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        }
       }
-      
+
       // Solo actualizar si aún estamos en el mismo postId
       if (currentPostId === currentRequestPostId) {
         if (result) {
           setAnalysisData(result);
         } else {
+          // After all attempts, no data found - show "no data" state
+          console.log('⚠️ No analysis data found after all attempts');
           setAnalysisData(null);
         }
       }
     } catch (err: any) {
       console.error('❌ Error cargando análisis:', err);
-      
-      // Limpiar timeout en caso de error
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-        loadingTimeoutRef.current = null;
-      }
-      
+
       // Solo mostrar error si aún estamos en el mismo postId
       if (currentPostId === currentRequestPostId) {
         setError(err.message || 'Error al cargar el análisis');

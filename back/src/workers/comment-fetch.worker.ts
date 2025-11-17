@@ -533,6 +533,8 @@ async function saveCommentsToDatabase(postId: string, platform: string, comments
  * Función principal del worker optimizada
  */
 async function processCommentFetchJob(job: any): Promise<void> {
+  console.log(`🔵 [COMMENT-FETCH] ========== STARTING JOB ${job.id} ==========`);
+  console.log(`🔵 [COMMENT-FETCH] Job created at: ${new Date(job.created_at || Date.now()).toISOString()}`);
 
   // Verificar que job.data existe y es válido
   if (!job.data || typeof job.data !== 'object') {
@@ -541,6 +543,7 @@ async function processCommentFetchJob(job: any): Promise<void> {
   }
 
   const { postId, postUrl, platform: specifiedPlatform, maxComments = 500, includeSentiment = true } = job.data as ICommentFetchJob;
+  console.log(`🔵 [COMMENT-FETCH] Job data: postId=${postId}, platform=${specifiedPlatform}, url=${postUrl}`);
 
   // Validar datos requeridos
   if (!postId) {
@@ -556,7 +559,7 @@ async function processCommentFetchJob(job: any): Promise<void> {
   try {
     // Detectar plataforma si no se especifica
     const platform = specifiedPlatform || detectPlatform(postUrl);
-    
+    console.log(`🔵 [COMMENT-FETCH] Detected platform: ${platform}`);
 
     let result: ExtractionResult;
 
@@ -583,8 +586,11 @@ async function processCommentFetchJob(job: any): Promise<void> {
     });
     
     result = await Promise.race([extractionPromise, timeoutPromise]);
-    
+
     if (!result.success) {
+      // Mark analysis as completed with 0 comments so UI knows it failed
+      console.log(`⚠️ [COMMENT-FETCH] Extraction failed for ${postId}, marking as completed with no comments`);
+      await SentimentAnalysisService.markPostAnalysisAsCompleted(postId);
       throw new Error(`Error en extracción de ${platform}: ${result.error}`);
     }
 

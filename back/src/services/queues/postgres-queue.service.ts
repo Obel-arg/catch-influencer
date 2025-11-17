@@ -100,7 +100,7 @@ export class PostgresQueueService {
    * Process jobs from a queue
    */
   async process<T>(
-    queueName: string, 
+    queueName: string,
     handler: (job: { id: string; data: T }) => Promise<void>,
     options: { concurrency?: number } = {}
   ): Promise<void> {
@@ -108,24 +108,37 @@ export class PostgresQueueService {
     let isProcessing = true;
     let loopCount = 0;
 
+    console.log(`🟢 [POSTGRES-QUEUE] Starting processor for queue: ${queueName}`);
 
     // Process jobs in a loop
     while (isProcessing) {
       try {
         loopCount++;
-        
+
+        // Log every 10 loops to show we're alive
+        if (loopCount % 10 === 0) {
+          console.log(`🟢 [POSTGRES-QUEUE] ${queueName} - Loop ${loopCount}, checking for jobs...`);
+        }
+
         // Get next job
         const job = await this.getNextJob(queueName);
-        
+
         if (!job) {
           // No jobs available, wait a bit
+          if (loopCount % 10 === 0) {
+            console.log(`🟡 [POSTGRES-QUEUE] ${queueName} - No jobs found, waiting...`);
+          }
           await new Promise(resolve => setTimeout(resolve, 1000));
           continue;
         }
 
+        console.log(`🟢 [POSTGRES-QUEUE] ${queueName} - Found job ${job.id}, processing...`);
+
         // Process the job
         await this.processJob(job, handler);
-        
+
+        console.log(`✅ [POSTGRES-QUEUE] ${queueName} - Job ${job.id} completed successfully`);
+
         // Small delay to prevent overwhelming the database
         await new Promise(resolve => setTimeout(resolve, 100));
       } catch (error) {
@@ -175,45 +188,58 @@ export class PostgresQueueService {
         return null;
       }
 
-      // Usar una transacción atómica para evitar race conditions
-      const { data: claimedJob, error } = await supabase
+      // FIRST: Find a pending job
+      const { data: pendingJobs, error: selectError } = await supabase
+        .from('queue_jobs')
+        .select('*')
+        .eq('name', queueName)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true })
+        .limit(1);
+
+      if (selectError) {
+        console.error(`❌ [POSTGRES-QUEUE] Error selecting job for ${queueName}:`, selectError);
+        return null;
+      }
+
+      if (!pendingJobs || pendingJobs.length === 0) {
+        // No pending jobs - this is normal
+        return null;
+      }
+
+      const jobToClaim = pendingJobs[0];
+      console.log(`🔵 [POSTGRES-QUEUE] Found pending job ${jobToClaim.id} for ${queueName}, attempting to claim...`);
+
+      // SECOND: Try to claim it atomically
+      const { data: claimedJob, error: updateError } = await supabase
         .from('queue_jobs')
         .update({
           status: 'processing',
           started_at: new Date(),
           updated_at: new Date()
         })
-        .eq('name', queueName)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: true })
-        .limit(1)
+        .eq('id', jobToClaim.id)
+        .eq('status', 'pending') // Double-check it's still pending
         .select()
         .single();
 
-      if (error) {
-        if (error.code === 'PGRST116') { // No rows found
+      if (updateError) {
+        if (updateError.code === 'PGRST116') {
+          // Someone else claimed it - this is normal in concurrent processing
+          console.log(`🟡 [POSTGRES-QUEUE] Job ${jobToClaim.id} was claimed by another worker`);
           return null;
         }
-        
-        // Manejar errores de conectividad específicamente
-        if (error.message && error.message.includes('fetch failed')) {
-          this.logThrottledError(
-            'fetch-failed',
-            '❌ [POSTGRES-QUEUE] Database connection failed. Check Supabase configuration and network connectivity.',
-            {
-              message: error.message,
-              code: error.code,
-              details: error.details?.substring(0, 200), // Truncate long error details
-              hint: error.hint
-            }
-          );
-          return null;
-        }
-        
-        console.error('❌ [POSTGRES-QUEUE] Error claiming job:', error);
+
+        console.error(`❌ [POSTGRES-QUEUE] Error claiming job ${jobToClaim.id}:`, updateError);
         return null;
       }
 
+      if (!claimedJob) {
+        console.log(`🟡 [POSTGRES-QUEUE] Job ${jobToClaim.id} could not be claimed (already taken)`);
+        return null;
+      }
+
+      console.log(`✅ [POSTGRES-QUEUE] Successfully claimed job ${claimedJob.id} for ${queueName}`);
       return claimedJob;
     } catch (error) {
       // Manejar errores de red y conectividad

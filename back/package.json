@@ -24,7 +24,9 @@
     "cleanup-jobs": "ts-node src/scripts/cleanup-corrupted-jobs.ts",
     "fix-all-workers": "ts-node src/scripts/fix-all-workers.ts",
     "test-queue": "ts-node src/scripts/test-queue-system.ts",
-    "test-slack": "ts-node scripts/test-slack-notification.js"
+    "test-slack": "ts-node scripts/test-slack-notification.js",
+    "check-sentiment-queue": "ts-node src/scripts/check-sentiment-queue.ts",
+    "fix-stuck-sentiment": "ts-node src/scripts/fix-stuck-sentiment-jobs.ts"
   },
   "dependencies": {
     "@huggingface/inference": "^2.8.1",
