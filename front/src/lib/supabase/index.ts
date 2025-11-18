@@ -11,7 +11,7 @@ if (!supabaseUrl) {
 
 if (!supabaseAnonKey) {
   console.error('❌ SUPABASE_ANON_KEY test no configurado');
-  console.error('🔧 Verifica que esta variable esté configurada en Vercel test test');
+  console.error('🔧 Verifica que esta variable esté configurada test en Vercel test test');
   throw new Error('SUPABASE_ANON_KEY es requerido');
 }
 
