@@ -1,12 +1,16 @@
 import { Request, Response } from 'express';
 import { CampaignScheduleService } from '../../services/campaign/campaign-schedule.service';
+import { CampaignInfluencerService } from '../../services/campaign/campaign-influencer.service';
 import { CampaignScheduleCreateDTO, CampaignScheduleUpdateDTO, CampaignScheduleFilters } from '../../models/campaign/campaign-schedule.model';
+import { ExcelParserService } from '../../services/campaign/excel-parser.service';
 
 export class CampaignScheduleController {
   private campaignScheduleService: CampaignScheduleService;
+  private campaignInfluencerService: CampaignInfluencerService;
 
   constructor() {
     this.campaignScheduleService = new CampaignScheduleService();
+    this.campaignInfluencerService = new CampaignInfluencerService();
   }
 
   // POST /campaign-schedule
@@ -266,16 +270,16 @@ export class CampaignScheduleController {
   async getPostMetricsForSchedules(req: Request, res: Response) {
     try {
       const { scheduleIds } = req.body
-      
+
       if (!Array.isArray(scheduleIds)) {
         return res.status(400).json({
           success: false,
           message: 'scheduleIds debe ser un array'
         })
       }
-      
+
       const metrics = await this.campaignScheduleService.getPostMetricsForSchedules(scheduleIds)
-      
+
       res.status(200).json({
         success: true,
         data: metrics
@@ -287,6 +291,148 @@ export class CampaignScheduleController {
         message: 'Error al obtener métricas de posts',
         error: error instanceof Error ? error.message : 'Error desconocido'
       })
+    }
+  }
+
+  /**
+   * POST /campaign-schedules/bulk-upload
+   * Upload Excel file and parse content schedules
+   */
+  async bulkUploadSchedules(req: Request, res: Response) {
+    try {
+      const { campaignId } = req.body;
+
+      // Validate campaign ID
+      if (!campaignId) {
+        return res.status(400).json({
+          success: false,
+          message: 'campaignId es requerido'
+        });
+      }
+
+      // Validate file upload
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: 'No se ha subido ningún archivo Excel'
+        });
+      }
+
+      // Get campaign influencers for validation
+      const campaignInfluencers = await this.campaignInfluencerService.getCampaignInfluencersWithDetailsById(campaignId);
+
+      if (!campaignInfluencers || campaignInfluencers.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'No hay influencers asignados a esta campaña'
+        });
+      }
+
+      // Map influencers to required format
+      const influencers = campaignInfluencers.map(ci => ({
+        id: ci.influencer_id,
+        name: ci.influencers?.name || '',
+        handle: ci.influencers?.username || ci.influencers?.handle || '',
+        avatar: ci.influencers?.picture_url || ci.influencers?.avatar || ''
+      }));
+
+      // Parse Excel file
+      const parsedResults = ExcelParserService.parseExcel(req.file.buffer, influencers);
+
+      // Get summary statistics
+      const summary = ExcelParserService.getSummary(parsedResults);
+
+      // Return parsed data with validation results
+      res.status(200).json({
+        success: true,
+        data: {
+          parsed: parsedResults,
+          summary
+        },
+        message: `Se procesaron ${summary.total} filas. ${summary.valid} válidas, ${summary.invalid} inválidas.`
+      });
+    } catch (error) {
+      console.error('CampaignScheduleController.bulkUploadSchedules error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al procesar el archivo Excel',
+        error: error instanceof Error ? error.message : 'Error desconocido'
+      });
+    }
+  }
+
+  /**
+   * POST /campaign-schedules/bulk-upload/confirm
+   * Confirm and save valid schedules from bulk upload
+   */
+  async confirmBulkUpload(req: Request, res: Response) {
+    try {
+      const { campaignId, schedules } = req.body;
+
+      console.log('🔵 confirmBulkUpload called with:', {
+        campaignId,
+        schedulesCount: schedules?.length
+      });
+
+      if (!campaignId || !Array.isArray(schedules)) {
+        return res.status(400).json({
+          success: false,
+          message: 'campaignId y schedules son requeridos'
+        });
+      }
+
+      // Create all valid schedules
+      const createdSchedules = [];
+      const errors = [];
+
+      for (const schedule of schedules) {
+        try {
+          console.log('🟢 Creating schedule:', {
+            title: schedule.title,
+            influencer_id: schedule.influencer_id,
+            influencer_name: schedule.influencer_name
+          });
+
+          const scheduleData: CampaignScheduleCreateDTO = {
+            ...schedule,
+            campaign_id: campaignId
+          };
+
+          const created = await this.campaignScheduleService.createSchedule(scheduleData);
+          console.log('✅ Schedule created successfully:', created.id);
+          createdSchedules.push(created);
+        } catch (error) {
+          console.error('❌ Error creating schedule:', {
+            title: schedule.title,
+            error: error instanceof Error ? error.message : 'Error desconocido'
+          });
+          errors.push({
+            schedule: schedule.title,
+            error: error instanceof Error ? error.message : 'Error desconocido'
+          });
+        }
+      }
+
+      console.log('📊 Bulk upload results:', {
+        created: createdSchedules.length,
+        errors: errors.length
+      });
+
+      res.status(201).json({
+        success: true,
+        data: {
+          created: createdSchedules,
+          errors
+        },
+        message: `Se crearon ${createdSchedules.length} contenidos programados exitosamente`
+      });
+    } catch (error) {
+      console.error('CampaignScheduleController.confirmBulkUpload error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al confirmar la importación',
+        error: error instanceof Error ? error.message : 'Error desconocido'
+      });
     }
   }
 } 

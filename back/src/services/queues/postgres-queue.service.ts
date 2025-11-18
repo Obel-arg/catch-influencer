@@ -31,7 +31,11 @@ export class PostgresQueueService {
   /**
    * Throttled error logger to reduce spam
    */
-  private logThrottledError(key: string, errorMsg: string, details?: any): void {
+  private logThrottledError(
+    key: string,
+    errorMsg: string,
+    details?: any,
+  ): void {
     const now = Date.now();
     const lastLog = PostgresQueueService.lastErrorLog.get(key) || 0;
 
@@ -51,11 +55,17 @@ export class PostgresQueueService {
   /**
    * Send a job to a queue
    */
-  async send<T>(queueName: string, data: T, options: QueueOptions = {}): Promise<string> {
+  async send<T>(
+    queueName: string,
+    data: T,
+    options: QueueOptions = {},
+  ): Promise<string> {
     try {
       // Validar datos antes de enviar
       if (!data || typeof data !== 'object') {
-        throw new Error(`Invalid job data: data must be an object, got ${typeof data}`);
+        throw new Error(
+          `Invalid job data: data must be an object, got ${typeof data}`,
+        );
       }
 
       // Validar campos requeridos según el tipo de queue
@@ -63,35 +73,40 @@ export class PostgresQueueService {
         const requiredFields = ['postId', 'postUrl', 'platform'];
         for (const field of requiredFields) {
           if (!(field in data)) {
-            throw new Error(`Missing required field '${field}' for ${queueName} job`);
+            throw new Error(
+              `Missing required field '${field}' for ${queueName} job`,
+            );
           }
         }
       }
 
       const jobId = crypto.randomUUID();
-      
-      const { error } = await supabase
-        .from('queue_jobs')
-        .insert({
-          id: jobId,
-          name: queueName,
-          data: JSON.stringify(data),
-          status: 'pending',
-          attempts: 0,
-          max_attempts: options.maxAttempts || 3,
-          created_at: new Date(),
-          updated_at: new Date()
-        });
+
+      const { error } = await supabase.from('queue_jobs').insert({
+        id: jobId,
+        name: queueName,
+        data: JSON.stringify(data),
+        status: 'pending',
+        attempts: 0,
+        max_attempts: options.maxAttempts || 3,
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
 
       if (error) {
-        console.error(`❌ [POSTGRES-QUEUE] Error sending job to ${queueName}:`, error);
+        console.error(
+          `❌ [POSTGRES-QUEUE] Error sending job to ${queueName}:`,
+          error,
+        );
         throw error;
       }
 
-
       return jobId;
     } catch (error) {
-      console.error(`❌ [POSTGRES-QUEUE] Failed to send job to ${queueName}:`, error);
+      console.error(
+        `❌ [POSTGRES-QUEUE] Failed to send job to ${queueName}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -102,48 +117,36 @@ export class PostgresQueueService {
   async process<T>(
     queueName: string,
     handler: (job: { id: string; data: T }) => Promise<void>,
-    options: { concurrency?: number } = {}
+    options: { concurrency?: number } = {},
   ): Promise<void> {
     const concurrency = options.concurrency || 1;
     let isProcessing = true;
     let loopCount = 0;
-
-    console.log(`🟢 [POSTGRES-QUEUE] Starting processor for queue: ${queueName}`);
 
     // Process jobs in a loop
     while (isProcessing) {
       try {
         loopCount++;
 
-        // Log every 10 loops to show we're alive
-        if (loopCount % 10 === 0) {
-          console.log(`🟢 [POSTGRES-QUEUE] ${queueName} - Loop ${loopCount}, checking for jobs...`);
-        }
-
         // Get next job
         const job = await this.getNextJob(queueName);
 
         if (!job) {
-          // No jobs available, wait a bit
-          if (loopCount % 10 === 0) {
-            console.log(`🟡 [POSTGRES-QUEUE] ${queueName} - No jobs found, waiting...`);
-          }
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise((resolve) => setTimeout(resolve, 1000));
           continue;
         }
-
-        console.log(`🟢 [POSTGRES-QUEUE] ${queueName} - Found job ${job.id}, processing...`);
 
         // Process the job
         await this.processJob(job, handler);
 
-        console.log(`✅ [POSTGRES-QUEUE] ${queueName} - Job ${job.id} completed successfully`);
-
         // Small delay to prevent overwhelming the database
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       } catch (error) {
-        console.error(`❌ [POSTGRES-QUEUE] Error processing jobs from ${queueName}:`, error);
-        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait longer on error
+        console.error(
+          `❌ [POSTGRES-QUEUE] Error processing jobs from ${queueName}:`,
+          error,
+        );
+        await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait longer on error
       }
     }
   }
@@ -155,7 +158,7 @@ export class PostgresQueueService {
     try {
       // Temporalmente usar claimNextJob hasta que se ejecute el SQL
       return await this.claimNextJob(queueName);
-      
+
       // TODO: Descomentar cuando se ejecute el SQL
       // const { data, error } = await supabase
       //   .rpc('get_next_job_atomic', {
@@ -198,7 +201,10 @@ export class PostgresQueueService {
         .limit(1);
 
       if (selectError) {
-        console.error(`❌ [POSTGRES-QUEUE] Error selecting job for ${queueName}:`, selectError);
+        console.error(
+          `❌ [POSTGRES-QUEUE] Error selecting job for ${queueName}:`,
+          selectError,
+        );
         return null;
       }
 
@@ -208,7 +214,9 @@ export class PostgresQueueService {
       }
 
       const jobToClaim = pendingJobs[0];
-      console.log(`🔵 [POSTGRES-QUEUE] Found pending job ${jobToClaim.id} for ${queueName}, attempting to claim...`);
+      console.log(
+        `🔵 [POSTGRES-QUEUE] Found pending job ${jobToClaim.id} for ${queueName}, attempting to claim...`,
+      );
 
       // SECOND: Try to claim it atomically
       const { data: claimedJob, error: updateError } = await supabase
@@ -216,7 +224,7 @@ export class PostgresQueueService {
         .update({
           status: 'processing',
           started_at: new Date(),
-          updated_at: new Date()
+          updated_at: new Date(),
         })
         .eq('id', jobToClaim.id)
         .eq('status', 'pending') // Double-check it's still pending
@@ -225,35 +233,43 @@ export class PostgresQueueService {
 
       if (updateError) {
         if (updateError.code === 'PGRST116') {
-          // Someone else claimed it - this is normal in concurrent processing
-          console.log(`🟡 [POSTGRES-QUEUE] Job ${jobToClaim.id} was claimed by another worker`);
           return null;
         }
 
-        console.error(`❌ [POSTGRES-QUEUE] Error claiming job ${jobToClaim.id}:`, updateError);
+        console.error(
+          `❌ [POSTGRES-QUEUE] Error claiming job ${jobToClaim.id}:`,
+          updateError,
+        );
         return null;
       }
 
       if (!claimedJob) {
-        console.log(`🟡 [POSTGRES-QUEUE] Job ${jobToClaim.id} could not be claimed (already taken)`);
+        console.log(
+          `🟡 [POSTGRES-QUEUE] Job ${jobToClaim.id} could not be claimed (already taken)`,
+        );
         return null;
       }
 
-      console.log(`✅ [POSTGRES-QUEUE] Successfully claimed job ${claimedJob.id} for ${queueName}`);
+      console.log(
+        `✅ [POSTGRES-QUEUE] Successfully claimed job ${claimedJob.id} for ${queueName}`,
+      );
       return claimedJob;
     } catch (error) {
       // Manejar errores de red y conectividad
       if (error instanceof Error) {
-        if (error.message.includes('fetch failed') || error.message.includes('network')) {
+        if (
+          error.message.includes('fetch failed') ||
+          error.message.includes('network')
+        ) {
           this.logThrottledError(
             'network-error',
             '❌ [POSTGRES-QUEUE] Network error when claiming job. Check internet connection and Supabase configuration.',
-            error.message
+            error.message,
           );
           return null;
         }
       }
-      
+
       console.error('❌ [POSTGRES-QUEUE] Failed to claim next job:', error);
       return null;
     }
@@ -263,13 +279,14 @@ export class PostgresQueueService {
    * Process a single job
    */
   private async processJob<T>(
-    job: QueueJob, 
-    handler: (job: { id: string; data: T }) => Promise<void>
+    job: QueueJob,
+    handler: (job: { id: string; data: T }) => Promise<void>,
   ): Promise<void> {
-    
     try {
       // Mark job as processing
-      await this.updateJobStatus(job.id, 'processing', { started_at: new Date() });
+      await this.updateJobStatus(job.id, 'processing', {
+        started_at: new Date(),
+      });
 
       // Parse job data - handle both string and object cases
       let jobData: any;
@@ -277,7 +294,10 @@ export class PostgresQueueService {
         try {
           jobData = JSON.parse(job.data);
         } catch (parseError) {
-          console.error(`❌ [POSTGRES-QUEUE] Failed to parse job data for job ${job.id}:`, parseError);
+          console.error(
+            `❌ [POSTGRES-QUEUE] Failed to parse job data for job ${job.id}:`,
+            parseError,
+          );
           throw new Error(`Invalid JSON in job data: ${parseError}`);
         }
       } else if (typeof job.data === 'object') {
@@ -290,22 +310,19 @@ export class PostgresQueueService {
       await handler({ id: job.id, data: jobData });
 
       // Mark job as completed
-      await this.updateJobStatus(job.id, 'completed', { 
+      await this.updateJobStatus(job.id, 'completed', {
         completed_at: new Date(),
-        attempts: job.attempts + 1
+        attempts: job.attempts + 1,
       });
-
-
-
     } catch (error) {
       console.error(`❌ [POSTGRES-QUEUE] Job ${job.id} failed:`, error);
-      
+
       // Mark job as failed
       await this.updateJobStatus(job.id, 'failed', {
         attempts: job.attempts + 1,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
-      
+
       console.error(`❌ [POSTGRES-QUEUE] Job ${job.id} marked as failed`);
     }
   }
@@ -314,9 +331,9 @@ export class PostgresQueueService {
    * Update job status
    */
   private async updateJobStatus(
-    jobId: string, 
-    status: QueueJob['status'], 
-    updates: Partial<QueueJob> = {}
+    jobId: string,
+    status: QueueJob['status'],
+    updates: Partial<QueueJob> = {},
   ): Promise<void> {
     try {
       const { error } = await supabase
@@ -324,7 +341,7 @@ export class PostgresQueueService {
         .update({
           status,
           updated_at: new Date(),
-          ...updates
+          ...updates,
         })
         .eq('id', jobId);
 
@@ -342,8 +359,8 @@ export class PostgresQueueService {
    * Mark job as completed (public method for external use)
    */
   public async markJobCompleted(jobId: string): Promise<void> {
-    await this.updateJobStatus(jobId, 'completed', { 
-      completed_at: new Date()
+    await this.updateJobStatus(jobId, 'completed', {
+      completed_at: new Date(),
     });
   }
 
@@ -352,7 +369,7 @@ export class PostgresQueueService {
    */
   public async markJobFailed(jobId: string, error?: string): Promise<void> {
     await this.updateJobStatus(jobId, 'failed', {
-      error: error || 'Unknown error'
+      error: error || 'Unknown error',
     });
   }
 
@@ -360,8 +377,8 @@ export class PostgresQueueService {
    * Mark job as processing (public method for external use)
    */
   public async markJobProcessing(jobId: string): Promise<void> {
-    await this.updateJobStatus(jobId, 'processing', { 
-      started_at: new Date() 
+    await this.updateJobStatus(jobId, 'processing', {
+      started_at: new Date(),
     });
   }
 
@@ -384,7 +401,10 @@ export class PostgresQueueService {
       const { count: totalCount, error: countError } = await countQuery;
 
       if (countError) {
-        console.error('❌ [POSTGRES-QUEUE] Error counting failed jobs:', countError);
+        console.error(
+          '❌ [POSTGRES-QUEUE] Error counting failed jobs:',
+          countError,
+        );
         return 0;
       }
 
@@ -398,7 +418,7 @@ export class PostgresQueueService {
         .update({
           status: 'pending',
           updated_at: new Date(),
-          error: null
+          error: null,
         })
         .eq('status', 'failed')
         .lt('attempts', 3);
@@ -410,7 +430,10 @@ export class PostgresQueueService {
       const { error: updateError } = await updateQuery;
 
       if (updateError) {
-        console.error('❌ [POSTGRES-QUEUE] Error retrying failed jobs:', updateError);
+        console.error(
+          '❌ [POSTGRES-QUEUE] Error retrying failed jobs:',
+          updateError,
+        );
         throw updateError;
       }
 
@@ -440,13 +463,19 @@ export class PostgresQueueService {
       const { data, error } = await query;
 
       if (error) {
-        console.error('❌ [POSTGRES-QUEUE] Error getting jobs needing retry:', error);
+        console.error(
+          '❌ [POSTGRES-QUEUE] Error getting jobs needing retry:',
+          error,
+        );
         throw error;
       }
 
       return data || [];
     } catch (error) {
-      console.error('❌ [POSTGRES-QUEUE] Failed to get jobs needing retry:', error);
+      console.error(
+        '❌ [POSTGRES-QUEUE] Failed to get jobs needing retry:',
+        error,
+      );
       return [];
     }
   }
@@ -463,7 +492,8 @@ export class PostgresQueueService {
         .single();
 
       if (error) {
-        if (error.code === 'PGRST116') { // No rows found
+        if (error.code === 'PGRST116') {
+          // No rows found
           return null;
         }
         console.error('❌ [POSTGRES-QUEUE] Error getting job status:', error);
@@ -480,7 +510,10 @@ export class PostgresQueueService {
   /**
    * Get completed jobs
    */
-  async getCompletedJobs(queueName: string, limit: number = 50): Promise<QueueJob[]> {
+  async getCompletedJobs(
+    queueName: string,
+    limit: number = 50,
+  ): Promise<QueueJob[]> {
     try {
       const { data, error } = await supabase
         .from('queue_jobs')
@@ -491,7 +524,10 @@ export class PostgresQueueService {
         .limit(limit);
 
       if (error) {
-        console.error('❌ [POSTGRES-QUEUE] Error getting completed jobs:', error);
+        console.error(
+          '❌ [POSTGRES-QUEUE] Error getting completed jobs:',
+          error,
+        );
         throw error;
       }
 
@@ -505,7 +541,10 @@ export class PostgresQueueService {
   /**
    * Get failed jobs
    */
-  async getFailedJobs(queueName: string, limit: number = 50): Promise<QueueJob[]> {
+  async getFailedJobs(
+    queueName: string,
+    limit: number = 50,
+  ): Promise<QueueJob[]> {
     try {
       const { data, error } = await supabase
         .from('queue_jobs')
@@ -561,7 +600,7 @@ export class PostgresQueueService {
         .update({
           status: 'failed',
           updated_at: new Date(),
-          error: 'Job cancelled'
+          error: 'Job cancelled',
         })
         .eq('id', jobId);
 
@@ -569,7 +608,6 @@ export class PostgresQueueService {
         console.error('❌ [POSTGRES-QUEUE] Error cancelling job:', error);
         throw error;
       }
-
     } catch (error) {
       console.error('❌ [POSTGRES-QUEUE] Failed to cancel job:', error);
       throw error;
@@ -590,7 +628,6 @@ export class PostgresQueueService {
         console.error('❌ [POSTGRES-QUEUE] Error deleting job:', error);
         throw error;
       }
-
     } catch (error) {
       console.error('❌ [POSTGRES-QUEUE] Failed to delete job:', error);
       throw error;
@@ -600,28 +637,29 @@ export class PostgresQueueService {
   /**
    * Force terminate a job regardless of its current state
    */
-  async forceTerminateJob(jobId: string): Promise<{ previousState: string; action: string }> {
+  async forceTerminateJob(
+    jobId: string,
+  ): Promise<{ previousState: string; action: string }> {
     try {
-      
       // Primero obtener el estado actual del job
       const currentJob = await this.getJobStatus(jobId);
       const previousState = currentJob?.status || 'unknown';
-      
+
       let action = '';
-      
+
       if (previousState === 'processing') {
         // Si está siendo procesado, marcarlo como fallido con razón de terminación forzada
         await this.updateJobStatus(jobId, 'failed', {
           attempts: (currentJob?.attempts || 0) + 1,
           error: 'Job terminated forcefully by admin',
-          completed_at: new Date()
+          completed_at: new Date(),
         });
         action = 'marked_as_failed';
       } else if (previousState === 'pending') {
         // Si está pendiente, marcarlo como fallido
         await this.updateJobStatus(jobId, 'failed', {
           error: 'Job terminated forcefully by admin before processing',
-          completed_at: new Date()
+          completed_at: new Date(),
         });
         action = 'marked_as_failed';
       } else if (previousState === 'completed') {
@@ -637,11 +675,13 @@ export class PostgresQueueService {
         await this.deleteJob(jobId);
         action = 'deleted';
       }
-      
+
       return { previousState, action };
-      
     } catch (error) {
-      console.error(`❌ [POSTGRES-QUEUE] Error forzando terminación del job ${jobId}:`, error);
+      console.error(
+        `❌ [POSTGRES-QUEUE] Error forzando terminación del job ${jobId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -650,7 +690,9 @@ export class PostgresQueueService {
    * Restart a job by resetting it to pending state
    * This will allow the job to be processed again from the beginning
    */
-  async restartJob(jobId: string): Promise<{ previousState: string; action: string }> {
+  async restartJob(
+    jobId: string,
+  ): Promise<{ previousState: string; action: string }> {
     try {
       // Primero obtener el estado actual del job
       const currentJob = await this.getJobStatus(jobId);
@@ -669,7 +711,7 @@ export class PostgresQueueService {
           error: undefined, // Limpiar error anterior
           started_at: undefined, // Limpiar tiempo de inicio
           completed_at: undefined, // Limpiar tiempo de completado
-          updated_at: new Date()
+          updated_at: new Date(),
         });
         action = 'restarted_to_pending';
       } else if (previousState === 'failed') {
@@ -679,7 +721,7 @@ export class PostgresQueueService {
           error: undefined, // Limpiar error anterior
           started_at: undefined, // Limpiar tiempo de inicio
           completed_at: undefined, // Limpiar tiempo de completado
-          updated_at: new Date()
+          updated_at: new Date(),
         });
         action = 'restarted_from_failed';
       } else if (previousState === 'completed') {
@@ -689,7 +731,7 @@ export class PostgresQueueService {
           error: undefined, // Limpiar error anterior
           started_at: undefined, // Limpiar tiempo de inicio
           completed_at: undefined, // Limpiar tiempo de completado
-          updated_at: new Date()
+          updated_at: new Date(),
         });
         action = 'restarted_from_completed';
       } else {
@@ -699,15 +741,17 @@ export class PostgresQueueService {
           error: undefined, // Limpiar error anterior
           started_at: undefined, // Limpiar tiempo de inicio
           completed_at: undefined, // Limpiar tiempo de completado
-          updated_at: new Date()
+          updated_at: new Date(),
         });
         action = `restarted_from_${previousState}`;
       }
-      
+
       return { previousState, action };
-      
     } catch (error) {
-      console.error(`❌ [POSTGRES-QUEUE] Error reiniciando job ${jobId}:`, error);
+      console.error(
+        `❌ [POSTGRES-QUEUE] Error reiniciando job ${jobId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -724,7 +768,7 @@ export class PostgresQueueService {
   }> {
     try {
       let query = supabase.from('queue_jobs').select('status');
-      
+
       if (queueName) {
         query = query.eq('name', queueName);
       }
@@ -741,10 +785,10 @@ export class PostgresQueueService {
         processing: 0,
         completed: 0,
         failed: 0,
-        total: 0
+        total: 0,
       };
 
-      data?.forEach(job => {
+      data?.forEach((job) => {
         const status = job.status as keyof typeof stats;
         if (status in stats) {
           stats[status]++;
@@ -760,7 +804,7 @@ export class PostgresQueueService {
         processing: 0,
         completed: 0,
         failed: 0,
-        total: 0
+        total: 0,
       };
     }
   }
@@ -804,7 +848,7 @@ export class PostgresQueueService {
         throw error;
       }
 
-      const queues = [...new Set(data?.map(job => job.name) || [])];
+      const queues = [...new Set(data?.map((job) => job.name) || [])];
       return queues;
     } catch (error) {
       console.error('❌ [POSTGRES-QUEUE] Failed to get queues:', error);
@@ -822,16 +866,21 @@ export class PostgresQueueService {
   /**
    * Clean up stuck jobs that have been in processing state for too long
    */
-  public async cleanupStuckJobs(queueName?: string, maxProcessingTimeMinutes: number = 10): Promise<number> {
+  public async cleanupStuckJobs(
+    queueName?: string,
+    maxProcessingTimeMinutes: number = 10,
+  ): Promise<number> {
     try {
-      const cutoffTime = new Date(Date.now() - maxProcessingTimeMinutes * 60 * 1000);
-      
+      const cutoffTime = new Date(
+        Date.now() - maxProcessingTimeMinutes * 60 * 1000,
+      );
+
       let query = supabase
         .from('queue_jobs')
         .update({
           status: 'failed',
           updated_at: new Date(),
-          error: `Job stuck in processing for more than ${maxProcessingTimeMinutes} minutes`
+          error: `Job stuck in processing for more than ${maxProcessingTimeMinutes} minutes`,
         })
         .eq('status', 'processing')
         .lt('started_at', cutoffTime.toISOString());
@@ -843,14 +892,19 @@ export class PostgresQueueService {
       const { error } = await query;
 
       if (error) {
-        console.error('❌ [POSTGRES-QUEUE] Error cleaning up stuck jobs:', error);
+        console.error(
+          '❌ [POSTGRES-QUEUE] Error cleaning up stuck jobs:',
+          error,
+        );
         throw error;
       }
 
       // Count affected rows by checking before and after
-      const beforeCount = await this.getStuckJobs(queueName, maxProcessingTimeMinutes);
+      const beforeCount = await this.getStuckJobs(
+        queueName,
+        maxProcessingTimeMinutes,
+      );
       const cleanedCount = beforeCount.length;
-
 
       return cleanedCount;
     } catch (error) {
@@ -862,10 +916,15 @@ export class PostgresQueueService {
   /**
    * Get stuck jobs that have been in processing state for too long
    */
-  public async getStuckJobs(queueName?: string, maxProcessingTimeMinutes: number = 10): Promise<QueueJob[]> {
+  public async getStuckJobs(
+    queueName?: string,
+    maxProcessingTimeMinutes: number = 10,
+  ): Promise<QueueJob[]> {
     try {
-      const cutoffTime = new Date(Date.now() - maxProcessingTimeMinutes * 60 * 1000);
-      
+      const cutoffTime = new Date(
+        Date.now() - maxProcessingTimeMinutes * 60 * 1000,
+      );
+
       let query = supabase
         .from('queue_jobs')
         .select('*')
@@ -893,4 +952,4 @@ export class PostgresQueueService {
 }
 
 // Export singleton instance
-export const postgresQueueService = PostgresQueueService.getInstance(); 
+export const postgresQueueService = PostgresQueueService.getInstance();

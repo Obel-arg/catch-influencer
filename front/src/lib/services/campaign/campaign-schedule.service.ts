@@ -284,13 +284,96 @@ class CampaignScheduleService {
           ...withContext('CampaignScheduleService', `getPostMetricsForSchedules(${scheduleIds})`).headers
         })
       })
-      
+
       return response.data
     } catch (error) {
       console.error('🔍 CampaignScheduleService: Error getting batch post metrics:', error)
       throw error
     }
   }
+
+  /**
+   * Upload Excel file for bulk content scheduling
+   */
+  async bulkUploadSchedules(file: File, campaignId: string): Promise<BulkUploadResult> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('campaignId', campaignId);
+
+      const response = await httpApiClient.post<BulkUploadResult>(
+        '/campaign-schedules/bulk-upload',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            ...withContext('CampaignScheduleService', 'bulkUploadSchedules').headers
+          }
+        }
+      );
+
+      // Handle API response format
+      if (response.data && typeof response.data === 'object' && 'data' in response.data) {
+        return response.data.data as BulkUploadResult;
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error('🔍 CampaignScheduleService: Error uploading Excel file:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Confirm and save valid schedules from bulk upload
+   */
+  async confirmBulkUpload(campaignId: string, schedules: Partial<CampaignScheduleCreateDTO>[]): Promise<BulkConfirmResult> {
+    try {
+      const response = await httpApiClient.post<BulkConfirmResult>(
+        '/campaign-schedules/bulk-upload/confirm',
+        { campaignId, schedules },
+        {
+          headers: new AxiosHeaders({
+            "Content-Type": "application/json",
+            ...withContext('CampaignScheduleService', 'confirmBulkUpload').headers
+          })
+        }
+      );
+
+      // Handle API response format
+      if (response.data && typeof response.data === 'object' && 'data' in response.data) {
+        return response.data.data as BulkConfirmResult;
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error('🔍 CampaignScheduleService: Error confirming bulk upload:', error);
+      throw error;
+    }
+  }
+}
+
+// Types for bulk upload
+export interface ParsedScheduleItem {
+  row: number;
+  data: Partial<CampaignSchedule>;
+  isValid: boolean;
+  errors: Array<{ field: string; message: string }>;
+}
+
+export interface BulkUploadResult {
+  parsed: ParsedScheduleItem[];
+  summary: {
+    total: number;
+    valid: number;
+    invalid: number;
+    validPercentage: number;
+  };
+}
+
+export interface BulkConfirmResult {
+  created: CampaignSchedule[];
+  errors: Array<{ schedule: string; error: string }>;
 }
 
 export const campaignScheduleService = new CampaignScheduleService(); 

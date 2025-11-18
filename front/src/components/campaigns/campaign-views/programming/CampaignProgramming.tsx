@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { FileSpreadsheet } from "lucide-react"
 
 // Types
 import { CampaignProgrammingProps, ZoomLevel, ViewType, ContentItem } from "./types"
@@ -31,6 +32,7 @@ import {
   EditContentModal,
   AddContentModal
 } from "./components"
+import { BulkUploadModal } from "./components/BulkUploadModal"
 import { FilterState } from "./components/FilterPanel"
 
 export function CampaignProgramming({ campaign }: CampaignProgrammingProps) {
@@ -46,6 +48,7 @@ export function CampaignProgramming({ campaign }: CampaignProgrammingProps) {
   })
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false)
   
   // Get campaign influencers
   const { influencers: campaignInfluencers = [] } = useCampaignInfluencers(campaign.id)
@@ -129,6 +132,42 @@ export function CampaignProgramming({ campaign }: CampaignProgrammingProps) {
   // Gantt date state
   const [ganttStartDate, setGanttStartDate] = useState(initialStartDate)
   const [ganttEndDate, setGanttEndDate] = useState(initialEndDate)
+  const [hasAutoScrolled, setHasAutoScrolled] = useState(false)
+
+  // Auto-scroll to earliest content when switching to Gantt view
+  useEffect(() => {
+    if (currentView === 'gantt' && !hasAutoScrolled && contentItems.length > 0) {
+      // Find the earliest content date
+      const earliestDate = contentItems.reduce((earliest, item) => {
+        const itemDate = parseLocalDate(item.startDate);
+        return !earliest || itemDate < earliest ? itemDate : earliest;
+      }, null as Date | null);
+
+      if (earliestDate) {
+        // Check if earliest date is outside current visible range
+        const ganttStart = new Date(ganttStartDate);
+        const ganttEnd = new Date(ganttEndDate);
+
+        if (earliestDate < ganttStart || earliestDate > ganttEnd) {
+          // Set gantt range to start from the month of the earliest content
+          const newStartDate = getFirstDayOfMonth(earliestDate);
+          const newEndDate = getLastDayOfMonth(
+            new Date(earliestDate.getFullYear(), earliestDate.getMonth() + 2, 1)
+          );
+
+          setGanttStartDate(newStartDate);
+          setGanttEndDate(newEndDate);
+        }
+      }
+
+      setHasAutoScrolled(true);
+    }
+
+    // Reset auto-scroll flag when leaving gantt view
+    if (currentView !== 'gantt') {
+      setHasAutoScrolled(false);
+    }
+  }, [currentView, contentItems, hasAutoScrolled, ganttStartDate, ganttEndDate]);
 
   // Derived state
   const timelineColumns = useTimelineColumns(zoomLevel, ganttStartDate, ganttEndDate)
@@ -374,6 +413,14 @@ export function CampaignProgramming({ campaign }: CampaignProgrammingProps) {
                 >
                   Agregar
                 </Button>
+                <Button
+                  onClick={() => setIsBulkUploadModalOpen(true)}
+                  variant="outline"
+                  className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                >
+                  <FileSpreadsheet className="w-4 h-4 mr-2" />
+                  Importar Excel
+                </Button>
               </div>
             </div>
             
@@ -463,6 +510,15 @@ export function CampaignProgramming({ campaign }: CampaignProgrammingProps) {
         onClose={() => setIsAddModalOpen(false)}
         onSave={handleAddContent}
         campaignInfluencers={campaignInfluencers}
+      />
+      <BulkUploadModal
+        isOpen={isBulkUploadModalOpen}
+        onClose={() => setIsBulkUploadModalOpen(false)}
+        campaignId={campaign.id}
+        onSuccess={() => {
+          loadSchedules();
+          setIsBulkUploadModalOpen(false);
+        }}
       />
     </Tabs>
   )

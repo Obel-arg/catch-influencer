@@ -20,13 +20,7 @@ export class CampaignScheduleService {
           assigned_budget: data.assigned_budget || 0,
           actual_cost: 0
         })
-        .select(`
-          *,
-          influencers!inner(
-            name,
-            avatar
-          )
-        `)
+        .select('*')
         .single();
 
       if (error) {
@@ -34,13 +28,7 @@ export class CampaignScheduleService {
         throw new Error(`Error creating campaign schedule: ${error.message}`);
       }
 
-      // Transformar los datos para usar el avatar de la tabla influencers
-      const transformedSchedule = {
-        ...schedule,
-        influencer_avatar: schedule.influencers?.avatar || schedule.influencer_avatar
-      };
-
-      return transformedSchedule;
+      return schedule;
     } catch (error) {
       console.error('CampaignScheduleService.createSchedule error:', error);
       throw error;
@@ -52,13 +40,7 @@ export class CampaignScheduleService {
     try {
       const { data: schedule, error } = await supabase
         .from('campaign_schedule')
-        .select(`
-          *,
-          influencers!inner(
-            name,
-            avatar
-          )
-        `)
+        .select('*')
         .eq('id', id)
         .is('deleted_at', null)
         .single();
@@ -71,13 +53,7 @@ export class CampaignScheduleService {
         throw new Error(`Error fetching campaign schedule: ${error.message}`);
       }
 
-      // Transformar los datos para usar el avatar de la tabla influencers
-      const transformedSchedule = schedule ? {
-        ...schedule,
-        influencer_avatar: schedule.influencers?.avatar || schedule.influencer_avatar
-      } : null;
-
-      return transformedSchedule;
+      return schedule;
     } catch (error) {
       console.error('CampaignScheduleService.getScheduleById error:', error);
       throw error;
@@ -89,13 +65,7 @@ export class CampaignScheduleService {
     try {
       let query = supabase
         .from('campaign_schedule')
-        .select(`
-          *,
-          influencers!inner(
-            name,
-            avatar
-          )
-        `)
+        .select('*')
         .eq('campaign_id', campaignId)
         .is('deleted_at', null)
         .order('start_date', { ascending: true });
@@ -132,13 +102,7 @@ export class CampaignScheduleService {
         throw new Error(`Error fetching campaign schedules: ${error.message}`);
       }
 
-      // Transformar los datos para usar el avatar de la tabla influencers
-      const transformedSchedules = schedules?.map(schedule => ({
-        ...schedule,
-        influencer_avatar: schedule.influencers?.avatar || schedule.influencer_avatar // Usar avatar de influencers si está disponible
-      })) || [];
-
-      return transformedSchedules;
+      return schedules || [];
     } catch (error) {
       console.error('CampaignScheduleService.getSchedulesByCampaign error:', error);
       throw error;
@@ -150,13 +114,7 @@ export class CampaignScheduleService {
     try {
       let query = supabase
         .from('campaign_schedule')
-        .select(`
-          *,
-          influencers!inner(
-            name,
-            avatar
-          )
-        `)
+        .select('*')
         .is('deleted_at', null)
         .order('start_date', { ascending: true });
 
@@ -195,13 +153,7 @@ export class CampaignScheduleService {
         throw new Error(`Error fetching campaign schedules: ${error.message}`);
       }
 
-      // Transformar los datos para usar el avatar de la tabla influencers
-      const transformedSchedules = schedules?.map(schedule => ({
-        ...schedule,
-        influencer_avatar: schedule.influencers?.avatar || schedule.influencer_avatar
-      })) || [];
-
-      return transformedSchedules;
+      return schedules || [];
     } catch (error) {
       console.error('CampaignScheduleService.getSchedules error:', error);
       throw error;
@@ -219,13 +171,7 @@ export class CampaignScheduleService {
         })
         .eq('id', id)
         .is('deleted_at', null)
-        .select(`
-          *,
-          influencers!inner(
-            name,
-            avatar
-          )
-        `)
+        .select('*')
         .single();
 
       if (error) {
@@ -233,13 +179,7 @@ export class CampaignScheduleService {
         throw new Error(`Error updating campaign schedule: ${error.message}`);
       }
 
-      // Transformar los datos para usar el avatar de la tabla influencers
-      const transformedSchedule = {
-        ...schedule,
-        influencer_avatar: schedule.influencers?.avatar || schedule.influencer_avatar
-      };
-
-      return transformedSchedule;
+      return schedule;
     } catch (error) {
       console.error('CampaignScheduleService.updateSchedule error:', error);
       throw error;
@@ -279,13 +219,7 @@ export class CampaignScheduleService {
         })
         .eq('id', id)
         .is('deleted_at', null)
-        .select(`
-          *,
-          influencers!inner(
-            name,
-            avatar
-          )
-        `)
+        .select('*')
         .single();
 
       if (error) {
@@ -293,13 +227,7 @@ export class CampaignScheduleService {
         throw new Error(`Error updating campaign schedule metrics: ${error.message}`);
       }
 
-      // Transformar los datos para usar el avatar de la tabla influencers
-      const transformedSchedule = {
-        ...schedule,
-        influencer_avatar: schedule.influencers?.avatar || schedule.influencer_avatar
-      };
-
-      return transformedSchedule;
+      return schedule;
     } catch (error) {
       console.error('CampaignScheduleService.updateMetrics error:', error);
       throw error;
@@ -317,13 +245,7 @@ export class CampaignScheduleService {
         })
         .eq('id', id)
         .is('deleted_at', null)
-        .select(`
-          *,
-          influencers!inner(
-            name,
-            avatar
-          )
-        `)
+        .select('*')
         .single();
 
       if (error) {
@@ -331,13 +253,7 @@ export class CampaignScheduleService {
         throw new Error(`Error updating campaign schedule objectives: ${error.message}`);
       }
 
-      // Transformar los datos para usar el avatar de la tabla influencers
-      const transformedSchedule = {
-        ...schedule,
-        influencer_avatar: schedule.influencers?.avatar || schedule.influencer_avatar
-      };
-
-      return transformedSchedule;
+      return schedule;
     } catch (error) {
       console.error('CampaignScheduleService.updateObjectives error:', error);
       throw error;
