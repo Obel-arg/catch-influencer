@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   PieChart,
   Pie,
@@ -21,6 +22,8 @@ interface HypeAuditorAudienceDemographicsProps {
 export default function HypeAuditorAudienceDemographics({
   data,
 }: HypeAuditorAudienceDemographicsProps) {
+  const [isEducationOpen, setIsEducationOpen] = useState(false);
+  const [isIncomeOpen, setIsIncomeOpen] = useState(false);
   const demographics = data.audience_demographics || {};
   const location = data.audience_location || {};
   const interests = data.audience_interests || [];
@@ -331,78 +334,126 @@ export default function HypeAuditorAudienceDemographics({
 
       {/* Education Level */}
       {Object.keys(education).length > 0 && (
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-200 p-6 shadow-sm">
-          <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <div className="w-1 h-6 bg-gradient-to-b from-blue-500 to-indigo-500 rounded-full"></div>
-            Nivel Educativo
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Object.entries(education).map(([level, percentage]: any) => {
-              const levelNames: Record<string, string> = {
-                no_education: "Sin educación",
-                incomplete_primary: "Primaria incompleta",
-                primary: "Primaria completa",
-                lower_secondary: "Secundaria inferior",
-                upper_secondary: "Secundaria superior",
-                post_secondary: "Post-secundaria",
-              };
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-200 shadow-sm overflow-hidden">
+          <button
+            onClick={() => setIsEducationOpen(!isEducationOpen)}
+            className="w-full p-6 flex items-center justify-between hover:bg-blue-50/50 transition-colors"
+          >
+            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <div className="w-1 h-6 bg-gradient-to-b from-blue-500 to-indigo-500 rounded-full"></div>
+              Nivel Educativo
+            </h3>
+            <svg
+              className={`w-6 h-6 text-gray-600 transition-transform duration-300 ${
+                isEducationOpen ? "rotate-180" : ""
+              }`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
+          {isEducationOpen && (
+            <div className="px-6 pb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Object.entries(education).map(([level, percentage]: any) => {
+                  const levelNames: Record<string, string> = {
+                    no_education: "Sin educación",
+                    incomplete_primary: "Primaria incompleta",
+                    primary: "Primaria completa",
+                    lower_secondary: "Secundaria inferior",
+                    upper_secondary: "Secundaria superior",
+                    post_secondary: "Post-secundaria",
+                  };
 
-              return (
-                <div
-                  key={level}
-                  className="bg-white rounded-xl p-4 border border-blue-200 shadow-sm"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-medium text-gray-700">
-                      {levelNames[level] || level}
-                    </span>
-                    <span className="text-lg font-bold text-blue-600">
-                      {percentage.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  return (
                     <div
-                      className="h-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600"
-                      style={{ width: `${Math.min(percentage, 100)}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                      key={level}
+                      className="bg-white rounded-xl p-4 border border-blue-200 shadow-sm"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm font-medium text-gray-700">
+                          {levelNames[level] || level}
+                        </span>
+                        <span className="text-lg font-bold text-blue-600">
+                          {percentage.toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="h-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600"
+                          style={{ width: `${Math.min(percentage, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* Income Level */}
       {Object.keys(income).length > 0 && (
-        <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border border-green-200 p-6 shadow-sm">
-          <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <div className="w-1 h-6 bg-gradient-to-b from-green-500 to-emerald-500 rounded-full"></div>
-            Nivel de Ingresos
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Object.entries(income).map(([incomeRange, percentage]: any) => (
-              <div
-                key={incomeRange}
-                className="bg-white rounded-xl p-4 border border-green-200 shadow-sm"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-gray-700">
-                    {incomeRange}
-                  </span>
-                  <span className="text-lg font-bold text-green-600">
-                    {percentage.toFixed(1)}%
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+        <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border border-green-200 shadow-sm overflow-hidden">
+          <button
+            onClick={() => setIsIncomeOpen(!isIncomeOpen)}
+            className="w-full p-6 flex items-center justify-between hover:bg-green-50/50 transition-colors"
+          >
+            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <div className="w-1 h-6 bg-gradient-to-b from-green-500 to-emerald-500 rounded-full"></div>
+              Nivel de Ingresos
+            </h3>
+            <svg
+              className={`w-6 h-6 text-gray-600 transition-transform duration-300 ${
+                isIncomeOpen ? "rotate-180" : ""
+              }`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
+          {isIncomeOpen && (
+            <div className="px-6 pb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Object.entries(income).map(([incomeRange, percentage]: any) => (
                   <div
-                    className="h-2 rounded-full bg-gradient-to-r from-green-500 to-emerald-600"
-                    style={{ width: `${Math.min(percentage, 100)}%` }}
-                  />
-                </div>
+                    key={incomeRange}
+                    className="bg-white rounded-xl p-4 border border-green-200 shadow-sm"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm font-medium text-gray-700">
+                        {incomeRange}
+                      </span>
+                      <span className="text-lg font-bold text-green-600">
+                        {percentage.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="h-2 rounded-full bg-gradient-to-r from-green-500 to-emerald-600"
+                        style={{ width: `${Math.min(percentage, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -129,6 +129,9 @@ export async function getTikTokThumbnailValidated(
         ? 'https://catch-influencer-back.vercel.app' // URL de producción en Vercel
         : 'http://localhost:5001'; // URL local del backend (puerto correcto)
 
+    // Obtener el token de autenticación
+    const token = localStorage.getItem('token');
+
     // Llamar a la API del backend
     const response = await fetch(
       `${backendUrl}/api/social/tiktok/thumbnail?url=${encodeURIComponent(
@@ -139,6 +142,7 @@ export async function getTikTokThumbnailValidated(
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }), // 🔐 Agregar token de autenticación
         },
         // Agregar timeout manual
         signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined,

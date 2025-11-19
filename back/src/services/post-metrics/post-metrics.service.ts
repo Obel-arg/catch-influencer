@@ -309,6 +309,12 @@ export class PostMetricsService {
         imageUrl = metrics.raw_response.data.basicInstagramPost.rawData.displayUrl;
       } else if (metrics.platform_data?.imageUrl) {
         imageUrl = metrics.platform_data.imageUrl;
+      } else if (metrics.raw_response?.data?.basicTikTokVideo?.cover) {
+        // 🎵 TikTok thumbnail from raw response
+        imageUrl = metrics.raw_response.data.basicTikTokVideo.cover;
+      } else if ((metrics as any).thumbnail_url) {
+        // 🎵 TikTok thumbnail from direct field
+        imageUrl = (metrics as any).thumbnail_url;
       }
 
       // For Instagram URLs, use proxy to avoid CORS issues

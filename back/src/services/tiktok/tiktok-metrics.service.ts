@@ -295,7 +295,8 @@ export class TikTokMetricsService {
       api_timestamp: Date.now(),
       api_success: true,
       api_error: undefined,
-      raw_response: creatorDbFormat
+      raw_response: creatorDbFormat,
+      thumbnail_url: tiktokMetrics.videoMeta.coverUrl // 🖼️ Incluir thumbnail para actualizar el post
     };
   }
 } 
