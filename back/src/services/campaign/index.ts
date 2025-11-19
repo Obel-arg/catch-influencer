@@ -82,7 +82,7 @@ export class CampaignService {
   }
 
   async getMyCampaigns(userId: string): Promise<Campaign[]> {
-    // Primero obtenemos las organizaciones del usuario y su rol
+    // Primero obtenemos las organizaciones del usuario
     const { data: userOrgs, error: orgError } = await supabase
       .from('organization_members')
       .select('organization_id, role')
@@ -94,65 +94,22 @@ export class CampaignService {
       return [];
     }
 
-    // Separar organizaciones por rol del usuario
-    const adminOrgs = userOrgs.filter(org => org.role === 'admin' || org.role === 'owner');
-    const memberOrgs = userOrgs.filter(org => org.role === 'member' || org.role === 'viewer');
+    // Obtener todas las campañas de todas las organizaciones del usuario (sin importar el rol)
+    const orgIds = userOrgs.map(org => org.organization_id);
+    const { data: campaigns, error: campaignsError } = await supabase
+      .from('campaigns')
+      .select('*')
+      .in('organization_id', orgIds)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
 
-    let allCampaigns: any[] = [];
+    if (campaignsError) throw campaignsError;
 
-    // Para organizaciones donde es admin/owner: obtener todas las campañas
-    if (adminOrgs.length > 0) {
-      const adminOrgIds = adminOrgs.map(org => org.organization_id);
-      const { data: adminCampaigns, error: adminError } = await supabase
-        .from('campaigns')
-        .select('*')
-        .in('organization_id', adminOrgIds)
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false });
-
-      if (adminError) throw adminError;
-      if (adminCampaigns) {
-        allCampaigns.push(...adminCampaigns);
-      }
-    }
-
-    // Para organizaciones donde es member/viewer: obtener solo campañas asignadas
-    if (memberOrgs.length > 0) {
-      const { data: assignedCampaigns, error: assignedError } = await supabase
-        .from('campaign_members')
-        .select(`
-          campaign_id,
-          campaigns:campaign_id (*)
-        `)
-        .eq('user_id', userId);
-
-      if (assignedError) throw assignedError;
-
-      // Extraer las campañas asignadas y filtrar por organizaciones donde es member/viewer
-      const memberOrgIds = memberOrgs.map(org => org.organization_id);
-      const memberCampaigns = assignedCampaigns
-        ?.map(item => item.campaigns)
-        .filter((campaign: any) => 
-          campaign && 
-          !campaign.deleted_at && 
-          memberOrgIds.includes(campaign.organization_id)
-        ) || [];
-
-      allCampaigns.push(...memberCampaigns);
-    }
-
-    // Eliminar duplicados y ordenar
-    const uniqueCampaigns = allCampaigns.filter((campaign, index, self) => 
-      index === self.findIndex(c => c.id === campaign.id)
-    );
-
-    return uniqueCampaigns.sort((a, b) => 
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
+    return campaigns || [];
   }
 
   async getMyCampaignsWithMetrics(userId: string): Promise<any[]> {
-    // Primero obtenemos las organizaciones del usuario y su rol
+    // Primero obtenemos las organizaciones del usuario
     const { data: userOrgs, error: orgError } = await supabase
       .from('organization_members')
       .select('organization_id, role')
@@ -167,78 +124,28 @@ export class CampaignService {
       return [];
     }
 
-    // Separar organizaciones por rol del usuario
-    const adminOrgs = userOrgs.filter(org => org.role === 'admin' || org.role === 'owner');
-    const memberOrgs = userOrgs.filter(org => org.role === 'member' || org.role === 'viewer');
+    // Obtener todas las campañas de todas las organizaciones del usuario (sin importar el rol)
+    const orgIds = userOrgs.map(org => org.organization_id);
 
-    let allCampaigns: any[] = [];
+    try {
+      // 🚀 OPTIMIZACIÓN CRÍTICA: Query única con todas las métricas pre-calculadas
+      const { data: campaignsWithMetrics, error: rpcError } = await supabase
+        .rpc('get_campaigns_with_metrics', {
+          org_ids: orgIds
+        });
 
-    // Para organizaciones donde es admin/owner: obtener todas las campañas con métricas
-    if (adminOrgs.length > 0) {
-      const adminOrgIds = adminOrgs.map(org => org.organization_id);
-
-      try {
-        // 🚀 OPTIMIZACIÓN CRÍTICA: Query única con todas las métricas pre-calculadas
-        const { data: adminCampaignsWithMetrics, error: adminError } = await supabase
-          .rpc('get_campaigns_with_metrics', {
-            org_ids: adminOrgIds
-          });
-
-        if (adminError) {
-          console.warn('⚠️ [SERVICE] RPC function not available for admin orgs, falling back to optimized manual query');
-          const adminCampaigns = await this.getMyCampaignsWithMetricsOptimized(adminOrgIds);
-          allCampaigns.push(...adminCampaigns);
-        } else {
-          allCampaigns.push(...(adminCampaignsWithMetrics || []));
-        }
-      } catch (error) {
-        console.warn('⚠️ [SERVICE] RPC failed for admin orgs, using optimized fallback:', error);
-        const adminCampaigns = await this.getMyCampaignsWithMetricsOptimized(adminOrgIds);
-        allCampaigns.push(...adminCampaigns);
+      if (rpcError) {
+        console.warn('⚠️ [SERVICE] RPC function not available, falling back to optimized manual query');
+        const campaigns = await this.getMyCampaignsWithMetricsOptimized(orgIds);
+        return campaigns;
+      } else {
+        return campaignsWithMetrics || [];
       }
+    } catch (error) {
+      console.warn('⚠️ [SERVICE] RPC failed, using optimized fallback:', error);
+      const campaigns = await this.getMyCampaignsWithMetricsOptimized(orgIds);
+      return campaigns;
     }
-
-    // Para organizaciones donde es member/viewer: obtener solo campañas asignadas
-    if (memberOrgs.length > 0) {
-      const { data: assignedCampaigns, error: assignedError } = await supabase
-        .from('campaign_members')
-        .select(`
-          campaign_id,
-          campaigns:campaign_id (*)
-        `)
-        .eq('user_id', userId);
-
-      if (assignedError) {
-        console.error('❌ [SERVICE] Error getting assigned campaigns:', assignedError);
-        throw assignedError;
-      }
-
-      // Extraer las campañas asignadas y filtrar por organizaciones donde es member/viewer
-      const memberOrgIds = memberOrgs.map(org => org.organization_id);
-      const memberCampaigns = assignedCampaigns
-        ?.map(item => item.campaigns)
-        .filter((campaign: any) => 
-          campaign && 
-          !campaign.deleted_at && 
-          memberOrgIds.includes(campaign.organization_id)
-        ) || [];
-
-      // Para usuarios member, usar el método optimizado con las campañas asignadas
-      if (memberCampaigns.length > 0) {
-        const memberCampaignIds = memberCampaigns.map((c: any) => c.id);
-        const memberCampaignsWithMetrics = await this.getMyCampaignsWithMetricsOptimizedForIds(memberCampaignIds);
-        allCampaigns.push(...memberCampaignsWithMetrics);
-      }
-    }
-
-    // Eliminar duplicados y ordenar
-    const uniqueCampaigns = allCampaigns.filter((campaign, index, self) => 
-      index === self.findIndex(c => c.id === campaign.id)
-    );
-
-    return uniqueCampaigns.sort((a, b) => 
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
   }
 
   // 🚀 NUEVO: Método optimizado con query manual más eficiente
