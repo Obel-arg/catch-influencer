@@ -18,7 +18,7 @@ export function formatNumber(num: number): string {
 }
 
 /**
- * 🎯 FUNCIÓN PARA LIMPIAR NÚMEROS CON DEMASIADOS DECIMALES
+ * 🎯 FUNCIÓN PARA LIMPIAR NÚMEROS CON DEMASIADOS DECIMALES test 
  */
 export function formatCleanNumber(value: number | undefined | null): string {
   if (value === undefined || value === null) return 'Sin datos';
