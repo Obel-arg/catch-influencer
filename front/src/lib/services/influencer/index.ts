@@ -239,6 +239,29 @@ export class InfluencerService {
     });
     return response.data;
   }
+
+  /**
+   * Obtiene datos sintéticos de audiencia para un influencer
+   * GET /influencers/:id/audience/synthetic?username=X&follower_count=Y&platform=Z&niche=W
+   */
+  public async getSyntheticAudience(id: string, influencerData?: { username?: string, follower_count?: number, platform?: string, niche?: string }): Promise<any> {
+    const params: any = {};
+    if (influencerData) {
+      if (influencerData.username) params.username = influencerData.username;
+      if (influencerData.follower_count) params.follower_count = influencerData.follower_count;
+      if (influencerData.platform) params.platform = influencerData.platform;
+      if (influencerData.niche) params.niche = influencerData.niche;
+    }
+
+    const response = await httpApiClient.get<any>(`${this.baseUrl}/${id}/audience/synthetic`, {
+      params,
+      headers: new AxiosHeaders({
+        "Content-Type": "application/json",
+        ...withContext('InfluencerService', `getSyntheticAudience(${id})`).headers
+      })
+    });
+    return response.data;
+  }
 }
 
 export const influencerService = InfluencerService.getInstance();

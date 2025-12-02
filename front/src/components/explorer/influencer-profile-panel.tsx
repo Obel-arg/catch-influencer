@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, Info } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NumberDisplay } from "@/components/ui/NumberDisplay";
 import {
@@ -17,6 +18,21 @@ import {
   getSafeAvatarUrlForModal,
 } from "@/utils/tiktok";
 import { CountryFlag } from "@/components/ui/country-flag";
+import { influencerService } from "@/lib/services/influencer";
+import { AudienceDemographics } from "@/types/audience";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 
 interface InfluencerProfilePanelProps {
   influencer: any;
@@ -350,6 +366,10 @@ export function InfluencerProfilePanel({
   // ✨ ESTADO PARA AVATAR PROCESADO
   const [processedAvatar, setProcessedAvatar] = useState<string>("");
 
+  // ✨ ESTADO PARA AUDIENCIA SINTÉTICA
+  const [audienceData, setAudienceData] = useState<AudienceDemographics | null>(null);
+  const [loadingAudience, setLoadingAudience] = useState(false);
+
   const availablePlatforms = useMemo(() => {
     const platforms: string[] = [];
 
@@ -472,6 +492,36 @@ export function InfluencerProfilePanel({
       setProcessedAvatar(processed);
     }
   }, [influencer]);
+
+  // ✨ CARGAR AUDIENCIA SINTÉTICA CUANDO SE ABRA EL MODAL
+  useEffect(() => {
+    const loadSyntheticAudience = async () => {
+      if (isOpen && influencer?.id) {
+        setLoadingAudience(true);
+        try {
+          // Prepare influencer data for the API call
+          const influencerData = {
+            username: influencer.name || influencer.id,
+            follower_count: influencer.followersCount || 50000,
+            platform: influencer.mainSocialPlatform || 'instagram',
+            niche: influencer.categories?.[0] || undefined
+          };
+
+          const response = await influencerService.getSyntheticAudience(influencer.id, influencerData);
+          if (response.success && response.audience) {
+            setAudienceData(response.audience);
+          }
+        } catch (error) {
+          console.error('Error loading synthetic audience:', error);
+          setAudienceData(null);
+        } finally {
+          setLoadingAudience(false);
+        }
+      }
+    };
+
+    loadSyntheticAudience();
+  }, [isOpen, influencer?.id]);
 
   const platformData = useMemo(() => {
     if (!influencer?.platformInfo) return null;
@@ -741,6 +791,104 @@ export function InfluencerProfilePanel({
                     </div>
                   </Card>
                 )}
+
+              {/* ✨ SECCIÓN DE AUDIENCIA SINTÉTICA */}
+              <Card className="border rounded-md overflow-hidden">
+                <div className="p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Audiencia</h3>
+                    <Badge variant="secondary" className="text-xs">
+                      Datos Estimados
+                    </Badge>
+                  </div>
+
+                  {/* Info banner */}
+                  <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-blue-800">
+                      Estos datos son estimaciones basadas en perfiles similares de influencers
+                    </p>
+                  </div>
+
+                  {loadingAudience ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <p className="text-sm text-gray-500">Cargando estadísticas...</p>
+                      </div>
+                    </div>
+                  ) : audienceData ? (
+                    <div className="space-y-6">
+                      {/* Age Distribution */}
+                      {audienceData.age && Object.keys(audienceData.age).length > 0 && (
+                        <div>
+                          <h4 className="text-md font-medium mb-3">Distribución por Edad</h4>
+                          <ResponsiveContainer width="100%" height={200}>
+                            <BarChart data={Object.entries(audienceData.age).map(([age, value]) => ({
+                              name: age,
+                              value: parseFloat(value.toFixed(1))
+                            }))}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" />
+                              <YAxis />
+                              <Tooltip formatter={(value) => `${value}%`} />
+                              <Bar dataKey="value" fill="#3b82f6" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      )}
+
+                      {/* Gender Distribution */}
+                      {audienceData.gender && audienceData.gender.male !== undefined && audienceData.gender.female !== undefined && (
+                        <div>
+                          <h4 className="text-md font-medium mb-3">Distribución por Género</h4>
+                          <ResponsiveContainer width="100%" height={200}>
+                            <PieChart>
+                              <Pie
+                                data={[
+                                  { name: 'Masculino', value: parseFloat(audienceData.gender.male.toFixed(1)) },
+                                  { name: 'Femenino', value: parseFloat(audienceData.gender.female.toFixed(1)) }
+                                ]}
+                                cx="50%"
+                                cy="50%"
+                                labelLine={false}
+                                label={({ name, value }) => `${name}: ${value}%`}
+                                outerRadius={80}
+                                fill="#8884d8"
+                                dataKey="value"
+                              >
+                                <Cell fill="#3b82f6" />
+                                <Cell fill="#ec4899" />
+                              </Pie>
+                              <Tooltip formatter={(value) => `${value}%`} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                      )}
+
+                      {/* Geographic Distribution */}
+                      {audienceData.geography && audienceData.geography.length > 0 && (
+                        <div>
+                          <h4 className="text-md font-medium mb-3">Distribución Geográfica</h4>
+                          <ResponsiveContainer width="100%" height={250}>
+                            <BarChart data={audienceData.geography} layout="vertical">
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis type="number" />
+                              <YAxis dataKey="country" type="category" width={100} />
+                              <Tooltip formatter={(value) => `${value}%`} />
+                              <Bar dataKey="percentage" fill="#10b981" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      No hay datos de audiencia disponibles
+                    </div>
+                  )}
+                </div>
+              </Card>
 
             </>
           )}

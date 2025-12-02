@@ -1,9 +1,11 @@
 import { Request, Response } from 'express';
 import { hypeAuditorService } from '../../services/hypeauditor/hypeauditor.service';
 import supabase from '../../config/supabase';
+import { ReportCollectorService } from '../../services/hypeauditor/report-collector.service';
 
 
 export class HypeAuditorController {
+  private static reportCollector = new ReportCollectorService();
   static async search(req: Request, res: Response) {
     try {
       const body = req.body || {};
@@ -86,6 +88,17 @@ export class HypeAuditorController {
         username as string,
       );
 
+      // 🔥 AUTO-SAVE: Store report in database for future audience inference
+      if (result.report_state && result.report_state.startsWith('READY')) {
+        console.log(`[HypeAuditor] Auto-saving Instagram report for ${username} (state: ${result.report_state})`);
+        HypeAuditorController.reportCollector.collectAndStoreReport(
+          username as string,
+          'instagram'
+        ).catch(err => {
+          console.error('Failed to auto-save Instagram report:', err);
+        });
+      }
+
       res.json({ success: true, ...result, provider: 'HypeAuditor' });
     } catch (error: any) {
       res.status(400).json({
@@ -110,6 +123,18 @@ export class HypeAuditorController {
       const result = await hypeAuditorService.getYoutubeReport(
         channel as string,
       );
+
+      // 🔥 AUTO-SAVE: Store report in database for future audience inference
+      if (result.report_state && result.report_state.startsWith('READY')) {
+        console.log(`[HypeAuditor] Auto-saving YouTube report for ${channel} (state: ${result.report_state})`);
+        HypeAuditorController.reportCollector.collectAndStoreReport(
+          channel as string,
+          'youtube'
+        ).catch(err => {
+          console.error('Failed to auto-save YouTube report:', err);
+        });
+      }
+
       res.json({ success: true, ...result, provider: 'HypeAuditor' });
     } catch (error: any) {
       res.status(400).json({
@@ -135,6 +160,18 @@ export class HypeAuditorController {
         channel as string,
         features as string,
       );
+
+      // 🔥 AUTO-SAVE: Store report in database for future audience inference
+      if (result.report_state && result.report_state.startsWith('READY')) {
+        console.log(`[HypeAuditor] Auto-saving TikTok report for ${channel} (state: ${result.report_state})`);
+        HypeAuditorController.reportCollector.collectAndStoreReport(
+          channel as string,
+          'tiktok'
+        ).catch(err => {
+          console.error('Failed to auto-save TikTok report:', err);
+        });
+      }
+
       res.json({ success: true, ...result, provider: 'HypeAuditor' });
     } catch (error: any) {
       res.status(400).json({
