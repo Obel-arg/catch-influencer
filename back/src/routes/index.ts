@@ -34,6 +34,8 @@ import feedbackRoutes from './feedback/feedback.routes';
 import connectionTestRoutes from './debug/connection-test.routes';
 import hypeAuditorRoutes from './hypeauditor/hypeauditor.routes';
 import hypeAuditorDiscoveryRoutes from './hypeauditor/hypeauditor-discovery.routes';
+import hypeAuditorCollectorRoutes from './hypeauditor/report-collector.routes';
+import userBrandRoutes from './user-brand';
 // import explorerRoutes from './explorer/explorer.routes';
 
 
@@ -115,6 +117,8 @@ router.use('/feedback', feedbackRoutes);
 router.use('/debug', connectionTestRoutes);
 router.use('/hypeauditor', hypeAuditorRoutes);
 router.use('/hypeauditor/discovery', hypeAuditorDiscoveryRoutes);
+router.use('/hypeauditor/collector', hypeAuditorCollectorRoutes);
+router.use('/user-brands', userBrandRoutes);
 // router.use('/explorer', explorerRoutes);
 
 

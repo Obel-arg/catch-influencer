@@ -1,9 +1,11 @@
 import { Router } from 'express';
 import { InfluencerController } from '../../controllers/influencer';
+import { InfluencerAudienceController } from '../../controllers/influencer/influencer-audience.controller';
 import { authenticateToken } from '../../middleware/auth';
 
 const router = Router();
 const influencerController = new InfluencerController();
+const audienceController = new InfluencerAudienceController();
 
 // Ruta para búsqueda local (DEBE ir ANTES de las rutas con parámetros)
 router.get('/search/local', authenticateToken, influencerController.searchLocal.bind(influencerController));
@@ -29,6 +31,9 @@ router.delete('/campaign/:campaignId/influencer/:influencerId', authenticateToke
 // Rutas de estadísticas
 router.get('/:id/stats', authenticateToken, influencerController.getInfluencerStats.bind(influencerController));
 router.post('/:id/stats', authenticateToken, influencerController.updateInfluencerStats.bind(influencerController));
+
+// Ruta de audiencia sintética (sin autenticación para el explorer)
+router.get('/:id/audience/synthetic', audienceController.getSyntheticAudience.bind(audienceController));
 
 // Ruta para obtener datos básicos de plataformas (sin guardar en BD)
 router.get('/platforms/basic-data', authenticateToken, influencerController.getBasicPlatformData.bind(influencerController));

@@ -10,7 +10,7 @@ router.post('/campaign/:campaignId', authenticateToken, campaignInfluencerContro
 router.post('/campaign/:campaignId/check-assignments', authenticateToken, campaignInfluencerController.checkInfluencerAssignments.bind(campaignInfluencerController));
 router.get('/:id', authenticateToken, campaignInfluencerController.getCampaignInfluencerById.bind(campaignInfluencerController));
 router.get('/campaign/:campaignId', authenticateToken, campaignInfluencerController.getCampaignInfluencersByCampaign.bind(campaignInfluencerController));
-router.get('/campaign/:campaignId/details', authenticateToken, campaignInfluencerController.getCampaignInfluencersWithDetails.bind(campaignInfluencerController));
+router.get('/campaign/:campaignId/details', campaignInfluencerController.getCampaignInfluencersWithDetails.bind(campaignInfluencerController)); // Removed auth for share links
 router.get('/influencer/:influencerId', authenticateToken, campaignInfluencerController.getCampaignInfluencersByInfluencer.bind(campaignInfluencerController));
 router.put('/:id', authenticateToken, campaignInfluencerController.updateCampaignInfluencer.bind(campaignInfluencerController));
 router.delete('/:id', authenticateToken, campaignInfluencerController.deleteCampaignInfluencer.bind(campaignInfluencerController));

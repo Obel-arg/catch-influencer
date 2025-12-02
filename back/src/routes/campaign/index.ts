@@ -3,6 +3,7 @@ import { CampaignController } from '../../controllers/campaign';
 import { CampaignMetricsController } from '../../controllers/campaign/campaign-metrics.controller';
 import { authenticateToken } from '../../middleware/auth';
 import campaignInfluencerRoutes from './campaign-influencer.routes';
+import campaignShareRoutes from './campaign-share.routes';
 
 const router = Router();
 const campaignController = new CampaignController();
@@ -19,7 +20,7 @@ router.get('/organization/:organizationId', authenticateToken, campaignControlle
 
 // Rutas para Campaign
 router.post('/', authenticateToken, campaignController.createCampaign.bind(campaignController));
-router.get('/:id', authenticateToken, campaignController.getCampaignById.bind(campaignController));
+router.get('/:id', campaignController.getCampaignById.bind(campaignController)); // Removed auth for share links
 router.put('/:id', authenticateToken, campaignController.updateCampaign.bind(campaignController));
 router.delete('/:id', authenticateToken, campaignController.deleteCampaign.bind(campaignController));
 
@@ -31,12 +32,15 @@ router.use('/:campaignId/influencers', campaignInfluencerRoutes);
 
 // Rutas de métricas
 router.put('/:id/metrics', authenticateToken, campaignController.updateCampaignMetrics.bind(campaignController));
-router.get('/:campaignId/metrics', authenticateToken, campaignMetricsController.getCampaignMetrics.bind(campaignMetricsController));
+router.get('/:campaignId/metrics', campaignMetricsController.getCampaignMetrics.bind(campaignMetricsController)); // Removed auth for share links
 
 // 🎯 RUTAS PARA ASIGNACIÓN DE USUARIOS A CAMPAÑAS
 router.post('/:campaignId/assign-users', authenticateToken, campaignController.assignUsersToCampaign.bind(campaignController));
 router.delete('/:campaignId/remove-users', authenticateToken, campaignController.removeUsersFromCampaign.bind(campaignController));
 router.get('/:campaignId/members', authenticateToken, campaignController.getCampaignMembers.bind(campaignController));
 router.get('/user/:userId/campaigns', authenticateToken, campaignController.getUserCampaigns.bind(campaignController));
+
+// 🔗 RUTAS PARA COMPARTIR CAMPAÑAS
+router.use('/', campaignShareRoutes);
 
 export default router; 

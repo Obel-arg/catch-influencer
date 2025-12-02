@@ -46,7 +46,7 @@ router.get('/campaign/:campaignId/influencer/:influencerId', authenticateToken, 
 // Rutas de filtros y métricas
 router.get('/platform/:platform', authenticateToken, influencerPostController.getInfluencerPostsByPlatform.bind(influencerPostController));
 router.get('/date-range', authenticateToken, influencerPostController.getInfluencerPostsByDateRange.bind(influencerPostController));
-router.get('/campaign/:campaignId/metrics', authenticateToken, influencerPostController.getInfluencerPostsWithMetrics.bind(influencerPostController));
+router.get('/campaign/:campaignId/metrics', influencerPostController.getInfluencerPostsWithMetrics.bind(influencerPostController)); // Removed auth for share links
 
 // Rutas de métricas automáticas CreatorDB (nuevas funcionalidades)
 router.get('/:postId/metrics', authenticateToken, influencerPostsController.getPostWithMetrics.bind(influencerPostsController));
