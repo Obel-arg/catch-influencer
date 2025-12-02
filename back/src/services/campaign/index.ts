@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
-import { 
+import {
   Campaign,
-  CampaignCreateDTO, 
+  CampaignCreateDTO,
   CampaignUpdateDTO,
   CampaignInfluencer,
   CampaignInfluencerCreateDTO,
@@ -11,6 +11,7 @@ import {
   CampaignContentUpdateDTO
 } from '../../models/campaign/campaign.model';
 import config from '../../config/environment';
+import { UserBrandService } from '../user/user-brand.service';
 
 // Usar el cliente admin para evitar restricciones RLS
 const supabase = createClient(
@@ -25,6 +26,12 @@ const supabase = createClient(
 );
 
 export class CampaignService {
+  private userBrandService: UserBrandService;
+
+  constructor() {
+    this.userBrandService = new UserBrandService();
+  }
+
   async createCampaign(data: CampaignCreateDTO, userId: string, token?: string): Promise<Campaign> {
     
     // Crear un cliente autenticado con el token del usuario
@@ -94,8 +101,9 @@ export class CampaignService {
       return [];
     }
 
-    // Obtener todas las campañas de todas las organizaciones del usuario (sin importar el rol)
     const orgIds = userOrgs.map(org => org.organization_id);
+
+    // Obtener todas las campañas de todas las organizaciones del usuario
     const { data: campaigns, error: campaignsError } = await supabase
       .from('campaigns')
       .select('*')
@@ -105,7 +113,49 @@ export class CampaignService {
 
     if (campaignsError) throw campaignsError;
 
-    return campaigns || [];
+    if (!campaigns || campaigns.length === 0) {
+      return [];
+    }
+
+    // 🔐 BRAND-BASED ACCESS CONTROL
+    // Admins see all campaigns, members/viewers only see campaigns from their assigned brands
+    const isAdmin = userOrgs.some(org => org.role === 'admin');
+
+    if (isAdmin) {
+      // Admins bypass brand filtering
+      return campaigns;
+    }
+
+    // For non-admins: filter by assigned brands
+    // Get user's brand IDs for all their organizations
+    const userBrandIdsPromises = orgIds.map(orgId =>
+      this.userBrandService.getUserBrandIds(userId, orgId)
+    );
+    const userBrandIdsArrays = await Promise.all(userBrandIdsPromises);
+    const userBrandIds = userBrandIdsArrays.flat();
+
+    if (userBrandIds.length === 0) {
+      // User has no brand assignments, cannot see any campaigns
+      return [];
+    }
+
+    // Get campaign IDs that belong to user's brands via brands_campaigns junction table
+    const { data: brandCampaigns, error: bcError } = await supabase
+      .from('brands_campaigns')
+      .select('campaign_id')
+      .in('brand_id', userBrandIds);
+
+    if (bcError) throw bcError;
+
+    if (!brandCampaigns || brandCampaigns.length === 0) {
+      return [];
+    }
+
+    // Create a Set for O(1) lookup performance
+    const allowedCampaignIds = new Set(brandCampaigns.map(bc => bc.campaign_id));
+
+    // Filter campaigns to only those the user has brand access to
+    return campaigns.filter(campaign => allowedCampaignIds.has(campaign.id));
   }
 
   async getMyCampaignsWithMetrics(userId: string): Promise<any[]> {
@@ -124,28 +174,71 @@ export class CampaignService {
       return [];
     }
 
-    // Obtener todas las campañas de todas las organizaciones del usuario (sin importar el rol)
     const orgIds = userOrgs.map(org => org.organization_id);
+
+    let campaignsWithMetrics: any[] = [];
 
     try {
       // 🚀 OPTIMIZACIÓN CRÍTICA: Query única con todas las métricas pre-calculadas
-      const { data: campaignsWithMetrics, error: rpcError } = await supabase
+      const { data: rpcData, error: rpcError } = await supabase
         .rpc('get_campaigns_with_metrics', {
           org_ids: orgIds
         });
 
       if (rpcError) {
         console.warn('⚠️ [SERVICE] RPC function not available, falling back to optimized manual query');
-        const campaigns = await this.getMyCampaignsWithMetricsOptimized(orgIds);
-        return campaigns;
+        campaignsWithMetrics = await this.getMyCampaignsWithMetricsOptimized(orgIds);
       } else {
-        return campaignsWithMetrics || [];
+        campaignsWithMetrics = rpcData || [];
       }
     } catch (error) {
       console.warn('⚠️ [SERVICE] RPC failed, using optimized fallback:', error);
-      const campaigns = await this.getMyCampaignsWithMetricsOptimized(orgIds);
-      return campaigns;
+      campaignsWithMetrics = await this.getMyCampaignsWithMetricsOptimized(orgIds);
     }
+
+    if (!campaignsWithMetrics || campaignsWithMetrics.length === 0) {
+      return [];
+    }
+
+    // 🔐 BRAND-BASED ACCESS CONTROL
+    // Admins see all campaigns, members/viewers only see campaigns from their assigned brands
+    const isAdmin = userOrgs.some(org => org.role === 'admin');
+
+    if (isAdmin) {
+      // Admins bypass brand filtering
+      return campaignsWithMetrics;
+    }
+
+    // For non-admins: filter by assigned brands
+    // Get user's brand IDs for all their organizations
+    const userBrandIdsPromises = orgIds.map(orgId =>
+      this.userBrandService.getUserBrandIds(userId, orgId)
+    );
+    const userBrandIdsArrays = await Promise.all(userBrandIdsPromises);
+    const userBrandIds = userBrandIdsArrays.flat();
+
+    if (userBrandIds.length === 0) {
+      // User has no brand assignments, cannot see any campaigns
+      return [];
+    }
+
+    // Get campaign IDs that belong to user's brands via brands_campaigns junction table
+    const { data: brandCampaigns, error: bcError } = await supabase
+      .from('brands_campaigns')
+      .select('campaign_id')
+      .in('brand_id', userBrandIds);
+
+    if (bcError) throw bcError;
+
+    if (!brandCampaigns || brandCampaigns.length === 0) {
+      return [];
+    }
+
+    // Create a Set for O(1) lookup performance
+    const allowedCampaignIds = new Set(brandCampaigns.map(bc => bc.campaign_id));
+
+    // Filter campaigns to only those the user has brand access to
+    return campaignsWithMetrics.filter(campaign => allowedCampaignIds.has(campaign.id));
   }
 
   // 🚀 NUEVO: Método optimizado con query manual más eficiente

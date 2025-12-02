@@ -13,11 +13,13 @@ export class ManualMetricsController {
   async saveManualMetrics(req: Request, res: Response) {
     try {
       const { postId } = req.params;
-      const { likes, comments, alcance } = req.body;
+      const { likes, comments, views, impressions, alcance } = req.body;
 
-     
+      // Support both new field names (views, impressions) and legacy field (alcance)
+      const viewsCount = views || alcance;
+      const impressionsCount = impressions || alcance;
 
-      if (!postId || (likes === undefined && comments === undefined && alcance === undefined)) {
+      if (!postId || (likes === undefined && comments === undefined && viewsCount === undefined && impressionsCount === undefined)) {
         return res.status(400).json({
           success: false,
           message: 'Post ID y al menos una métrica son requeridos'
@@ -38,9 +40,9 @@ export class ManualMetricsController {
         });
       }
 
-      // Validar que sea una historia de Instagram
-      const isInstagramStory = post.platform.toLowerCase() === 'instagram' && 
-                               /instagram\.com\/stories\//i.test(post.post_url);
+      // Validar que sea una historia de Instagram (check content_type first, fallback to URL pattern)
+      const isInstagramStory = post.platform.toLowerCase() === 'instagram' &&
+                               (post.content_type === 'story' || /instagram\.com\/stories\//i.test(post.post_url));
 
       if (!isInstagramStory) {
         return res.status(400).json({
@@ -51,7 +53,7 @@ export class ManualMetricsController {
 
       // Calcular engagement rate básico (en formato decimal 0-1, no porcentaje)
       const totalEngagement = (parseInt(likes) || 0) + (parseInt(comments) || 0);
-      const reach = parseInt(alcance) || 1; // Evitar división por 0
+      const reach = Math.max(parseInt(impressionsCount) || 0, parseInt(viewsCount) || 0, 1); // Use the higher value, minimum 1
       const engagementRate = Math.min(totalEngagement / reach, 1); // Máximo 1 (100%)
 
       // Crear el objeto de métricas
@@ -63,10 +65,11 @@ export class ManualMetricsController {
         title: `Historia de ${post.influencers?.name || 'Instagram'}`,
         likes_count: parseInt(likes) || 0,
         comments_count: parseInt(comments) || 0,
-        views_count: parseInt(alcance) || 0, // Usar alcance como views para historias
+        views_count: parseInt(viewsCount) || 0,
         engagement_rate: engagementRate,
         platform_data: {
           manual: true,
+          impressions: parseInt(impressionsCount) || 0,
           storyId: this.extractStoryId(post.post_url),
           influencer: post.influencers?.name,
           savedAt: new Date().toISOString()
@@ -79,7 +82,9 @@ export class ManualMetricsController {
           manual_metrics: {
             likes,
             comments,
-            alcance,
+            views: viewsCount,
+            impressions: impressionsCount,
+            alcance, // Keep for backwards compatibility
             saved_at: new Date().toISOString()
           }
         }
@@ -87,6 +92,18 @@ export class ManualMetricsController {
 
       // Guardar en la base de datos
       const savedMetrics = await this.postMetricsService.createUserPostMetrics(metricsData);
+
+      // Also update the influencer_posts table with the metrics
+      await supabase
+        .from('influencer_posts')
+        .update({
+          likes_count: parseInt(likes) || 0,
+          comments_count: parseInt(comments) || 0,
+          views_count: parseInt(viewsCount) || 0,
+          impressions_count: parseInt(impressionsCount) || 0,
+          updated_at: new Date()
+        })
+        .eq('id', postId);
 
       return res.json({
         success: true,
@@ -143,9 +160,9 @@ export class ManualMetricsController {
         });
       }
 
-      // Validar que sea una historia de Instagram
-      const isInstagramStory = post.platform.toLowerCase() === 'instagram' && 
-                               /instagram\.com\/stories\//i.test(post.post_url);
+      // Validar que sea una historia de Instagram (check content_type first, fallback to URL pattern)
+      const isInstagramStory = post.platform.toLowerCase() === 'instagram' &&
+                               (post.content_type === 'story' || /instagram\.com\/stories\//i.test(post.post_url));
 
       if (!isInstagramStory) {
         return res.status(400).json({

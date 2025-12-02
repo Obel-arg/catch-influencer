@@ -16,28 +16,34 @@ export class InfluencerPostsController {
 
   async createPost(req: Request, res: Response) {
     const startTime = Date.now();
-    
+
     try {
       const postData = req.body;
-      
+
+      // Auto-detect content type from URL if not provided
+      if (!postData.content_type && postData.post_url) {
+        postData.content_type = this.detectContentType(postData.post_url, postData.platform);
+      }
+
       // 1. Crear el post (operación rápida)
       const newPost = await this.influencerPostService.createInfluencerPost(postData);
-      
+
       // 2. Respuesta inmediata al usuario
       const responseTime = Date.now() - startTime;
-      
+      const isStory = newPost.content_type === 'story';
+
       res.status(201).json({
         success: true,
         message: 'Post creado exitosamente. Procesamiento en background iniciado.',
         data: {
           ...newPost,
-          processingStatus: 'queued',
+          processingStatus: isStory ? 'manual' : 'queued',
           responseTime: `${responseTime}ms`
         }
       });
 
       // 3. Iniciar procesamiento en background (no bloquea la respuesta)
-      this.initiateBackgroundProcessing(newPost.id, newPost.post_url, newPost.platform);
+      this.initiateBackgroundProcessing(newPost.id, newPost.post_url, newPost.platform, newPost.content_type);
 
     } catch (error) {
       console.error('❌ [POST-CREATION] Error creating post:', error);
@@ -52,13 +58,13 @@ export class InfluencerPostsController {
   /**
    * Inicia todo el procesamiento en background usando workers optimizados
    */
-  private async initiateBackgroundProcessing(postId: string, postUrl: string, platform: string) {
+  private async initiateBackgroundProcessing(postId: string, postUrl: string, platform: string, contentType?: string) {
     try {
       console.log(`🔄 [BACKGROUND] Initiating background processing for post ${postId}`);
-      console.log(`🔄 [BACKGROUND] Platform: ${platform}, URL: ${postUrl.substring(0, 50)}...`);
+      console.log(`🔄 [BACKGROUND] Platform: ${platform}, Content Type: ${contentType || 'post'}, URL: ${postUrl.substring(0, 50)}...`);
 
       // Omitir procesamiento automático para historias de Instagram
-      if (platform.toLowerCase() === 'instagram' && /instagram\.com\/stories\//i.test(postUrl)) {
+      if (platform.toLowerCase() === 'instagram' && (contentType === 'story' || /instagram\.com\/stories\//i.test(postUrl))) {
         console.log(`⏭️ [BACKGROUND] Skipping metrics for Instagram story: ${postId}`);
         return;
       }
@@ -266,34 +272,58 @@ export class InfluencerPostsController {
   }
 
   /**
+   * Detecta el tipo de contenido basado en la URL y plataforma
+   */
+  private detectContentType(postUrl: string, platform: string): string {
+    if (!postUrl || !platform) {
+      return 'post';
+    }
+
+    const platformLower = platform.toLowerCase();
+
+    // Instagram stories detection
+    if (platformLower === 'instagram' && /instagram\.com\/stories\//i.test(postUrl)) {
+      return 'story';
+    }
+
+    // Instagram reels detection
+    if (platformLower === 'instagram' && /instagram\.com\/reel\//i.test(postUrl)) {
+      return 'reel';
+    }
+
+    // Default to 'post' for all other content
+    return 'post';
+  }
+
+  /**
    * Determina si se debe realizar auto-scraping para una plataforma y URL
    */
   private shouldAutoScrape(platform: string, postUrl: string): boolean {
     const supportedPlatforms = ['youtube', 'tiktok', 'twitter', 'instagram'];
-    
+
     if (!supportedPlatforms.includes(platform.toLowerCase())) {
       return false;
     }
-    
+
     // Verificar que la URL sea válida para la plataforma
     const platformLower = platform.toLowerCase();
-    
+
     if (platformLower === 'youtube' && (postUrl.includes('youtube.com') || postUrl.includes('youtu.be'))) {
       return true;
     }
-    
+
     if (platformLower === 'tiktok' && (postUrl.includes('tiktok.com') || postUrl.includes('vm.tiktok.com'))) {
       return true;
     }
-    
+
     if (platformLower === 'twitter' && (postUrl.includes('twitter.com') || postUrl.includes('x.com'))) {
       return true;
     }
-    
+
     if (platformLower === 'instagram' && postUrl.includes('instagram.com')) {
       return true;
     }
-    
+
     return false;
   }
 

@@ -14,6 +14,7 @@ import {
   Users,
   CalendarDays,
   Loader2,
+  Share2,
 } from "lucide-react"
 import { CampaignProvider, useCampaignContext } from "@/contexts/CampaignContext"
 import { CampaignStatus } from "@/components/campaigns/campaign-components"
@@ -25,6 +26,7 @@ import { formatDateRange } from "@/utils/campaign"
 import { useCampaignExport } from "@/hooks/campaign/useCampaignExport"
 import { useCampaignPosts } from "@/hooks/campaign/useCampaignPosts"
 import { toast } from "sonner"
+import { generateShareLink } from "@/services/campaign-share.service"
 
 type ViewType = "dashboard" | "posts" | "influencers" | "programming"
 
@@ -115,7 +117,7 @@ function CampaignDetailContent() {
   const searchParams = useSearchParams()
   const { exportCampaign, isExporting, exportError } = useCampaignExport()
   const { posts } = useCampaignPosts(campaign?.id || '')
-  
+
   // 🎯 NUEVO: Determinar tab inicial basado en parámetros de URL
   const getInitialView = (): ViewType => {
     const tab = searchParams.get('tab')
@@ -124,8 +126,11 @@ function CampaignDetailContent() {
     if (tab === 'programming') return 'programming'
     return 'dashboard'
   }
-  
+
   const [activeView, setActiveView] = useState<ViewType>(getInitialView())
+  const [shareUrl, setShareUrl] = useState<string | null>(null)
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
   
   // 🎯 Lógica de redirect: determinar URL de vuelta
   const getBackUrl = () => {
@@ -142,6 +147,36 @@ function CampaignDetailContent() {
   const getBackLabel = () => {
     const redirect = searchParams.get('redirect')
     return redirect === 'brands' ? 'Volver a marca' : 'Volver a campañas'
+  }
+
+  const handleGenerateShareLink = async () => {
+    if (!campaign) return
+
+    try {
+      setIsGeneratingLink(true)
+      const result = await generateShareLink(campaign.id)
+      setShareUrl(result.shareUrl)
+      setShowShareModal(true)
+    } catch (error) {
+      console.error('Error generating share link:', error)
+      toast.error('Error al generar enlace de compartir')
+    } finally {
+      setIsGeneratingLink(false)
+    }
+  }
+
+  const handleCopyUrl = () => {
+    if (!shareUrl) return
+
+    const textArea = document.createElement('textarea')
+    textArea.value = shareUrl
+    textArea.style.position = 'fixed'
+    textArea.style.left = '-999999px'
+    document.body.appendChild(textArea)
+    textArea.select()
+    document.execCommand('copy')
+    textArea.remove()
+    toast.success('Enlace copiado')
   }
 
   const navigationItems = [
@@ -232,6 +267,23 @@ function CampaignDetailContent() {
               </span>
             </Button>
 
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1 text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+              onClick={handleGenerateShareLink}
+              disabled={isGeneratingLink}
+            >
+              {isGeneratingLink ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Share2 className="h-3.5 w-3.5" />
+              )}
+              <span className="hidden sm:inline text-xs">
+                {isGeneratingLink ? 'Generando...' : 'Compartir'}
+              </span>
+            </Button>
+
           </div>
         </div>
 
@@ -267,6 +319,26 @@ function CampaignDetailContent() {
         {activeView === "influencers" && <CampaignInfluencers campaign={campaign} />}
         {activeView === "programming" && <CampaignProgramming campaign={campaign} />}
       </main>
+
+      {/* Share Modal */}
+      {showShareModal && shareUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowShareModal(false)}>
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold mb-4">Enlace de Compartir</h3>
+            <div className="bg-gray-50 p-3 rounded border border-gray-200 mb-4">
+              <p className="text-sm text-gray-700 break-all">{shareUrl}</p>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleCopyUrl} className="flex-1">
+                Copiar Enlace
+              </Button>
+              <Button variant="outline" onClick={() => setShowShareModal(false)}>
+                Cerrar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

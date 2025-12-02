@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { SentimentAnalysisService } from '@/lib/services/analysis/sentiment-analysis.service';
+import type { ContentItem } from '@/components/campaigns/campaign-views/programming/types';
 
 export interface PostData {
   id: string;
@@ -431,12 +432,181 @@ export async function exportCampaignPostsToExcel(campaign: CampaignData) {
       post['Positivo (%)'] > 0 || post['Negativo (%)'] > 0 || post['Neutro (%)'] > 0
     ).length;
     
-    
-    
+
+
   } catch (error) {
     console.error('❌ Error exportando a Excel:', error);
     throw new Error('Error al exportar el archivo Excel');
   }
 }
 
- 
+/**
+ * Helper function to format platform names in Spanish
+ */
+function formatPlatform(platform: string): string {
+  const platformMap: Record<string, string> = {
+    instagram: 'Instagram',
+    tiktok: 'TikTok',
+    youtube: 'YouTube',
+    twitter: 'Twitter',
+    facebook: 'Facebook',
+  };
+  return platformMap[platform?.toLowerCase()] || platform;
+}
+
+/**
+ * Helper function to format content type names in Spanish
+ */
+function formatContentType(type: string): string {
+  const typeMap: Record<string, string> = {
+    post: 'Post',
+    story: 'Historia',
+    reel: 'Reel',
+    video: 'Video',
+    carrusel: 'Carrusel',
+    live: 'En Vivo',
+    tweet: 'Tweet',
+    short: 'Short',
+  };
+  return typeMap[type?.toLowerCase()] || type;
+}
+
+/**
+ * Helper function to format status names in Spanish
+ */
+function formatStatus(status: string): string {
+  const statusMap: Record<string, string> = {
+    completed: 'Completado',
+    'in-progress': 'En Progreso',
+    pending: 'Pendiente',
+    cancelled: 'Cancelado',
+    overdue: 'Atrasado',
+  };
+  return statusMap[status] || status;
+}
+
+/**
+ * Helper function to format dates in DD/MM/YYYY format
+ */
+function formatDate(dateString: string): string {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
+
+/**
+ * Export campaign schedule/programming to Excel
+ */
+export async function exportCampaignScheduleToExcel(
+  campaignName: string,
+  scheduleItems: ContentItem[]
+): Promise<void> {
+  try {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Programación');
+
+    // Define columns
+    worksheet.columns = [
+      { header: 'Título', key: 'title', width: 30 },
+      { header: 'Influencer', key: 'influencer', width: 20 },
+      { header: 'Plataforma', key: 'platform', width: 12 },
+      { header: 'Tipo de Contenido', key: 'contentType', width: 18 },
+      { header: 'Fecha Inicio', key: 'startDate', width: 15 },
+      { header: 'Fecha Fin', key: 'endDate', width: 15 },
+      { header: 'Estado', key: 'status', width: 12 },
+      { header: 'Descripción', key: 'description', width: 40 },
+      { header: 'URL del Contenido', key: 'contentUrl', width: 30 },
+      { header: 'Objetivos', key: 'objectives', width: 25 },
+    ];
+
+    // Style header row
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF4472C4' },
+    };
+    headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+    headerRow.height = 25;
+
+    // Add data rows
+    scheduleItems.forEach((item, index) => {
+      const row = worksheet.addRow({
+        title: item.title,
+        influencer: item.influencer?.name || 'N/A',
+        platform: formatPlatform(item.platform),
+        contentType: formatContentType(item.type),
+        startDate: formatDate(item.startDate),
+        endDate: formatDate(item.endDate),
+        status: formatStatus(item.status),
+        description: item.description || '',
+        contentUrl: item.content_url || '',
+        objectives: item.objectives?.map(obj => obj.name || obj.type).join(', ') || '',
+      });
+
+      // Alternating row colors
+      if (index % 2 === 0) {
+        row.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFF2F2F2' },
+        };
+      }
+
+      // Add hyperlink to content URL if exists
+      if (item.content_url) {
+        const urlCell = row.getCell('contentUrl');
+        urlCell.value = {
+          text: item.content_url,
+          hyperlink: item.content_url,
+        };
+        urlCell.font = { color: { argb: 'FF0563C1' }, underline: true };
+      }
+
+      // Color code status
+      const statusCell = row.getCell('status');
+      switch (item.status) {
+        case 'completed':
+          statusCell.font = { color: { argb: 'FF059669' }, bold: true };
+          break;
+        case 'in-progress':
+          statusCell.font = { color: { argb: 'FFD97706' }, bold: true };
+          break;
+        case 'pending':
+          statusCell.font = { color: { argb: 'FF6B7280' } };
+          break;
+        case 'cancelled':
+          statusCell.font = { color: { argb: 'FFDC2626' } };
+          break;
+      }
+    });
+
+    // Add auto-filter
+    worksheet.autoFilter = {
+      from: 'A1',
+      to: 'J1',
+    };
+
+    // Freeze header row
+    worksheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 1 }];
+
+    // Generate file
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+
+    const fileName = `Programacion_${campaignName.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toLocaleDateString('es-ES').replace(/\//g, '-')}.xlsx`;
+    saveAs(blob, fileName);
+
+    console.log(`✅ Programación exportada exitosamente: ${scheduleItems.length} items`);
+  } catch (error) {
+    console.error('❌ Error exportando programación a Excel:', error);
+    throw new Error('Error al exportar el archivo Excel de programación');
+  }
+}

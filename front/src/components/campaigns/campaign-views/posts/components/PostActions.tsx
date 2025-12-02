@@ -66,7 +66,7 @@ export const PostActions = ({ sentiment, sentimentLoading, platform, onAnalyze, 
           onClick={onAnalyze}
           disabled={!['youtube', 'tiktok', 'twitter', 'instagram'].includes(platform.toLowerCase())}
         >
-          Ver análisis
+          {isInstagramStory ? 'Completar métricas' : 'Ver análisis'}
         </Button>
       </div>
     </div>

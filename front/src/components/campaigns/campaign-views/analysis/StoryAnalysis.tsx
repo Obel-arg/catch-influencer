@@ -50,15 +50,17 @@ const StoryAnalysis: React.FC<StoryAnalysisProps> = ({ postUrl, platform, postId
       
       const response = await httpApiClient.get(endpoint);
       const responseData = response.data as { success: boolean; data?: { post: any; metrics: any } };
-      
+
+      const post = responseData.data?.post;
       const metrics = responseData.data?.metrics;
+
       if (metrics) {
-        
+
         // Buscar métricas manuales en raw_response.manual_metrics primero
         let existingMetrics = null;
         if (metrics.raw_response?.manual_metrics) {
           existingMetrics = metrics.raw_response.manual_metrics;
-        } 
+        }
         // Si no están en manual_metrics, usar las columnas principales
         else if (metrics.likes_count !== undefined || metrics.comments_count !== undefined || metrics.views_count !== undefined) {
           existingMetrics = {
@@ -67,7 +69,7 @@ const StoryAnalysis: React.FC<StoryAnalysisProps> = ({ postUrl, platform, postId
             alcance: metrics.views_count || 0
           };
         }
-        
+
         if (existingMetrics) {
           setMetrics({
             likes: existingMetrics.likes?.toString() || '',
@@ -79,10 +81,10 @@ const StoryAnalysis: React.FC<StoryAnalysisProps> = ({ postUrl, platform, postId
           setHasExistingMetrics(false);
         }
 
-        // ✅ NUEVO: Cargar screenshot existente si hay
-        const screenshotUrl = metrics?.raw_response?.screenshot_url;
-        const uploadedAt = metrics?.raw_response?.screenshot_uploaded_at;
-        
+        // ✅ NUEVO: Cargar screenshot existente si hay (from metrics or post)
+        const screenshotUrl = metrics?.raw_response?.screenshot_url || post?.image_url;
+        const uploadedAt = metrics?.raw_response?.screenshot_uploaded_at || post?.created_at;
+
         if (screenshotUrl) {
           setScreenshot(prev => ({
             ...prev,
@@ -92,6 +94,15 @@ const StoryAnalysis: React.FC<StoryAnalysisProps> = ({ postUrl, platform, postId
         }
       } else {
         setHasExistingMetrics(false);
+
+        // Check for screenshot in post even if no metrics
+        if (post?.image_url) {
+          setScreenshot(prev => ({
+            ...prev,
+            url: post.image_url,
+            uploadedAt: post.created_at || null
+          }));
+        }
       }
     } catch (error) {
       setHasExistingMetrics(false);

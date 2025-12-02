@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { FileSpreadsheet } from "lucide-react"
+import { FileSpreadsheet, Download } from "lucide-react"
+import { useToast } from "@/hooks/common/useToast"
 
 // Types
 import { CampaignProgrammingProps, ZoomLevel, ViewType, ContentItem } from "./types"
@@ -21,6 +22,7 @@ import { useCampaignSchedule } from "@/hooks/campaign/useCampaignSchedule"
 
 // Utils
 import { normalizeDate, parseLocalDate } from "./utils/helpers"
+import { exportCampaignScheduleToExcel } from "@/utils/excel-export"
 
 // Components
 import {
@@ -49,7 +51,10 @@ export function CampaignProgramming({ campaign }: CampaignProgrammingProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false)
-  
+
+  // Hooks
+  const { showToast } = useToast()
+
   // Get campaign influencers
   const { influencers: campaignInfluencers = [] } = useCampaignInfluencers(campaign.id)
   
@@ -367,6 +372,24 @@ export function CampaignProgramming({ campaign }: CampaignProgrammingProps) {
     }
   }
 
+  // Handle export to Excel
+  const handleExportToExcel = async () => {
+    try {
+      await exportCampaignScheduleToExcel(campaign.name, filteredContent)
+      showToast({
+        title: "Éxito",
+        description: "Programación exportada correctamente",
+      })
+    } catch (error) {
+      console.error('Error exporting schedule:', error)
+      showToast({
+        title: "Error",
+        description: "No se pudo exportar la programación",
+        variant: "destructive",
+      })
+    }
+  }
+
   // Handle tab changes
   const handleTabChange = (value: string) => {
     setCurrentView(value as ViewType)
@@ -420,6 +443,14 @@ export function CampaignProgramming({ campaign }: CampaignProgrammingProps) {
                 >
                   <FileSpreadsheet className="w-4 h-4 mr-2" />
                   Importar Excel
+                </Button>
+                <Button
+                  onClick={handleExportToExcel}
+                  variant="outline"
+                  className="border-green-300 text-green-700 hover:bg-green-50"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Exportar
                 </Button>
               </div>
             </div>

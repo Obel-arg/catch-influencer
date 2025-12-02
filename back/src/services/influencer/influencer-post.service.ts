@@ -4,12 +4,28 @@ import { SentimentAnalysisService } from '../database/sentiment-analysis.service
 
 export class InfluencerPostService {
   /**
+   * Helper method to normalize post_metrics from array to object
+   */
+  private normalizePostMetrics(posts: any[]): any[] {
+    return posts.map(post => {
+      // Supabase returns post_metrics as an array, but we need it as a single object
+      if (post.post_metrics && Array.isArray(post.post_metrics)) {
+        post.post_metrics = post.post_metrics[0] || null;
+      }
+      return post;
+    });
+  }
+
+  /**
    * Helper method to enrich posts with influencer data
    */
   private async enrichPostsWithInfluencers(posts: any[]): Promise<any[]> {
     if (!posts || posts.length === 0) {
       return [];
     }
+
+    // Normalize post_metrics first
+    posts = this.normalizePostMetrics(posts);
 
     // Get unique influencer IDs
     const influencerIds = [...new Set(posts.map(post => post.influencer_id).filter(Boolean))];
@@ -43,6 +59,18 @@ export class InfluencerPostService {
   }
 
   async createInfluencerPost(data: InfluencerPostCreateDTO): Promise<InfluencerPost> {
+    // Validate Instagram stories have required fields
+    if (data.platform?.toLowerCase() === 'instagram' && data.content_type === 'story') {
+      if (!data.image_url) {
+        throw new Error('Instagram stories require a screenshot (image_url)');
+      }
+
+      // Remove likes and comments for stories (stories don't support these metrics)
+      delete data.likes_count;
+      delete data.comments_count;
+      // Note: views_count and impressions_count will be added later via manual metrics
+    }
+
     const { data: influencerPost, error } = await supabase
       .from('influencer_posts')
       .insert([{
@@ -54,6 +82,33 @@ export class InfluencerPostService {
       .single();
 
     if (error) throw error;
+
+    // For Instagram stories, create post_metrics record with manual metrics
+    if (influencerPost.platform?.toLowerCase() === 'instagram' && influencerPost.content_type === 'story') {
+      try {
+        await supabase.from('post_metrics').insert({
+          post_id: influencerPost.id,
+          platform: influencerPost.platform,
+          raw_response: {
+            manual_metrics: {
+              likes: 0,
+              comments: 0,
+              views: influencerPost.views_count || 0,
+              impressions: influencerPost.impressions_count || 0,
+              alcance: influencerPost.views_count || 0,
+              saved_at: new Date().toISOString()
+            }
+          },
+          extracted_at: new Date(),
+          created_at: new Date(),
+          updated_at: new Date()
+        });
+      } catch (metricsError) {
+        console.error('Error creating post_metrics for story:', metricsError);
+        // Don't fail the entire operation if metrics creation fails
+      }
+    }
+
     return influencerPost;
   }
 
@@ -72,7 +127,7 @@ export class InfluencerPostService {
   async getInfluencerPostsByCampaign(campaignId: string, limit: number = 50, offset: number = 0): Promise<InfluencerPost[]> {
     const { data: influencerPosts, error } = await supabase
       .from('influencer_posts')
-      .select('*')
+      .select('*, post_metrics(*)')
       .eq('campaign_id', campaignId)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -87,7 +142,7 @@ export class InfluencerPostService {
   async getInfluencerPostsByInfluencer(influencerId: string, limit: number = 50, offset: number = 0): Promise<InfluencerPost[]> {
     const { data: influencerPosts, error } = await supabase
       .from('influencer_posts')
-      .select('*')
+      .select('*, post_metrics(*)')
       .eq('influencer_id', influencerId)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -102,7 +157,7 @@ export class InfluencerPostService {
   async getInfluencerPostsByCampaignAndInfluencer(campaignId: string, influencerId: string, limit: number = 50, offset: number = 0): Promise<InfluencerPost[]> {
     const { data: influencerPosts, error } = await supabase
       .from('influencer_posts')
-      .select('*')
+      .select('*, post_metrics(*)')
       .eq('campaign_id', campaignId)
       .eq('influencer_id', influencerId)
       .is('deleted_at', null)
