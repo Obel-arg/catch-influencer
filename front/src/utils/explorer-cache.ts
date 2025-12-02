@@ -1,5 +1,5 @@
 // 🎯 Sistema de Cache Híbrido para Explorer
-// Combina memoria + localStorage para reducir créditos CreatorDB
+// Combina memoria + localStorage para reducir créditos CreatorDB test
 
 interface CacheEntry {
   data: any;
