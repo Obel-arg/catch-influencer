@@ -5,12 +5,15 @@ import { generateToken, generateRefreshToken, verifyToken } from '../../services
 import { GoogleOAuthService } from '../../services/auth/google-oauth.service';
 import supabase, { supabaseAdmin } from '../../config/supabase';
 import { config } from '../../config/environment';
+import { UserBrandService } from '../../services/user/user-brand.service';
 
 export class AuthController {
   private userService: UserService;
+  private userBrandService: UserBrandService;
 
   constructor() {
     this.userService = new UserService();
+    this.userBrandService = new UserBrandService();
   }
 
   async register(req: Request, res: Response) {
@@ -797,6 +800,22 @@ export class AuthController {
             console.warn('⚠️ Error agregando usuario a organización:', memberError);
           } else if (!memberError) {
             console.log('✅ Usuario agregado a la organización:', orgId);
+          }
+
+          // Asignar marcas si están especificadas en el metadata y el rol no es admin
+          const brandIds = user.user_metadata?.brand_ids;
+          if (role !== 'admin' && brandIds && Array.isArray(brandIds) && brandIds.length > 0) {
+            try {
+              await this.userBrandService.assignUserToBrands(
+                user.id,
+                brandIds,
+                orgId
+              );
+              console.log(`✅ Marcas asignadas al usuario: ${brandIds.length} marcas`);
+            } catch (brandError) {
+              console.warn('⚠️ Error asignando marcas al usuario:', brandError);
+              // No lanzamos error aquí, continuamos con el login
+            }
           }
         } catch (error) {
           console.warn('⚠️ Error procesando agregar usuario a organización:', error);

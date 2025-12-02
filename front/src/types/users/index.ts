@@ -73,6 +73,7 @@ export interface InviteUserData {
   full_name: string;
   role: UserRole;
   message?: string;
+  brand_ids?: string[];
 }
 
 export interface UpdateUserRoleData {

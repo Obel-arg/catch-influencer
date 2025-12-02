@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   MoreVertical,
   Edit,
@@ -52,6 +52,7 @@ import { cn } from "@/lib/utils";
 import { AssignCampaignModal } from "./AssignCampaignModal";
 import { OutlineButton } from "@/components/ui/robust-buttons";
 import { SkeletonUserTableRows } from "./SkeletonUserTable";
+import { BrandBadges } from "./BrandBadges";
 
 interface UserTableProps {
   members: OrganizationMember[];
@@ -65,6 +66,8 @@ interface UserTableProps {
   className?: string;
   searchQuery?: string;
   currentUserId?: string;
+  organizationId?: string;
+  onPageChange?: (page: number) => void;
 }
 
 const roleConfig = {
@@ -100,12 +103,19 @@ export function UserTable({
   className,
   searchQuery = "",
   currentUserId,
+  organizationId,
+  onPageChange,
 }: UserTableProps) {
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [userToAssignCampaigns, setUserToAssignCampaigns] =
     useState<OrganizationMember | null>(null);
   const [page, setPage] = useState(1);
-  const pageSize = 6;
+  const pageSize = 10;
+
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("es-ES", {
@@ -179,6 +189,9 @@ export function UserTable({
               <TableHead className="w-[120px] font-semibold text-gray-700 text-center py-2 text-sm">
                 Rol
               </TableHead>
+              <TableHead className="w-[180px] font-semibold text-gray-700 text-center py-2 text-sm">
+                Marcas
+              </TableHead>
               <TableHead className="w-[140px] font-semibold text-gray-700 text-center py-2 text-sm">
                 Email
               </TableHead>
@@ -226,6 +239,9 @@ export function UserTable({
                 </TableHead>
                 <TableHead className="w-[120px] font-semibold text-gray-700 text-center py-2 text-sm">
                   Rol
+                </TableHead>
+                <TableHead className="w-[180px] font-semibold text-gray-700 text-center py-2 text-sm">
+                  Marcas
                 </TableHead>
                 <TableHead className="w-[140px] font-semibold text-gray-700 text-center py-2 text-sm">
                   Email
@@ -293,6 +309,21 @@ export function UserTable({
                         <RoleIcon className="h-3 w-3" />
                         {roleInfo.label}
                       </Badge>
+                    </TableCell>
+
+                    <TableCell className="text-center">
+                      {organizationId ? (
+                        <div className="flex justify-center">
+                          <BrandBadges
+                            userId={member.user_id}
+                            organizationId={organizationId}
+                            maxVisible={2}
+                            size="sm"
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-sm">-</span>
+                      )}
                     </TableCell>
 
                     <TableCell className="text-center text-gray-600">
@@ -377,29 +408,32 @@ export function UserTable({
         </div>
       )}
 
-      {/* 🎯 PAGINACIÓN OPTIMIZADA */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center border-t border-gray-100 bg-white py-2">
+      {/* 🎯 PAGINACIÓN */}
+      {totalPages > 0 && (
+        <div className="flex items-center justify-between border-t border-gray-200 bg-gray-50 px-6 py-4">
+          <span className="text-sm text-gray-600">
+            Página <span className="font-semibold">{page}</span> de <span className="font-semibold">{totalPages}</span>
+          </span>
           <div className="flex items-center gap-2">
-            <OutlineButton
+            <Button
               onClick={() => setPage(prev => Math.max(1, prev - 1))}
               disabled={page === 1}
-              className="px-2 py-1 text-sm"
+              variant="outline"
+              size="sm"
+              className="h-9"
             >
-              Anterior
-            </OutlineButton>
-            
-            <span className="text-xs text-gray-600 px-2">
-              {page} / {totalPages}
-            </span>
-            
-            <OutlineButton
+              ← Anterior
+            </Button>
+
+            <Button
               onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
               disabled={page === totalPages}
-              className="px-2 py-1 text-sm"
+              variant="outline"
+              size="sm"
+              className="h-9"
             >
-              Siguiente
-            </OutlineButton>
+              Siguiente →
+            </Button>
           </div>
         </div>
       )}

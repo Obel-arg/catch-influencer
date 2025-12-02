@@ -1,12 +1,13 @@
 "use client"
 
 import { useState, useEffect } from 'react';
-import { Crown, User, Eye, Check, AlertTriangle, Edit3 } from 'lucide-react';
+import { Crown, User, Eye, Check, AlertTriangle, Edit3, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -24,15 +25,18 @@ import {
   AlertDescription,
 } from '@/components/ui/alert';
 import { OrganizationMember, UserRole } from '@/types/users';
+import { Brand } from '@/types/brands';
 import { cn } from '@/lib/utils';
+import { brandService } from '@/lib/services/brands';
 
 interface EditUserRoleModalProps {
   member: OrganizationMember | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (userId: string, role: UserRole) => Promise<void>;
+  onSave: (userId: string, role: UserRole, brandIds?: string[]) => Promise<void>;
   onUpdateName?: (userId: string, fullName: string) => Promise<void>;
   loading?: boolean;
+  organizationId?: string;
 }
 
 const roleOptions = [
@@ -65,13 +69,25 @@ export function EditUserRoleModal({
   onClose,
   onSave,
   onUpdateName,
-  loading = false
+  loading = false,
+  organizationId
 }: EditUserRoleModalProps) {
   const [selectedRole, setSelectedRole] = useState<UserRole>('member');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fullName, setFullName] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameError, setNameError] = useState('');
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [selectedBrandIds, setSelectedBrandIds] = useState<string[]>([]);
+  const [loadingBrands, setLoadingBrands] = useState(false);
+  const [brandError, setBrandError] = useState('');
+
+  // Load brands and user's current brands when modal opens
+  useEffect(() => {
+    if (isOpen && organizationId && member) {
+      loadBrandsAndUserBrands();
+    }
+  }, [isOpen, organizationId, member]);
 
   // Actualizar rol seleccionado y nombre cuando cambia el miembro
   useEffect(() => {
@@ -83,11 +99,66 @@ export function EditUserRoleModal({
     }
   }, [member]);
 
+  const loadBrandsAndUserBrands = async () => {
+    if (!organizationId || !member) return;
+
+    setLoadingBrands(true);
+    try {
+      console.log('🔍 Loading brands for user edit...');
+      const brandsData = await brandService.getBrands({ status: 'active' });
+      console.log('✅ Brands loaded:', brandsData);
+      setBrands(brandsData);
+
+      // Fetch user's current brand assignments
+      try {
+        const response = await fetch(
+          `/api/user-brands/organizations/${organizationId}/users/${member.user_id}/brands`,
+          {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const userBrandIds = data.brands?.map((b: Brand) => b.id) || [];
+          console.log('✅ User brands loaded:', userBrandIds);
+          setSelectedBrandIds(userBrandIds);
+        }
+      } catch (error) {
+        console.error('Error loading user brands:', error);
+      }
+    } catch (error) {
+      console.error('❌ Error loading brands:', error);
+    } finally {
+      setLoadingBrands(false);
+    }
+  };
+
   const getInitials = (name: string | null, email: string) => {
     if (name) {
       return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
     }
     return email.slice(0, 2).toUpperCase();
+  };
+
+  const handleBrandToggle = (brandId: string) => {
+    setSelectedBrandIds(prev =>
+      prev.includes(brandId)
+        ? prev.filter(id => id !== brandId)
+        : [...prev, brandId]
+    );
+    setBrandError('');
+  };
+
+  const handleRoleChange = (role: UserRole) => {
+    setSelectedRole(role);
+    // Clear brand selections when switching to admin
+    if (role === 'admin') {
+      setSelectedBrandIds([]);
+      setBrandError('');
+    }
   };
 
   const selectedRoleInfo = roleOptions.find(role => role.value === selectedRole);
@@ -108,12 +179,27 @@ export function EditUserRoleModal({
     return '';
   };
 
+  const validateForm = (): boolean => {
+    // Validate brand selection for non-admin users
+    if (selectedRole !== 'admin' && selectedBrandIds.length === 0) {
+      setBrandError('Debes seleccionar al menos una marca para miembros y visualizadores');
+      return false;
+    }
+    return true;
+  };
+
   const handleSaveRole = async () => {
-    if (!member || !isRoleChanged) return;
+    if (!member) return;
+
+    if (!validateForm()) return;
 
     setIsSubmitting(true);
     try {
-      await onSave(member.user_id, selectedRole);
+      await onSave(
+        member.user_id,
+        selectedRole,
+        selectedRole !== 'admin' ? selectedBrandIds : undefined
+      );
       onClose();
     } catch (error) {
       console.error('Error al actualizar rol:', error);
@@ -255,9 +341,9 @@ export function EditUserRoleModal({
               Seleccionar nuevo rol
             </Label>
             
-            <RadioGroup 
-              value={selectedRole} 
-              onValueChange={(value) => setSelectedRole(value as UserRole)}
+            <RadioGroup
+              value={selectedRole}
+              onValueChange={(value) => handleRoleChange(value as UserRole)}
               className="space-y-3"
             >
               {roleOptions.map((role) => {
@@ -315,12 +401,91 @@ export function EditUserRoleModal({
             </RadioGroup>
           </div>
 
+          {/* Brand Selection (only for non-admin users) */}
+          {selectedRole !== 'admin' && (
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold text-gray-700">
+                Marcas asignadas *
+              </Label>
+              <p className="text-sm text-gray-600">
+                Selecciona las marcas a las que este usuario tendrá acceso
+              </p>
+
+              {loadingBrands ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+                </div>
+              ) : brands.length === 0 ? (
+                <div className="p-4 border border-yellow-200 bg-yellow-50 rounded-lg">
+                  <p className="text-sm text-yellow-800">
+                    No hay marcas activas disponibles. Crea una marca primero para poder asignarla a usuarios.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-60 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                  {brands.map((brand) => (
+                    <label
+                      key={brand.id}
+                      className={cn(
+                        "flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all",
+                        "hover:bg-gray-50 hover:border-gray-300",
+                        selectedBrandIds.includes(brand.id)
+                          ? "border-blue-500 bg-blue-50/50"
+                          : "border-gray-200"
+                      )}
+                    >
+                      <Checkbox
+                        checked={selectedBrandIds.includes(brand.id)}
+                        onCheckedChange={() => handleBrandToggle(brand.id)}
+                        className="border-gray-300"
+                      />
+                      <div className="flex items-center gap-2 flex-1">
+                        {brand.logo_url && (
+                          <img
+                            src={brand.logo_url}
+                            alt={brand.name}
+                            className="w-6 h-6 rounded object-cover"
+                          />
+                        )}
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {brand.name}
+                          </p>
+                          {brand.industry && (
+                            <p className="text-xs text-gray-500">
+                              {brand.industry}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      {selectedBrandIds.includes(brand.id) && (
+                        <Tag className="h-4 w-4 text-blue-600" />
+                      )}
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              {selectedBrandIds.length > 0 && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs text-gray-600">
+                    {selectedBrandIds.length} marca{selectedBrandIds.length !== 1 ? 's' : ''} seleccionada{selectedBrandIds.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+              )}
+
+              {brandError && (
+                <p className="text-sm text-red-600 font-medium">{brandError}</p>
+              )}
+            </div>
+          )}
+
           {/* Advertencia para cambios importantes */}
           {isRoleChanged && (selectedRole === 'admin' || member.org_role === 'admin') && (
             <Alert className="border-amber-200 bg-amber-50/50">
               <AlertTriangle className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-sm text-amber-800">
-                {selectedRole === 'admin' 
+                {selectedRole === 'admin'
                   ? "Otorgar permisos de administrador dará acceso total a la organización, incluyendo gestión de usuarios y facturación."
                   : "Remover permisos de administrador limitará significativamente el acceso del usuario."
                 }
@@ -338,9 +503,9 @@ export function EditUserRoleModal({
           >
             Cancelar
           </Button>
-          <Button 
+          <Button
             onClick={handleSaveRole}
-            disabled={!isRoleChanged || isSubmitting}
+            disabled={isSubmitting}
             className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
           >
             {isSubmitting ? 'Actualizando...' : 'Guardar cambios'}

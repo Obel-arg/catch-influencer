@@ -3,6 +3,7 @@ import { config } from '../../config/environment';
 import { supabaseAdmin } from '../../config/supabase';
 import { Organization, OrganizationCreateDTO, OrganizationUpdateDTO } from '../../models/organization/organization.model';
 import { User } from '../../models/user/user.model';
+import { UserBrandService } from '../user/user-brand.service';
 
 const supabase = createClient(
   config.supabase.url || '',
@@ -10,6 +11,12 @@ const supabase = createClient(
 );
 
 export class OrganizationService {
+  private userBrandService: UserBrandService;
+
+  constructor() {
+    this.userBrandService = new UserBrandService();
+  }
+
   async createOrganization(data: any, userId: string): Promise<Organization> {
     const organizationData: any = {
       ...data,
@@ -255,7 +262,14 @@ export class OrganizationService {
   }
 
   // Invitar usuario por email usando Supabase Auth
-  async inviteUser(organizationId: string, email: string, fullName: string, role: string, invitedBy: string): Promise<any> {
+  async inviteUser(
+    organizationId: string,
+    email: string,
+    fullName: string,
+    role: string,
+    invitedBy: string,
+    brandIds: string[] = []
+  ): Promise<any> {
     // Verificar que quien invita sea admin
     const isAdmin = await this.isUserAdmin(organizationId, invitedBy);
     if (!isAdmin) {
@@ -266,24 +280,48 @@ export class OrganizationService {
       throw new Error('Configuración de Supabase Admin no disponible');
     }
 
+    // Validar que las marcas pertenecen a la organización (si no es admin)
+    if (role !== 'admin' && brandIds.length > 0) {
+      const brandValidations = await Promise.all(
+        brandIds.map(brandId =>
+          this.userBrandService.verifyBrandInOrganization(brandId, organizationId)
+        )
+      );
+
+      if (brandValidations.some(valid => !valid)) {
+        throw new Error('Una o más marcas no pertenecen a la organización');
+      }
+    }
+
     // Primero, verificar si el usuario ya existe en Supabase Auth
     const { data: existingUser, error: userError } = await supabaseAdmin.auth.admin.listUsers();
-    
+
     if (userError) {
       throw new Error('Error al verificar usuarios existentes');
     }
 
     const userExists = existingUser.users.find(user => user.email === email);
-    
+
     if (userExists) {
       // El usuario ya existe, agregarlo directamente a la organización
-      
+
       try {
         await this.addMemberToOrganization(organizationId, userExists.id, role);
+
+        // Asignar marcas para usuarios no-admin
+        if (role !== 'admin' && brandIds.length > 0) {
+          await this.userBrandService.assignUserToBrands(
+            userExists.id,
+            brandIds,
+            organizationId
+          );
+        }
+
         return {
           message: 'Usuario agregado exitosamente a la organización',
           user_id: userExists.id,
-          action: 'added_to_organization'
+          action: 'added_to_organization',
+          brands_assigned: role !== 'admin' ? brandIds.length : 0
         };
       } catch (addError: any) {
         if (addError.message.includes('duplicate key') || addError.message.includes('already exists')) {
@@ -302,8 +340,7 @@ export class OrganizationService {
     const organizationName = organizationData?.data?.name || 'Organización';
     const inviterName = inviterData?.data?.full_name || 'Usuario';
 
-    // El usuario no existe, enviar invitación
-
+    // El usuario no existe, enviar invitación con brandIds en metadata
     const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       data: {
         organization_id: organizationId,
@@ -311,32 +348,34 @@ export class OrganizationService {
         role: role,
         invited_by: invitedBy,
         inviter_name: inviterName,
-        full_name: fullName
+        full_name: fullName,
+        brand_ids: brandIds // Include brand IDs for new user setup
       },
       redirectTo: `${config.urls.frontend}/auth/invite-callback`
     });
 
     if (error) {
-      
+
       // Manejar errores específicos de Supabase Auth
-      if (error.message.includes('already registered') || 
+      if (error.message.includes('already registered') ||
           error.message.includes('already exists') ||
           error.message.includes('duplicate key') ||
           error.message.includes('users_email_partial_key')) {
         throw new Error('Este email ya está registrado. El usuario ya tiene una cuenta en la plataforma.');
       }
-      
+
       if (error.message.includes('Database error')) {
         throw new Error('Error en la base de datos. Por favor intenta de nuevo en unos minutos.');
       }
-      
+
       throw new Error(`Error al enviar invitación: ${error.message}`);
     }
 
     return {
       message: 'Invitación enviada exitosamente',
       invitation: data,
-      action: 'invitation_sent'
+      action: 'invitation_sent',
+      brands_to_assign: role !== 'admin' ? brandIds.length : 0
     };
   }
 } 

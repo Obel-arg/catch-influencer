@@ -165,7 +165,7 @@ export class OrganizationController {
   async inviteUser(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { email, full_name, role } = req.body;
+      const { email, full_name, role, brand_ids } = req.body;
       const invitedBy = req.user?.id;
 
       if (!invitedBy) {
@@ -181,26 +181,40 @@ export class OrganizationController {
         return res.status(400).json({ error: 'Rol inválido' });
       }
 
-      const result = await this.organizationService.inviteUser(id, email, full_name, role, invitedBy);
-      
-      res.status(201).json({ 
+      // Brand validation for non-admin users
+      if (role !== 'admin') {
+        if (!brand_ids || !Array.isArray(brand_ids) || brand_ids.length === 0) {
+          return res.status(400).json({ error: 'Al menos una marca debe ser asignada para miembros y viewers' });
+        }
+      }
+
+      const result = await this.organizationService.inviteUser(
+        id,
+        email,
+        full_name,
+        role,
+        invitedBy,
+        brand_ids || []
+      );
+
+      res.status(201).json({
         message: result.message,
-        data: result 
+        data: result
       });
     } catch (error: any) {
       console.error('Error al invitar usuario:', error);
-      
+
       // Manejar errores específicos
       if (error.message === 'Solo los administradores pueden invitar usuarios') {
         return res.status(403).json({ error: error.message });
       }
-      
+
       if (error.message === 'Este email ya pertenece a la organización' ||
           error.message === 'Este usuario ya pertenece a la organización') {
         return res.status(409).json({ error: error.message });
       }
 
-      if (error.message.includes('ya está registrado') || 
+      if (error.message.includes('ya está registrado') ||
           error.message.includes('already registered') ||
           error.message.includes('already exists')) {
         return res.status(409).json({ error: error.message });
