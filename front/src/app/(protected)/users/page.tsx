@@ -24,6 +24,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/common/useToast";
 import { httpClient } from "@/lib/http";
+import { brandService } from "@/lib/services/brands";
+import { Brand } from "@/types/brands";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Types
 interface User {
@@ -55,6 +58,13 @@ function UsersPage() {
   const [inviteName, setInviteName] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "member" | "viewer">("member");
 
+  // Brand selection
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [selectedBrandIds, setSelectedBrandIds] = useState<string[]>([]);
+  const [loadingBrands, setLoadingBrands] = useState(false);
+  const [brandsError, setBrandsError] = useState<string | null>(null);
+  const [brandSearch, setBrandSearch] = useState("");
+
   // Edit role
   const [newRole, setNewRole] = useState<"admin" | "member" | "viewer">("member");
 
@@ -85,6 +95,54 @@ function UsersPage() {
     fetchUsers();
   }, []);
 
+  // Load brands when invite modal opens
+  useEffect(() => {
+    if (inviteModalOpen) {
+      loadBrands();
+    }
+  }, [inviteModalOpen]);
+
+  const loadBrands = async () => {
+    try {
+      setLoadingBrands(true);
+      setBrandsError(null);
+      const activeBrands = await brandService.getBrands({ status: 'active' });
+      setBrands(activeBrands);
+    } catch (error) {
+      console.error("Error loading brands:", error);
+      setBrandsError("No se pudieron cargar las marcas");
+    } finally {
+      setLoadingBrands(false);
+    }
+  };
+
+  // Filter brands based on search query
+  const filteredBrands = brands.filter(brand => {
+    const searchLower = brandSearch.toLowerCase();
+    return (
+      brand.name.toLowerCase().includes(searchLower) ||
+      brand.industry?.toLowerCase().includes(searchLower)
+    );
+  });
+
+  // Handle role change - clear brands if admin selected
+  const handleRoleChange = (value: "admin" | "member" | "viewer") => {
+    setInviteRole(value);
+    if (value === "admin") {
+      setSelectedBrandIds([]);
+      setBrandSearch("");
+    }
+  };
+
+  // Handle brand selection toggle
+  const handleBrandToggle = (brandId: string) => {
+    setSelectedBrandIds(prev =>
+      prev.includes(brandId)
+        ? prev.filter(id => id !== brandId)
+        : [...prev, brandId]
+    );
+  };
+
   // Invite user
   const handleInvite = async () => {
     if (!inviteEmail || !inviteName) {
@@ -96,12 +154,23 @@ function UsersPage() {
       return;
     }
 
+    // Brand validation for non-admin users
+    if (inviteRole !== "admin" && selectedBrandIds.length === 0) {
+      showToast({
+        title: "Error",
+        description: "Debes seleccionar al menos una marca para este rol",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setSubmitting(true);
       await httpClient.post(`/organizations/${ORGANIZATION_ID}/invite`, {
         email: inviteEmail,
         full_name: inviteName,
         role: inviteRole,
+        brand_ids: inviteRole === "admin" ? [] : selectedBrandIds,
       });
 
       showToast({
@@ -113,6 +182,8 @@ function UsersPage() {
       setInviteEmail("");
       setInviteName("");
       setInviteRole("member");
+      setSelectedBrandIds([]);
+      setBrandSearch("");
       await fetchUsers();
     } catch (error: any) {
       console.error("Error inviting user:", error);
@@ -377,7 +448,7 @@ function UsersPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="role">Rol</Label>
-              <Select value={inviteRole} onValueChange={(value: any) => setInviteRole(value)}>
+              <Select value={inviteRole} onValueChange={handleRoleChange}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -388,9 +459,92 @@ function UsersPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Brand Selection - Only for non-admin roles */}
+            {inviteRole !== "admin" && (
+              <div className="space-y-3">
+                <div>
+                  <Label>Marcas *</Label>
+                  <p className="text-sm text-gray-500">
+                    Selecciona las marcas a las que el usuario tendrá acceso
+                  </p>
+                </div>
+
+                {loadingBrands ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                    <span className="ml-2 text-sm text-gray-500">Cargando marcas...</span>
+                  </div>
+                ) : brandsError ? (
+                  <div className="text-sm text-red-600 py-2">{brandsError}</div>
+                ) : brands.length === 0 ? (
+                  <div className="text-sm text-gray-500 py-2">
+                    No hay marcas activas disponibles
+                  </div>
+                ) : (
+                  <>
+                    {/* Search Input */}
+                    <div className="relative">
+                      <Input
+                        type="text"
+                        placeholder="Buscar marcas..."
+                        value={brandSearch}
+                        onChange={(e) => setBrandSearch(e.target.value)}
+                        className="w-full"
+                      />
+                    </div>
+
+                    {/* Brand List */}
+                    <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-3">
+                      {filteredBrands.length === 0 ? (
+                        <p className="text-sm text-gray-500 text-center py-2">
+                          No se encontraron marcas
+                        </p>
+                      ) : (
+                        filteredBrands.map((brand) => (
+                          <div key={brand.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`brand-${brand.id}`}
+                              checked={selectedBrandIds.includes(brand.id)}
+                              onCheckedChange={() => handleBrandToggle(brand.id)}
+                            />
+                            <label
+                              htmlFor={`brand-${brand.id}`}
+                              className="flex items-center space-x-2 text-sm cursor-pointer flex-1"
+                            >
+                              {brand.logo_url && (
+                                <img
+                                  src={brand.logo_url}
+                                  alt={brand.name}
+                                  className="h-6 w-6 rounded object-cover"
+                                />
+                              )}
+                              <span className="font-medium">{brand.name}</span>
+                              {brand.industry && (
+                                <span className="text-gray-500 text-xs">({brand.industry})</span>
+                              )}
+                            </label>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Selected count */}
+                    <p className="text-xs text-gray-500">
+                      {selectedBrandIds.length} marca{selectedBrandIds.length !== 1 ? 's' : ''} seleccionada{selectedBrandIds.length !== 1 ? 's' : ''}
+                      {brandSearch && ` (mostrando ${filteredBrands.length} de ${brands.length})`}
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setInviteModalOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              setInviteModalOpen(false);
+              setBrandSearch("");
+              setSelectedBrandIds([]);
+            }}>
               Cancelar
             </Button>
             <Button onClick={handleInvite} disabled={submitting}>
