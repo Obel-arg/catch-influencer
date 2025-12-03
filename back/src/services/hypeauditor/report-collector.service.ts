@@ -227,63 +227,101 @@ export class ReportCollectorService {
   /**
    * Find similar reports for matching
    *
-   * Searches for reports with similar characteristics:
-   * - Follower count within ±50% range
-   * - Same niche (if provided)
-   * - Same platform (if provided)
+   * Searches for reports with similar characteristics using progressive relaxation:
+   * 1. Try: platform + niche + follower range (±50%)
+   * 2. Try: platform + follower range (±50%)
+   * 3. Try: all platforms + follower range (±50%)
+   * 4. Try: all platforms + wider follower range (±2x)
+   * 5. Fallback: return ANY reports (max 20)
+   *
+   * This ensures we ALWAYS return something rather than falling back to synthetic data.
    *
    * @param followerCount - Target follower count
    * @param niche - Target niche/category (optional)
    * @param platform - Target platform (optional)
-   * @returns Array of similar reports (max 10)
+   * @returns Array of similar reports (max 20)
    */
   async findSimilarReports(
     followerCount: number,
     niche?: string,
     platform?: string,
   ): Promise<HypeAuditorAudienceReport[]> {
-    // First try with platform filter
-    let query = supabase
-      .from('hypeauditor_audience_reports')
-      .select('*')
-      .gte('follower_count', followerCount * 0.5) // ±50% range
-      .lte('follower_count', followerCount * 2)
-      .limit(10);
+    let data: HypeAuditorAudienceReport[] = [];
 
-    if (niche) {
-      query = query.eq('influencer_niche', niche);
-    }
-
-    if (platform) {
-      query = query.eq('platform', platform);
-    }
-
-    let { data, error } = await query;
-
-    // If no results and platform was specified, try without platform filter
-    if ((!data || data.length === 0) && platform) {
-      console.log(`[ReportCollector] No reports found for platform ${platform}, searching all platforms...`);
-      query = supabase
+    // Strategy 1: Try with platform + niche + follower range (±50%)
+    if (platform && niche) {
+      const result = await supabase
         .from('hypeauditor_audience_reports')
         .select('*')
+        .eq('platform', platform)
+        .eq('influencer_niche', niche)
         .gte('follower_count', followerCount * 0.5)
         .lte('follower_count', followerCount * 2)
-        .limit(10);
+        .limit(20);
 
-      if (niche) {
-        query = query.eq('influencer_niche', niche);
+      if (result.data && result.data.length > 0) {
+        console.log(`✅ [ReportCollector] Found ${result.data.length} reports (platform + niche + follower range)`);
+        return result.data;
       }
-
-      const result = await query;
-      data = result.data;
-      error = result.error;
     }
 
-    if (error || !data) {
-      return [];
+    // Strategy 2: Try with platform + follower range (remove niche filter)
+    if (platform) {
+      const result = await supabase
+        .from('hypeauditor_audience_reports')
+        .select('*')
+        .eq('platform', platform)
+        .gte('follower_count', followerCount * 0.5)
+        .lte('follower_count', followerCount * 2)
+        .limit(20);
+
+      if (result.data && result.data.length > 0) {
+        console.log(`✅ [ReportCollector] Found ${result.data.length} reports (platform + follower range, no niche)`);
+        return result.data;
+      }
     }
 
-    return data;
+    // Strategy 3: Try all platforms with follower range (±50%)
+    const result3 = await supabase
+      .from('hypeauditor_audience_reports')
+      .select('*')
+      .gte('follower_count', followerCount * 0.5)
+      .lte('follower_count', followerCount * 2)
+      .limit(20);
+
+    if (result3.data && result3.data.length > 0) {
+      console.log(`✅ [ReportCollector] Found ${result3.data.length} reports (all platforms, follower range ±50%)`);
+      return result3.data;
+    }
+
+    // Strategy 4: Try wider follower range (±2x = 0.25x to 4x)
+    const result4 = await supabase
+      .from('hypeauditor_audience_reports')
+      .select('*')
+      .gte('follower_count', followerCount * 0.25)
+      .lte('follower_count', followerCount * 4)
+      .limit(20);
+
+    if (result4.data && result4.data.length > 0) {
+      console.log(`✅ [ReportCollector] Found ${result4.data.length} reports (wider follower range ±4x)`);
+      return result4.data;
+    }
+
+    // Strategy 5: FINAL FALLBACK - Return ANY reports in database
+    console.log(`⚠️ [ReportCollector] No matches with filters, returning ANY available reports as fallback`);
+    const result5 = await supabase
+      .from('hypeauditor_audience_reports')
+      .select('*')
+      .limit(20);
+
+    if (result5.data && result5.data.length > 0) {
+      console.log(`✅ [ReportCollector] Fallback: Found ${result5.data.length} reports (ANY from database)`);
+      return result5.data;
+    }
+
+    // Absolutely no reports in database
+    console.log(`❌ [ReportCollector] Database is empty - no reports available at all`);
+    return [];
   }
 
   /**

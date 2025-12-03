@@ -18,7 +18,7 @@ export class InfluencerAudienceController {
   async getSyntheticAudience(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { username, follower_count, platform, niche } = req.query;
+      const { username, follower_count, platform, niche, location } = req.query;
 
       let influencerData: any;
 
@@ -31,6 +31,7 @@ export class InfluencerAudienceController {
           niche: niche as string || undefined,
           follower_count: parseInt(follower_count as string),
           platform: platform as string || 'instagram',
+          location: location as string || undefined,
         };
         console.log('[InfluencerAudience] Using explorer data:', influencerData);
       } else {
@@ -57,6 +58,7 @@ export class InfluencerAudienceController {
           platform:
             influencer.primary_platform ||
             this.detectPlatform(influencer),
+          location: influencer.location || undefined,
         };
         console.log('[InfluencerAudience] Using database influencer:', influencerData);
       }

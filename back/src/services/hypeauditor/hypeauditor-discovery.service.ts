@@ -913,6 +913,9 @@ export class HypeAuditorDiscoveryService {
           item.type?.toLowerCase() ||
           'instagram';
 
+        // Extraer ubicación/país (suggestion response may not have account_geo)
+        const country = (item as any).account_geo?.country || undefined;
+
         // Crear el objeto en el formato que espera la tabla del Explorer
         return {
           // IDs y básicos
@@ -925,7 +928,7 @@ export class HypeAuditorDiscoveryService {
           // Campos que usa directamente la tabla
           followersCount: followers,
           averageEngagementRate: averageEngagement / 100, // Convertir a decimal
-          location: undefined,
+          location: country,
           language: undefined,
           categories: [],
 
@@ -934,7 +937,7 @@ export class HypeAuditorDiscoveryService {
 
           // Estructura completa para compatibilidad
           contentNiches: [],
-          country: undefined,
+          country: country,
           socialPlatforms:
             mappedNetworks.length > 0
               ? mappedNetworks
@@ -1058,6 +1061,10 @@ export class HypeAuditorDiscoveryService {
           rawNetworks[0]?.type?.toLowerCase() ||
           'instagram';
 
+        // Extraer ubicación/país desde account_geo
+        const accountGeo = item.features?.account_geo;
+        const country = accountGeo?.country || undefined;
+
         // Crear el objeto en el formato que espera la tabla del Explorer
         return {
           // IDs y básicos
@@ -1070,7 +1077,7 @@ export class HypeAuditorDiscoveryService {
           // Campos que usa directamente la tabla
           followersCount: followers, // ✅ Campo que lee la tabla
           averageEngagementRate: engagementRate / 100, // ✅ Campo que lee la tabla (convertir a decimal)
-          location: undefined, // No disponible en la respuesta
+          location: country, // ✅ Extract from account_geo
           language: undefined, // No disponible en la respuesta
           categories: contentNiches,
 
@@ -1079,7 +1086,7 @@ export class HypeAuditorDiscoveryService {
 
           // Estructura completa para compatibilidad
           contentNiches: contentNiches,
-          country: undefined,
+          country: country, // ✅ Extract from account_geo
           socialPlatforms:
             mappedNetworks.length > 0
               ? mappedNetworks

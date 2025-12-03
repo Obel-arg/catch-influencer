@@ -504,7 +504,8 @@ export function InfluencerProfilePanel({
             username: influencer.name || influencer.id,
             follower_count: influencer.followersCount || 50000,
             platform: influencer.mainSocialPlatform || 'instagram',
-            niche: influencer.categories?.[0] || undefined
+            niche: influencer.categories?.[0] || undefined,
+            location: influencer.location || influencer.country || undefined
           };
 
           const response = await influencerService.getSyntheticAudience(influencer.id, influencerData);
@@ -842,27 +843,39 @@ export function InfluencerProfilePanel({
                       {audienceData.gender && audienceData.gender.male !== undefined && audienceData.gender.female !== undefined && (
                         <div>
                           <h4 className="text-md font-medium mb-3">Distribución por Género</h4>
-                          <ResponsiveContainer width="100%" height={200}>
-                            <PieChart>
-                              <Pie
-                                data={[
-                                  { name: 'Masculino', value: parseFloat(audienceData.gender.male.toFixed(1)) },
-                                  { name: 'Femenino', value: parseFloat(audienceData.gender.female.toFixed(1)) }
-                                ]}
-                                cx="50%"
-                                cy="50%"
-                                labelLine={false}
-                                label={({ name, value }) => `${name}: ${value}%`}
-                                outerRadius={80}
-                                fill="#8884d8"
-                                dataKey="value"
-                              >
-                                <Cell fill="#3b82f6" />
-                                <Cell fill="#ec4899" />
-                              </Pie>
-                              <Tooltip formatter={(value) => `${value}%`} />
-                            </PieChart>
-                          </ResponsiveContainer>
+                          <div className="flex flex-col items-center gap-2">
+                            <ResponsiveContainer width="100%" height={250}>
+                              <PieChart>
+                                <Pie
+                                  data={[
+                                    { name: 'Masculino', value: parseFloat(audienceData.gender.male.toFixed(1)) },
+                                    { name: 'Femenino', value: parseFloat(audienceData.gender.female.toFixed(1)) }
+                                  ]}
+                                  cx="50%"
+                                  cy="50%"
+                                  labelLine={false}
+                                  label={({ name, value }) => `${name}: ${value}%`}
+                                  outerRadius={70}
+                                  fill="#8884d8"
+                                  dataKey="value"
+                                >
+                                  <Cell fill="#3b82f6" />
+                                  <Cell fill="#ec4899" />
+                                </Pie>
+                                <Tooltip formatter={(value) => `${value}%`} />
+                              </PieChart>
+                            </ResponsiveContainer>
+                            <div className="flex items-center gap-4 text-sm">
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 bg-[#3b82f6] rounded-full"></div>
+                                <span className="text-gray-700">Masculino: {audienceData.gender.male.toFixed(1)}%</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 bg-[#ec4899] rounded-full"></div>
+                                <span className="text-gray-700">Femenino: {audienceData.gender.female.toFixed(1)}%</span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       )}
 
@@ -870,12 +883,17 @@ export function InfluencerProfilePanel({
                       {audienceData.geography && audienceData.geography.length > 0 && (
                         <div>
                           <h4 className="text-md font-medium mb-3">Distribución Geográfica</h4>
-                          <ResponsiveContainer width="100%" height={250}>
-                            <BarChart data={audienceData.geography} layout="vertical">
+                          <ResponsiveContainer width="100%" height={Math.max(250, audienceData.geography.length * 30)}>
+                            <BarChart data={audienceData.geography} layout="vertical" margin={{ left: 20 }}>
                               <CartesianGrid strokeDasharray="3 3" />
                               <XAxis type="number" />
-                              <YAxis dataKey="country" type="category" width={100} />
-                              <Tooltip formatter={(value) => `${value}%`} />
+                              <YAxis
+                                dataKey="country"
+                                type="category"
+                                width={120}
+                                tick={{ fontSize: 12 }}
+                              />
+                              <Tooltip formatter={(value) => `${Number(value).toFixed(1)}%`} />
                               <Bar dataKey="percentage" fill="#10b981" />
                             </BarChart>
                           </ResponsiveContainer>
