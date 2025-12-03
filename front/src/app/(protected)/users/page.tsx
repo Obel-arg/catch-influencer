@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { withAdminOnly } from "@/components/auth/withRole";
 import { Button } from "@/components/ui/button";
-import { Plus, Loader2, Trash2, Edit, Mail } from "lucide-react";
+import { Plus, Loader2, Trash2, Edit, Mail, ChevronLeft, ChevronRight } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
@@ -64,9 +64,22 @@ function UsersPage() {
   const [loadingBrands, setLoadingBrands] = useState(false);
   const [brandsError, setBrandsError] = useState<string | null>(null);
   const [brandSearch, setBrandSearch] = useState("");
+  const [brandDropdownOpen, setBrandDropdownOpen] = useState(false);
 
   // Edit role
   const [newRole, setNewRole] = useState<"admin" | "member" | "viewer">("member");
+
+  // Edit brand management
+  const [editBrands, setEditBrands] = useState<Brand[]>([]);
+  const [editSelectedBrandIds, setEditSelectedBrandIds] = useState<string[]>([]);
+  const [editLoadingBrands, setEditLoadingBrands] = useState(false);
+  const [editBrandSearch, setEditBrandSearch] = useState("");
+  const [editBrandsError, setEditBrandsError] = useState<string | null>(null);
+  const [editBrandDropdownOpen, setEditBrandDropdownOpen] = useState(false);
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const USERS_PER_PAGE = 10;
 
   const { showToast } = useToast();
 
@@ -116,6 +129,35 @@ function UsersPage() {
     }
   };
 
+  // Load brands for edit modal
+  const loadEditBrands = async (userId: string) => {
+    try {
+      setEditLoadingBrands(true);
+      setEditBrandsError(null);
+
+      // Load all active brands
+      const activeBrands = await brandService.getBrands({ status: 'active' });
+      setEditBrands(activeBrands);
+
+      // Load user's current brand assignments
+      try {
+        const response = await httpClient.get(
+          `/user-brands/organizations/${ORGANIZATION_ID}/users/${userId}/brands`
+        );
+        const userBrandIds = response.data.brands?.map((b: Brand) => b.id) || [];
+        setEditSelectedBrandIds(userBrandIds);
+      } catch (error) {
+        console.error('Error loading user brands:', error);
+        setEditSelectedBrandIds([]);
+      }
+    } catch (error) {
+      console.error('Error loading brands for edit:', error);
+      setEditBrandsError('No se pudieron cargar las marcas');
+    } finally {
+      setEditLoadingBrands(false);
+    }
+  };
+
   // Filter brands based on search query
   const filteredBrands = brands.filter(brand => {
     const searchLower = brandSearch.toLowerCase();
@@ -131,6 +173,7 @@ function UsersPage() {
     if (value === "admin") {
       setSelectedBrandIds([]);
       setBrandSearch("");
+      setBrandDropdownOpen(false);
     }
   };
 
@@ -141,6 +184,24 @@ function UsersPage() {
         ? prev.filter(id => id !== brandId)
         : [...prev, brandId]
     );
+  };
+
+  // Handle brand selection toggle in edit modal
+  const handleEditBrandToggle = (brandId: string) => {
+    setEditSelectedBrandIds(prev =>
+      prev.includes(brandId)
+        ? prev.filter(id => id !== brandId)
+        : [...prev, brandId]
+    );
+  };
+
+  // Handle role change in edit modal
+  const handleEditRoleChange = (value: "admin" | "member" | "viewer") => {
+    setNewRole(value);
+    if (value === "admin") {
+      setEditSelectedBrandIds([]);
+      setEditBrandSearch("");
+    }
   };
 
   // Invite user
@@ -201,26 +262,46 @@ function UsersPage() {
   const handleUpdateRole = async () => {
     if (!selectedUser) return;
 
+    // Validate brand selection for non-admin users
+    if (newRole !== "admin" && editSelectedBrandIds.length === 0) {
+      showToast({
+        title: "Error",
+        description: "Debes seleccionar al menos una marca para este rol",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setSubmitting(true);
+
+      // Update role
       await httpClient.put(
         `/organizations/${ORGANIZATION_ID}/members/${selectedUser.user_id}/role`,
         { role: newRole }
       );
 
+      // Update brands (only for non-admin users)
+      if (newRole !== "admin") {
+        await httpClient.put(
+          `/user-brands/organizations/${ORGANIZATION_ID}/users/${selectedUser.user_id}/brands`,
+          { brand_ids: editSelectedBrandIds }
+        );
+      }
+
       showToast({
         title: "Éxito",
-        description: "Rol actualizado correctamente",
+        description: "Usuario actualizado correctamente",
       });
 
       setEditRoleModalOpen(false);
       setSelectedUser(null);
       await fetchUsers();
     } catch (error) {
-      console.error("Error updating role:", error);
+      console.error("Error updating user:", error);
       showToast({
         title: "Error",
-        description: "No se pudo actualizar el rol",
+        description: "No se pudo actualizar el usuario",
         variant: "destructive",
       });
     } finally {
@@ -263,6 +344,12 @@ function UsersPage() {
     setSelectedUser(user);
     setNewRole(user.role);
     setEditRoleModalOpen(true);
+    setEditBrandSearch("");
+    setEditSelectedBrandIds([]);
+    setEditBrandDropdownOpen(false);
+
+    // Load brands
+    loadEditBrands(user.user_id);
   };
 
   // Open delete modal
@@ -295,6 +382,23 @@ function UsersPage() {
       default:
         return role;
     }
+  };
+
+  // Pagination logic
+  const totalPages = Math.ceil(users.length / USERS_PER_PAGE);
+  const paginatedUsers = useMemo(() => {
+    const startIndex = (currentPage - 1) * USERS_PER_PAGE;
+    const endIndex = startIndex + USERS_PER_PAGE;
+    return users.slice(startIndex, endIndex);
+  }, [users, currentPage]);
+
+  // Reset to page 1 when users change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [users.length]);
+
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
   };
 
   return (
@@ -354,7 +458,7 @@ function UsersPage() {
                   </td>
                 </tr>
               ) : (
-                users.map((user) => (
+                paginatedUsers.map((user) => (
                   <tr key={user.user_id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -415,6 +519,75 @@ function UsersPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {!loading && users.length > 0 && totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-gray-700">
+              <span>
+                Mostrando {((currentPage - 1) * USERS_PER_PAGE) + 1} - {Math.min(currentPage * USERS_PER_PAGE, users.length)} de {users.length} usuarios
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="h-8"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                  // Show first page, last page, current page, and pages around current
+                  const showPage =
+                    page === 1 ||
+                    page === totalPages ||
+                    (page >= currentPage - 1 && page <= currentPage + 1);
+
+                  const showEllipsis =
+                    (page === 2 && currentPage > 3) ||
+                    (page === totalPages - 1 && currentPage < totalPages - 2);
+
+                  if (showEllipsis) {
+                    return (
+                      <span key={page} className="px-2 text-gray-500">
+                        ...
+                      </span>
+                    );
+                  }
+
+                  if (!showPage) return null;
+
+                  return (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => goToPage(page)}
+                      className="h-8 w-8 p-0"
+                    >
+                      {page}
+                    </Button>
+                  );
+                })}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="h-8"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Invite User Modal */}
@@ -482,7 +655,7 @@ function UsersPage() {
                     No hay marcas activas disponibles
                   </div>
                 ) : (
-                  <>
+                  <div className="relative">
                     {/* Search Input */}
                     <div className="relative">
                       <Input
@@ -490,51 +663,73 @@ function UsersPage() {
                         placeholder="Buscar marcas..."
                         value={brandSearch}
                         onChange={(e) => setBrandSearch(e.target.value)}
+                        onFocus={() => setBrandDropdownOpen(true)}
                         className="w-full"
+                        autoComplete="off"
+                        data-form-type="other"
+                        data-lpignore="true"
                       />
                     </div>
 
-                    {/* Brand List */}
-                    <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-3">
-                      {filteredBrands.length === 0 ? (
-                        <p className="text-sm text-gray-500 text-center py-2">
-                          No se encontraron marcas
-                        </p>
-                      ) : (
-                        filteredBrands.map((brand) => (
-                          <div key={brand.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`brand-${brand.id}`}
-                              checked={selectedBrandIds.includes(brand.id)}
-                              onCheckedChange={() => handleBrandToggle(brand.id)}
-                            />
-                            <label
-                              htmlFor={`brand-${brand.id}`}
-                              className="flex items-center space-x-2 text-sm cursor-pointer flex-1"
-                            >
-                              {brand.logo_url && (
-                                <img
-                                  src={brand.logo_url}
-                                  alt={brand.name}
-                                  className="h-6 w-6 rounded object-cover"
-                                />
-                              )}
-                              <span className="font-medium">{brand.name}</span>
-                              {brand.industry && (
-                                <span className="text-gray-500 text-xs">({brand.industry})</span>
-                              )}
-                            </label>
+                    {/* Dropdown List - Only shows when focused/open */}
+                    {brandDropdownOpen && (
+                      <>
+                        {/* Backdrop to close dropdown */}
+                        <div
+                          className="fixed inset-0 z-10"
+                          onClick={() => setBrandDropdownOpen(false)}
+                        />
+
+                        {/* Brand List */}
+                        <div className="absolute z-20 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                          <div className="p-2 space-y-1">
+                            {filteredBrands.length === 0 ? (
+                              <p className="text-sm text-gray-500 text-center py-2">
+                                No se encontraron marcas
+                              </p>
+                            ) : (
+                              filteredBrands.map((brand) => (
+                                <div
+                                  key={brand.id}
+                                  className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                                  onClick={() => handleBrandToggle(brand.id)}
+                                >
+                                  <Checkbox
+                                    id={`brand-${brand.id}`}
+                                    checked={selectedBrandIds.includes(brand.id)}
+                                    onCheckedChange={() => handleBrandToggle(brand.id)}
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                  <label
+                                    htmlFor={`brand-${brand.id}`}
+                                    className="flex items-center space-x-2 text-sm cursor-pointer flex-1"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {brand.logo_url && (
+                                      <img
+                                        src={brand.logo_url}
+                                        alt={brand.name}
+                                        className="h-6 w-6 rounded object-cover"
+                                      />
+                                    )}
+                                    <span className="font-medium">{brand.name}</span>
+                                    {brand.industry && (
+                                      <span className="text-gray-500 text-xs">({brand.industry})</span>
+                                    )}
+                                  </label>
+                                </div>
+                              ))
+                            )}
                           </div>
-                        ))
-                      )}
-                    </div>
+                        </div>
+                      </>
+                    )}
 
                     {/* Selected count */}
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 mt-2">
                       {selectedBrandIds.length} marca{selectedBrandIds.length !== 1 ? 's' : ''} seleccionada{selectedBrandIds.length !== 1 ? 's' : ''}
-                      {brandSearch && ` (mostrando ${filteredBrands.length} de ${brands.length})`}
                     </p>
-                  </>
+                  </div>
                 )}
               </div>
             )}
@@ -544,6 +739,7 @@ function UsersPage() {
               setInviteModalOpen(false);
               setBrandSearch("");
               setSelectedBrandIds([]);
+              setBrandDropdownOpen(false);
             }}>
               Cancelar
             </Button>
@@ -557,17 +753,18 @@ function UsersPage() {
 
       {/* Edit Role Modal */}
       <Dialog open={editRoleModalOpen} onOpenChange={setEditRoleModalOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Cambiar Rol</DialogTitle>
             <DialogDescription>
-              Modifica el rol de {selectedUser?.user_profiles?.full_name || "este usuario"}
+              Modifica el rol y marcas de {selectedUser?.user_profiles?.full_name || "este usuario"}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {/* Role Selection */}
             <div className="space-y-2">
               <Label htmlFor="new-role">Nuevo Rol</Label>
-              <Select value={newRole} onValueChange={(value: any) => setNewRole(value)}>
+              <Select value={newRole} onValueChange={handleEditRoleChange}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -578,6 +775,109 @@ function UsersPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Brand Selection - Only for non-admin roles */}
+            {newRole !== "admin" && (
+              <div className="space-y-3">
+                <div>
+                  <Label>Marcas *</Label>
+                  <p className="text-sm text-gray-500">
+                    Selecciona las marcas a las que el usuario tendrá acceso
+                  </p>
+                </div>
+
+                {editLoadingBrands ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                    <span className="ml-2 text-sm text-gray-500">Cargando marcas...</span>
+                  </div>
+                ) : editBrandsError ? (
+                  <div className="text-sm text-red-600 py-2">{editBrandsError}</div>
+                ) : editBrands.length === 0 ? (
+                  <div className="text-sm text-gray-500 py-2">
+                    No hay marcas activas disponibles
+                  </div>
+                ) : (
+                  <div className="relative">
+                    {/* Search Input */}
+                    <div className="relative">
+                      <Input
+                        type="text"
+                        placeholder="Buscar marcas..."
+                        value={editBrandSearch}
+                        onChange={(e) => setEditBrandSearch(e.target.value)}
+                        onFocus={() => setEditBrandDropdownOpen(true)}
+                        className="w-full"
+                        autoComplete="off"
+                        data-form-type="other"
+                        data-lpignore="true"
+                      />
+                    </div>
+
+                    {/* Dropdown List - Only shows when focused/open */}
+                    {editBrandDropdownOpen && (
+                      <>
+                        {/* Backdrop to close dropdown */}
+                        <div
+                          className="fixed inset-0 z-10"
+                          onClick={() => setEditBrandDropdownOpen(false)}
+                        />
+
+                        {/* Brand List */}
+                        <div className="absolute z-20 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                          <div className="p-2 space-y-1">
+                            {editBrands
+                              .filter(brand => {
+                                const searchLower = editBrandSearch.toLowerCase();
+                                return (
+                                  brand.name.toLowerCase().includes(searchLower) ||
+                                  brand.industry?.toLowerCase().includes(searchLower)
+                                );
+                              })
+                              .map((brand) => (
+                                <div
+                                  key={brand.id}
+                                  className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                                  onClick={() => handleEditBrandToggle(brand.id)}
+                                >
+                                  <Checkbox
+                                    id={`edit-brand-${brand.id}`}
+                                    checked={editSelectedBrandIds.includes(brand.id)}
+                                    onCheckedChange={() => handleEditBrandToggle(brand.id)}
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                  <label
+                                    htmlFor={`edit-brand-${brand.id}`}
+                                    className="flex items-center space-x-2 text-sm cursor-pointer flex-1"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {brand.logo_url && (
+                                      <img
+                                        src={brand.logo_url}
+                                        alt={brand.name}
+                                        className="h-6 w-6 rounded object-cover"
+                                      />
+                                    )}
+                                    <span className="font-medium">{brand.name}</span>
+                                    {brand.industry && (
+                                      <span className="text-gray-500 text-xs">({brand.industry})</span>
+                                    )}
+                                  </label>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Selected count */}
+                    <p className="text-xs text-gray-500 mt-2">
+                      {editSelectedBrandIds.length} marca{editSelectedBrandIds.length !== 1 ? 's' : ''} seleccionada{editSelectedBrandIds.length !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditRoleModalOpen(false)}>
