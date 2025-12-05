@@ -1,0 +1,234 @@
+/**
+ * OpenAI Audience Inference Models
+ *
+ * Type definitions for OpenAI-based Instagram audience demographics inference.
+ * This module provides interfaces for the inference process, caching, and data structures.
+ */
+
+/**
+ * Instagram profile data extracted from scraping
+ */
+export interface InstagramProfileData {
+  username: string;
+  url: string;
+  bio: string;
+  followerCount: number;
+  followingCount: number;
+  postCount: number;
+  isVerified: boolean;
+  category?: string;
+  primaryLanguage?: string;
+  secondaryLanguages?: string[];
+  avgEngagementRate?: number;
+  postingTimePattern?: string;
+  recentPosts: InstagramPost[];
+  topHashtags?: string[];
+}
+
+/**
+ * Instagram post data
+ */
+export interface InstagramPost {
+  id: string;
+  caption?: string;
+  likesCount: number;
+  commentsCount: number;
+  hashtags: string[];
+  timestamp: Date;
+  isVideo: boolean;
+  mentions?: string[];
+}
+
+/**
+ * Audience demographics structure (matches existing format)
+ */
+export interface AudienceDemographics {
+  age: {
+    '13-17': number;
+    '18-24': number;
+    '25-34': number;
+    '35-44': number;
+    '45-54': number;
+    '55+': number;
+  };
+  gender: {
+    male: number;
+    female: number;
+  };
+  geography: Array<{
+    country: string;
+    country_code: string;
+    percentage: number;
+  }>;
+  is_synthetic: boolean; // Always false for OpenAI inferences
+}
+
+/**
+ * Extended audience demographics with metadata
+ */
+export interface AudienceDemographicsExtended extends AudienceDemographics {
+  inference_source: 'openai';
+  model_used: string;
+  confidence_score?: number;
+  inferred_at: Date;
+}
+
+/**
+ * OpenAI API response structure
+ */
+export interface OpenAIInferenceResponse {
+  age: {
+    '13-17': number;
+    '18-24': number;
+    '25-34': number;
+    '35-44': number;
+    '45-54': number;
+    '55+': number;
+  };
+  gender: {
+    male: number;
+    female: number;
+  };
+  geography: Array<{
+    country: string;
+    country_code: string;
+    percentage: number;
+  }>;
+}
+
+/**
+ * Cache entry structure
+ */
+export interface CacheEntry {
+  url: string;
+  username: string;
+  demographics: AudienceDemographics;
+  model: string;
+  cached_at: string; // ISO 8601 date string
+  expires_at: string; // ISO 8601 date string
+  api_cost: number;
+  profile_snapshot?: Partial<InstagramProfileData>;
+}
+
+/**
+ * Cache file structure
+ */
+export interface CacheFile {
+  version: string;
+  entries: {
+    [cacheKey: string]: CacheEntry;
+  };
+}
+
+/**
+ * Inference result (success or error)
+ */
+export interface InferenceResult {
+  success: boolean;
+  demographics?: AudienceDemographicsExtended;
+  error?: string;
+  cached?: boolean;
+  cost?: number;
+  details?: any;
+}
+
+/**
+ * Cache statistics
+ */
+export interface CacheStats {
+  totalEntries: number;
+  totalCost: number;
+  oldestEntry?: Date;
+  newestEntry?: Date;
+  averageCost: number;
+  expirationBreakdown: {
+    valid: number;
+    expired: number;
+  };
+}
+
+/**
+ * Cost tracking entry
+ */
+export interface CostEntry {
+  timestamp: Date;
+  operation: string;
+  cost: number;
+  url?: string;
+  model: string;
+  success: boolean;
+}
+
+/**
+ * Inference options
+ */
+export interface InferenceOptions {
+  dryRun?: boolean; // Test scraping without calling OpenAI
+  forceRefresh?: boolean; // Bypass cache and force new inference
+  skipCache?: boolean; // Don't read from or write to cache
+  mockMode?: boolean; // Use mock OpenAI responses
+  maxRetries?: number; // Max retry attempts for failures
+  timeout?: number; // Timeout in milliseconds
+  influencerId?: string; // Influencer ID for database caching
+}
+
+/**
+ * Batch inference request
+ */
+export interface BatchInferenceRequest {
+  urls: string[];
+  delay?: number; // Delay between requests in milliseconds
+  options?: InferenceOptions;
+}
+
+/**
+ * Batch inference result
+ */
+export interface BatchInferenceResult {
+  total: number;
+  successful: number;
+  failed: number;
+  cached: number;
+  totalCost: number;
+  results: Array<{
+    url: string;
+    result: InferenceResult;
+  }>;
+}
+
+/**
+ * Validation error details
+ */
+export interface ValidationError {
+  field: string;
+  message: string;
+  value?: any;
+}
+
+/**
+ * Validation result
+ */
+export interface ValidationResult {
+  valid: boolean;
+  errors: ValidationError[];
+  normalized?: AudienceDemographics;
+}
+
+/**
+ * Database record for OpenAI audience inference
+ */
+export interface OpenAIAudienceInferenceDB {
+  id: string;
+  influencer_id?: string;
+  instagram_url: string;
+  instagram_username: string;
+  audience_demographics: AudienceDemographics;
+  audience_geography: any; // Same as demographics.geography
+  model_used: string;
+  profile_data_snapshot?: Partial<InstagramProfileData>;
+  inferred_at: Date;
+  expires_at: Date;
+  api_cost: number;
+  created_at: Date;
+  updated_at: Date;
+}

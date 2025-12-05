@@ -26,7 +26,11 @@
     "test-queue": "ts-node src/scripts/test-queue-system.ts",
     "test-slack": "ts-node scripts/test-slack-notification.js",
     "check-sentiment-queue": "ts-node src/scripts/check-sentiment-queue.ts",
-    "fix-stuck-sentiment": "ts-node src/scripts/fix-stuck-sentiment-jobs.ts"
+    "fix-stuck-sentiment": "ts-node src/scripts/fix-stuck-sentiment-jobs.ts",
+    "infer-audience": "ts-node src/scripts/openai-audience-inference.ts",
+    "infer-audience:batch": "ts-node src/scripts/openai-audience-inference.ts batch",
+    "infer-audience:stats": "ts-node src/scripts/openai-audience-inference.ts stats",
+    "infer-audience:clear": "ts-node src/scripts/openai-audience-inference.ts clear-cache"
   },
   "dependencies": {
     "@huggingface/inference": "^2.8.1",
@@ -47,6 +51,7 @@
     "bullmq": "^5.56.3",
     "cheerio": "^1.1.0",
     "cloudinary": "^2.7.0",
+    "commander": "^14.0.2",
     "compression": "^1.7.4",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -64,6 +69,7 @@
     "multer": "^1.4.5-lts.1",
     "node-fetch": "^3.3.2",
     "ollama": "^0.5.16",
+    "openai": "^6.10.0",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "pg": "^8.16.0",

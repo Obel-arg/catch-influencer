@@ -35,6 +35,9 @@ yarn-error.log*
 .npm
 .eslintcache
 
+# OpenAI Audience Inference Cache
+src/data/openai-audience-cache.json
+
 # Archivos temporales
 /tmp
 /temp

@@ -1,91 +1,97 @@
 import { Request, Response } from 'express';
-import { SyntheticAudienceService } from '../../services/audience/synthetic-audience.service';
+import { OpenAIAudienceService } from '../../services/audience/openai-audience.service';
 import { InfluencerService } from '../../services/influencer/influencer.service';
 
 export class InfluencerAudienceController {
-  private syntheticService: SyntheticAudienceService;
+  private openaiService: OpenAIAudienceService;
   private influencerService: InfluencerService;
 
   constructor() {
-    this.syntheticService = new SyntheticAudienceService();
+    this.openaiService = new OpenAIAudienceService();
     this.influencerService = new InfluencerService();
   }
 
   /**
    * GET /api/influencers/:id/audience/synthetic
-   * Generate synthetic audience demographics for an influencer
+   * Generate audience demographics using OpenAI inference
    */
   async getSyntheticAudience(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { username, follower_count, platform, niche, location } = req.query;
+      const { username, instagram_url, force } = req.query;
 
-      let influencerData: any;
+      let instagramUrl: string;
+      let influencerId: string = id;
 
-      // Check if influencer data is passed via query params (from explorer)
-      if (username && follower_count) {
-        // Use query params directly (explorer mode)
-        influencerData = {
-          id: id,
-          username: username as string,
-          niche: niche as string || undefined,
-          follower_count: parseInt(follower_count as string),
-          platform: platform as string || 'instagram',
-          location: location as string || undefined,
-        };
-        console.log('[InfluencerAudience] Using explorer data:', influencerData);
+      // Check if Instagram URL is provided directly
+      if (instagram_url) {
+        instagramUrl = instagram_url as string;
+        console.log('[InfluencerAudience] Using provided Instagram URL:', instagramUrl);
+      } else if (username) {
+        // Clean username: remove spaces, special chars, convert to lowercase
+        const cleanUsername = (username as string)
+          .toLowerCase()
+          .trim()
+          .replace(/\s+/g, '')  // Remove all spaces
+          .replace(/[^a-z0-9._]/g, '');  // Keep only valid Instagram characters
+
+        instagramUrl = `https://instagram.com/${cleanUsername}`;
+        console.log('[InfluencerAudience] Built Instagram URL from username:', instagramUrl,
+          username !== cleanUsername ? `(cleaned from: ${username})` : '');
       } else {
         // Try to get influencer from database
         const influencer = await this.influencerService.getById(id);
         if (!influencer) {
           return res.status(404).json({
             success: false,
-            error: 'Influencer not found in database. Please provide username and follower_count as query params.'
+            error: 'Influencer not found in database. Please provide username or instagram_url as query params.'
           });
         }
 
-        // Prepare influencer data for matching
-        influencerData = {
-          id: influencer.id,
-          username: influencer.username || influencer.name,
-          niche: influencer.niche || influencer.category,
-          follower_count:
-            influencer.follower_count ||
-            influencer.instagram_followers ||
-            influencer.tiktok_followers ||
-            influencer.youtube_subscribers ||
-            50000, // Default fallback
-          platform:
-            influencer.primary_platform ||
-            this.detectPlatform(influencer),
-          location: influencer.location || undefined,
-        };
-        console.log('[InfluencerAudience] Using database influencer:', influencerData);
+        // Extract Instagram URL or username from influencer data
+        const influencerUsername =
+          influencer.instagram_username ||
+          influencer.username ||
+          influencer.name;
+
+        if (!influencerUsername) {
+          return res.status(400).json({
+            success: false,
+            error: 'No Instagram username found for this influencer. Please provide username or instagram_url.'
+          });
+        }
+
+        instagramUrl = `https://instagram.com/${influencerUsername}`;
+        console.log('[InfluencerAudience] Using database influencer Instagram:', instagramUrl);
       }
 
-      // Generate audience (hybrid: real or synthetic)
-      const audience = await this.syntheticService.getInfluencerAudience(influencerData);
+      // Call OpenAI inference service
+      console.log('[InfluencerAudience] Calling OpenAI inference...');
+      const result = await this.openaiService.inferAudience(instagramUrl, {
+        influencerId: influencerId,
+        forceRefresh: force === 'true',
+      });
+
+      if (!result.success) {
+        return res.status(500).json({
+          success: false,
+          error: result.error || 'Failed to infer audience demographics',
+          details: result.details
+        });
+      }
 
       res.json({
         success: true,
-        audience,
+        audience: result.demographics,
+        cached: result.cached,
+        cost: result.cost,
       });
-    } catch (error) {
-      console.error('Error generating synthetic audience:', error);
+    } catch (error: any) {
+      console.error('[InfluencerAudience] Error inferring audience:', error);
       res.status(500).json({
         success: false,
-        error: 'Error generating audience data'
+        error: error.message || 'Error inferring audience data'
       });
     }
-  }
-
-  /**
-   * Helper: Detect primary platform from influencer data
-   */
-  private detectPlatform(influencer: any): string {
-    if (influencer.instagram_id || influencer.instagram_followers) return 'instagram';
-    if (influencer.tiktok_id || influencer.tiktok_followers) return 'tiktok';
-    if (influencer.youtube_id || influencer.youtube_subscribers) return 'youtube';
-    return 'instagram'; // Default
   }
 }
