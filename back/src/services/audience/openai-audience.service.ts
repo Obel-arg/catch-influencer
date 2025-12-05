@@ -9,7 +9,9 @@ import * as fs from 'fs/promises';
 import * as fsSync from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import puppeteer, { Browser, Page } from 'puppeteer';
+import puppeteer from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
+import { Browser, Page } from 'puppeteer-core';
 import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
 import { config } from '../../config/environment';
@@ -277,12 +279,31 @@ export class OpenAIAudienceService {
     let page: Page | null = null;
 
     try {
-      // Launch browser
-      browser = await puppeteer.launch({
-        headless: this.config.scraping.headless,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-        timeout: timeout || this.config.scraping.timeout,
-      });
+      // Determine if we're in production (Vercel/serverless)
+      const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL;
+
+      // Launch browser with appropriate configuration
+      if (isProduction) {
+        // Production: Use @sparticuz/chromium for serverless
+        browser = await puppeteer.launch({
+          args: chromium.args,
+          defaultViewport: { width: 1280, height: 800 },
+          executablePath: await chromium.executablePath(),
+          headless: true,
+        });
+      } else {
+        // Development: Use local Puppeteer
+        const puppeteerLocal = require('puppeteer');
+        browser = await puppeteerLocal.launch({
+          headless: this.config.scraping.headless,
+          args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+          timeout: timeout || this.config.scraping.timeout,
+        });
+      }
+
+      if (!browser) {
+        throw new Error('Failed to launch browser');
+      }
 
       page = await browser.newPage();
 
@@ -417,7 +438,9 @@ export class OpenAIAudienceService {
       });
 
       // Close browser
-      await browser.close();
+      if (browser) {
+        await browser.close();
+      }
 
       // Construct full profile data
       const fullProfile: InstagramProfileData = {
