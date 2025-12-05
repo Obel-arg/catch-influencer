@@ -331,8 +331,19 @@ export class OpenAIAudienceService {
         timeout: timeout || this.config.scraping.timeout,
       });
 
-      // Wait for content to load (shorter timeout)
-      await page.waitForSelector('header', { timeout: 5000 });
+      // Wait for content to load (try multiple selectors)
+      try {
+        await Promise.race([
+          page.waitForSelector('header', { timeout: 10000 }),
+          page.waitForSelector('main', { timeout: 10000 }),
+          page.waitForSelector('article', { timeout: 10000 }),
+        ]);
+      } catch (error) {
+        console.log('  Warning: Standard selectors not found, trying to extract data anyway...');
+      }
+
+      // Additional wait for dynamic content
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Extract profile data
       // Note: This function runs in the browser context, so DOM APIs are available
@@ -1013,13 +1024,25 @@ Now infer the audience demographics as JSON:`;
     }
   }
 
+  /**
+   * Get log file path (use /tmp in production for writable filesystem)
+   */
+  private getLogFilePath(): string {
+    const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL;
+
+    if (isProduction) {
+      // Use /tmp directory in serverless environments (writable)
+      return '/tmp/openai-costs.log';
+    } else {
+      // Use configured path in development
+      return this.config.costControl.logFile;
+    }
+  }
+
   private async getTodaySpending(date: string): Promise<number> {
     try {
-      // Ensure log directory exists
-      const logDir = path.dirname(this.config.costControl.logFile);
-      await fs.mkdir(logDir, { recursive: true });
-
-      const content = await fs.readFile(this.config.costControl.logFile, 'utf-8');
+      const logFile = this.getLogFilePath();
+      const content = await fs.readFile(logFile, 'utf-8');
       const lines = content.split('\n').filter(Boolean);
 
       let total = 0;
@@ -1039,14 +1062,17 @@ Now infer the audience demographics as JSON:`;
 
   private async recordCost(entry: CostEntry): Promise<void> {
     try {
-      // Ensure log directory exists
-      const logDir = path.dirname(this.config.costControl.logFile);
-      await fs.mkdir(logDir, { recursive: true });
+      const logFile = this.getLogFilePath();
+      const logDir = path.dirname(logFile);
+
+      // Ensure log directory exists (ignore errors in production)
+      await fs.mkdir(logDir, { recursive: true }).catch(() => {});
 
       const line = `${entry.timestamp.toISOString()},${entry.operation},${entry.cost},${entry.model},${entry.success ? 'success' : 'failed'},${entry.url || ''}\n`;
-      await fs.appendFile(this.config.costControl.logFile, line);
+      await fs.appendFile(logFile, line);
     } catch (error) {
-      console.warn('Cost tracking error:', error);
+      // Don't fail the request if cost tracking fails
+      console.warn('Cost tracking warning:', error);
     }
   }
 
