@@ -167,6 +167,14 @@ export default function Explorer() {
   }>({});
   const [loadingPanel, setLoadingPanel] = useState(false);
 
+  // Audience cache (5-minute TTL for synthetic audience data)
+  const [audienceCache, setAudienceCache] = useState<{
+    [influencerId: string]: {
+      data: any;
+      timestamp: number;
+    };
+  }>({});
+
   // Nuevo: Estado para información de validación
   const [validationInfo, setValidationInfo] = useState<{
     applied: boolean;
@@ -2772,6 +2780,19 @@ export default function Explorer() {
           isOpen={isPanelOpen}
           onClose={() => setIsPanelOpen(false)}
           isLoading={loadingPanel}
+          audienceCache={audienceCache}
+          onAudienceFetched={(id, data) => {
+            setAudienceCache(prev => ({
+              ...prev,
+              [id]: { data, timestamp: Date.now() }
+            }));
+          }}
+          searchContext={{
+            location: location !== 'all' ? location : undefined,
+            audienceGeo: audienceGeo.countries.length > 0 || audienceGeo.cities.length > 0
+              ? audienceGeo
+              : undefined
+          }}
         />
       )}
 

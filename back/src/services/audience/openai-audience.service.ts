@@ -31,6 +31,7 @@ import {
   ValidationResult,
   ValidationError,
   OpenAIAudienceInferenceDB,
+  SearchContext,
 } from '../../models/audience/openai-audience-inference.model';
 
 /**
@@ -68,7 +69,11 @@ export class OpenAIAudienceService {
 
       // Check database cache first (unless force refresh or skip cache)
       if (!options.forceRefresh && !options.skipCache) {
-        const dbCached = await this.checkDatabaseCache(normalizedUrl, options.influencerId);
+        const dbCached = await this.checkDatabaseCache(
+          normalizedUrl,
+          options.influencerId,
+          options.searchContext
+        );
         if (dbCached) {
           console.log(`✅ Database cache hit: ${normalizedUrl}`);
           return {
@@ -101,7 +106,8 @@ export class OpenAIAudienceService {
             demographics,
             options.influencerId,
             cached.api_cost,
-            cached.profile_snapshot
+            cached.profile_snapshot,
+            options.searchContext
           );
 
           return {
@@ -151,13 +157,37 @@ export class OpenAIAudienceService {
         await this.checkDailyBudget();
       }
 
-      // Call OpenAI API
+      // Call OpenAI API with search context (with retries for hallucinated countries)
       console.log(`🤖 Calling OpenAI API (${this.config.openai.model})...`);
-      const rawDemographics = await this.callOpenAIAPI(profileData);
+      if (options.searchContext) {
+        console.log('📍 Using search context for enhanced inference');
+      }
+
+      let rawDemographics: OpenAIInferenceResponse;
+      let attempts = 0;
+      const maxAttempts = 3;
+
+      while (attempts < maxAttempts) {
+        attempts++;
+        rawDemographics = await this.callOpenAIAPI(profileData, options.searchContext);
+
+        // HARD VALIDATION: Check for hallucinated countries
+        const hallucinatedCountries = this.detectHallucinatedCountries(rawDemographics, profileData);
+        if (hallucinatedCountries.length > 0) {
+          console.warn(`❌ Attempt ${attempts}: OpenAI hallucinated impossible countries: ${hallucinatedCountries.join(', ')}`);
+          if (attempts < maxAttempts) {
+            console.log(`🔄 Retrying with stricter prompt...`);
+            continue;
+          } else {
+            throw new Error(`OpenAI keeps hallucinating impossible countries after ${maxAttempts} attempts: ${hallucinatedCountries.join(', ')}`);
+          }
+        }
+        break;
+      }
 
       // Validate and normalize
       console.log('✅ Validating and normalizing output...');
-      const validation = this.validateAndNormalize(rawDemographics);
+      const validation = this.validateAndNormalize(rawDemographics!);
       if (!validation.valid) {
         throw new Error(
           `Validation failed: ${validation.errors.map((e) => e.message).join(', ')}`
@@ -198,7 +228,8 @@ export class OpenAIAudienceService {
           demographics,
           options.influencerId,
           cost,
-          profileData
+          profileData,
+          options.searchContext
         );
       }
 
@@ -482,9 +513,9 @@ export class OpenAIAudienceService {
   /**
    * Call OpenAI API for audience inference
    */
-  private async callOpenAIAPI(profileData: InstagramProfileData): Promise<OpenAIInferenceResponse> {
+  private async callOpenAIAPI(profileData: InstagramProfileData, searchContext?: SearchContext): Promise<OpenAIInferenceResponse> {
     const systemPrompt = this.buildSystemPrompt();
-    const userPrompt = this.buildUserPrompt(profileData);
+    const userPrompt = this.buildUserPrompt(profileData, searchContext);
 
     try {
       // Build request parameters based on model capabilities
@@ -556,30 +587,40 @@ You MUST respond with ONLY valid JSON in this exact format:
 
 GEOGRAPHIC INFERENCE RULES (CRITICAL - FOLLOW EXACTLY):
 
-1. **Language is PRIMARY signal**:
-   - Spanish content → MUST have 60-80% LATAM countries (AR, MX, CO, CL, ES)
-   - Portuguese → Brazil (BR) 70-85%
-   - English → depends on creator location, NOT automatic US/UK
+⚠️ **STRICT LANGUAGE-BASED RULES - NO EXCEPTIONS**:
 
-2. **Creator location determines primary audience**:
-   - Argentine creator → Argentina 35-55%, then other LATAM
-   - Mexican creator → Mexico 40-60%, then other LATAM
-   - US/UK only if creator is clearly from there
+1. **Spanish content (MANDATORY)**:
+   - If bio/posts contain Spanish → 70-90% MUST be Spanish-speaking countries (AR, MX, CO, CL, ES, PE, VE, UY)
+   - Argentine markers (🇦🇷, Buenos Aires, Argentine slang) → Argentina 40-55%, Mexico 10-18%, Chile 6-10%
+   - Mexican markers → Mexico 45-60%, US 8-12% (Mexican diaspora), other LATAM
+   - **ABSOLUTELY NO India, Pakistan, Nigeria, Bangladesh, Kenya, or Asian countries for Spanish content**
 
-3. **Content type modifiers**:
-   - Gaming: +10-15% global reach (US, BR, MX still prioritized)
-   - Music/Entertainment: heavily local (60-70% creator's country)
-   - Fashion/Beauty: more global but still language-based
+2. **Portuguese content**:
+   - Brazil (BR) 70-90%
+   - Portugal (PT) 5-10%
+   - **NO African or Asian countries**
 
-4. **NEVER default to US/UK unless**:
-   - Content is in English
-   - Creator has clear US/UK markers
-   - Verified accounts with global brands
+3. **English content**:
+   - Check bio/posts for location clues FIRST
+   - If no clear location → US 30%, UK 20%, Canada 10%, Australia 10%, then diverse
+   - **DO NOT assume global English = India/Pakistan/Africa**
+
+4. **Content type**:
+   - Music/Entertainment: 60-70% creator's country
+   - Gaming: Creator's region primary, then language-based expansion
+   - Fashion/Beauty: Still language-based, just more distributed
+
+⚠️ **ABSOLUTE PROHIBITIONS - WILL BE REJECTED IF VIOLATED**:
+- Spanish content → **ZERO TOLERANCE**: NO Sweden, New Zealand, France, Germany, Canada, Ireland, Netherlands, Australia, UK
+- Spanish content → **ZERO TOLERANCE**: NO India, Pakistan, Bangladesh, Nigeria, Kenya, Philippines, Indonesia, Thailand, Japan, China
+- Portuguese content → NO Asian/African countries except Portuguese-speaking (Angola, Mozambique rarely)
+- If you detect Spanish language → geography MUST be >70% LATAM+Spain
+- **YOUR RESPONSE WILL BE REJECTED AND YOU'LL BE ASKED AGAIN IF YOU INCLUDE FORBIDDEN COUNTRIES**
 
 CRITICAL RULES:
 1. All percentages MUST sum to exactly 100.0
 2. Country codes: ISO 3166-1 alpha-2 (AR, MX, BR, CO, CL, ES, US, GB)
-3. DO NOT assume English-speaking audiences for Spanish content
+3. **LANGUAGE DETERMINES GEOGRAPHY** - this is the PRIMARY rule
 4. ONLY the JSON object in response - no explanations
 
 EXAMPLES:
@@ -588,9 +629,85 @@ EXAMPLES:
   }
 
   /**
+   * Detect hallucinated/impossible countries based on profile language and content
+   */
+  private detectHallucinatedCountries(
+    response: OpenAIInferenceResponse,
+    profileData: InstagramProfileData
+  ): string[] {
+    const hallucinated: string[] = [];
+
+    // Detect language
+    const isSpanish = profileData.primaryLanguage === 'Spanish' ||
+                     profileData.bio?.match(/[áéíóúñ¿¡]/i);
+    const isPortuguese = profileData.primaryLanguage === 'Portuguese' ||
+                        profileData.bio?.match(/ã|õ|ç/i);
+
+    // FORBIDDEN countries for Spanish content (LATAM creators)
+    const forbiddenForSpanish = [
+      'SE', 'NZ', 'FR', 'DE', 'CA', 'IE', 'NL', 'NO', 'DK', 'FI', 'IS', 'AU',
+      'IN', 'PK', 'BD', 'LK', 'NP', 'NG', 'KE', 'GH', 'TZ', 'UG', 'ZA', 'EG',
+      'PH', 'ID', 'TH', 'VN', 'MY', 'SG', 'JP', 'KR', 'CN', 'TW', 'HK', 'GB'
+    ];
+
+    // FORBIDDEN countries for Portuguese content (Brazil)
+    const forbiddenForPortuguese = [
+      'SE', 'NZ', 'FR', 'DE', 'CA', 'IE', 'NL', 'NO', 'DK', 'FI', 'IS',
+      'IN', 'PK', 'BD', 'LK', 'NP', 'NG', 'KE', 'GH', 'TZ', 'UG', 'EG',
+      'PH', 'ID', 'TH', 'VN', 'MY', 'SG', 'JP', 'KR', 'CN', 'TW', 'HK',
+      'AR', 'MX', 'CO', 'CL', 'ES' // No Spanish countries for Portuguese
+    ];
+
+    // Check geography array for forbidden countries
+    for (const geo of response.geography) {
+      const code = geo.country_code.toUpperCase();
+
+      if (isSpanish && forbiddenForSpanish.includes(code)) {
+        hallucinated.push(`${geo.country} (${code}) - impossible for Spanish content`);
+      } else if (isPortuguese && forbiddenForPortuguese.includes(code)) {
+        hallucinated.push(`${geo.country} (${code}) - impossible for Portuguese content`);
+      }
+    }
+
+    return hallucinated;
+  }
+
+  /**
+   * Get country name from country code
+   */
+  private getCountryName(code: string): string {
+    const countries: { [key: string]: string } = {
+      'AR': 'Argentina',
+      'MX': 'Mexico',
+      'US': 'United States',
+      'BR': 'Brazil',
+      'CO': 'Colombia',
+      'CL': 'Chile',
+      'ES': 'Spain',
+      'GB': 'United Kingdom',
+      'PE': 'Peru',
+      'UY': 'Uruguay',
+      'EC': 'Ecuador',
+      'VE': 'Venezuela',
+      'BO': 'Bolivia',
+      'PY': 'Paraguay',
+      'FR': 'France',
+      'DE': 'Germany',
+      'IT': 'Italy',
+      'CA': 'Canada',
+      'AU': 'Australia',
+      'JP': 'Japan',
+      'KR': 'South Korea',
+      'IN': 'India',
+      'CN': 'China',
+    };
+    return countries[code.toUpperCase()] || code;
+  }
+
+  /**
    * Build user prompt for OpenAI
    */
-  private buildUserPrompt(profileData: InstagramProfileData): string {
+  private buildUserPrompt(profileData: InstagramProfileData, searchContext?: SearchContext): string {
     const posts = profileData.recentPosts
       .map(
         (post, i) =>
@@ -610,6 +727,26 @@ EXAMPLES:
     // Detect gaming/tech content
     const isGaming = profileData.bio?.toLowerCase().match(/gam(ing|er)|stream|twitch|youtube|esports/i) ||
                     profileData.topHashtags?.some(tag => tag.match(/gam(ing|er)|stream|esports/i));
+
+    // Build search context hint
+    let searchContextHint = '';
+    if (searchContext) {
+      if (searchContext.creator_location) {
+        const locationName = this.getCountryName(searchContext.creator_location);
+        searchContextHint += `\n🎯 SEARCH CONTEXT - Creator Location: ${locationName} (${searchContext.creator_location})`;
+        searchContextHint += `\n   → User is specifically searching for creators from ${locationName}`;
+        searchContextHint += `\n   → Audience should reflect ${locationName}-based creator patterns`;
+      }
+
+      if (searchContext.target_audience_geo?.countries && searchContext.target_audience_geo.countries.length > 0) {
+        const targetCountries = searchContext.target_audience_geo.countries
+          .map(c => `${this.getCountryName(c.id)} (${c.prc}%)`)
+          .join(', ');
+        searchContextHint += `\n🎯 SEARCH CONTEXT - Target Audience Geography: ${targetCountries}`;
+        searchContextHint += `\n   → User wants creators whose audience is in these countries`;
+        searchContextHint += `\n   → STRONGLY PRIORITIZE these countries in your geography inference`;
+      }
+    }
 
     let geographicHint = '';
     if (isSpanish) {
@@ -634,13 +771,16 @@ CONTENT SAMPLE (Recent ${profileData.recentPosts.length} posts):
 ${posts}
 
 TOP HASHTAGS: ${profileData.topHashtags?.join(', ') || 'None'}
+${searchContextHint}
 
 🎯 CRITICAL GEOGRAPHIC INFERENCE:
 ${geographicHint}
 ${isGaming ? '🎮 Gaming content: Audience skews male (65-75%), ages 18-34, primarily from creator\'s region' : ''}
 
+${searchContext?.target_audience_geo ? '⚠️ IMPORTANT: The user is searching for creators with specific target audience geography. Weight this heavily in your inference.' : ''}
 ⚠️ DO NOT default to US/UK unless creator is clearly English-speaking from those regions.
 ✅ Match audience geography to creator's language and location.
+${searchContext?.creator_location ? `✅ Consider that this creator is from ${this.getCountryName(searchContext.creator_location)}` : ''}
 
 Now infer the audience demographics as JSON:`;
   }
@@ -798,29 +938,71 @@ Now infer the audience demographics as JSON:`;
    */
   private async checkDatabaseCache(
     instagramUrl: string,
-    influencerId?: string
+    influencerId?: string,
+    searchContext?: SearchContext
   ): Promise<OpenAIAudienceInferenceDB | null> {
     try {
+      console.log(`[Cache Check] Starting database cache check`);
+      console.log(`[Cache Check] URL: ${instagramUrl}`);
+      console.log(`[Cache Check] Influencer ID: ${influencerId || 'none'}`);
+      console.log(`[Cache Check] Search Context:`, searchContext);
+
       let query = this.supabase
         .from('openai_audience_inferences')
         .select('*')
-        .or(`instagram_url.eq.${instagramUrl}${influencerId ? `,influencer_id.eq.${influencerId}` : ''}`)
+        .eq('instagram_url', instagramUrl);
+
+      // Add influencer_id filter if provided
+      if (influencerId && this.isValidUUID(influencerId)) {
+        query = query.eq('influencer_id', influencerId);
+      }
+
+      // Add search context filters if provided
+      if (searchContext?.creator_location) {
+        query = query.eq('creator_location', searchContext.creator_location);
+      } else {
+        // Match entries with no creator_location
+        query = query.is('creator_location', null);
+      }
+
+      const { data, error } = await query
         .order('inferred_at', { ascending: false })
         .limit(1)
         .single();
 
-      const { data, error } = await query;
-
-      if (error || !data) {
+      if (error) {
+        console.log(`[Cache Check] Query error:`, error.message);
         return null;
       }
 
-      // Check if expired
+      if (!data) {
+        console.log(`[Cache Check] No data found in database`);
+        return null;
+      }
+
+      console.log(`[Cache Check] Found entry:`, {
+        instagram_url: data.instagram_url,
+        inferred_at: data.inferred_at,
+        expires_at: data.expires_at,
+        model_used: data.model_used
+      });
+
+      // Check if expired - ensure proper date comparison
       const expiresAt = new Date(data.expires_at as string);
-      if (expiresAt < new Date()) {
-        console.log(`  Database cache entry expired for ${instagramUrl}`);
+      const now = new Date();
+
+      console.log(`[Cache Check] Expiration check:`);
+      console.log(`[Cache Check]   Expires: ${expiresAt.toISOString()}`);
+      console.log(`[Cache Check]   Now:     ${now.toISOString()}`);
+      console.log(`[Cache Check]   Expired: ${expiresAt < now}`);
+
+      if (expiresAt < now) {
+        console.log(`[Cache Check] ❌ Cache EXPIRED - will re-scrape`);
         return null;
       }
+
+      const daysUntilExpiry = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      console.log(`[Cache Check] ✅ Cache HIT - valid for ${daysUntilExpiry} more days`);
 
       return {
         ...data,
@@ -830,7 +1012,7 @@ Now infer the audience demographics as JSON:`;
         updated_at: new Date(data.updated_at as string),
       } as OpenAIAudienceInferenceDB;
     } catch (error) {
-      console.error('  Error checking database cache:', error);
+      console.error('[Cache Check] Error:', error);
       return null;
     }
   }
@@ -852,7 +1034,8 @@ Now infer the audience demographics as JSON:`;
     demographics: AudienceDemographics,
     influencerId?: string,
     cost: number = 0.05,
-    profileSnapshot?: Partial<InstagramProfileData>
+    profileSnapshot?: Partial<InstagramProfileData>,
+    searchContext?: SearchContext
   ): Promise<void> {
     try {
       const now = new Date();
@@ -871,6 +1054,10 @@ Now infer the audience demographics as JSON:`;
         inferred_at: now.toISOString(),
         expires_at: expiresAt.toISOString(),
         api_cost: cost,
+        // Store search context
+        search_context: searchContext || null,
+        creator_location: searchContext?.creator_location || null,
+        target_audience_geo: searchContext?.target_audience_geo || null,
       };
 
       // Only add influencer_id if it's a valid UUID
@@ -878,17 +1065,32 @@ Now infer the audience demographics as JSON:`;
         record.influencer_id = validInfluencerId;
       }
 
-      // Upsert based on instagram_url (or influencer_id if valid)
-      const { error } = await this.supabase
-        .from('openai_audience_inferences')
-        .upsert(record, {
-          onConflict: validInfluencerId ? 'influencer_id' : 'instagram_url',
-        });
+      // Check if entry exists with same URL + context
+      const existing = await this.checkDatabaseCache(instagramUrl, validInfluencerId || undefined, searchContext);
 
-      if (error) {
-        console.error('  Error storing to database:', error);
+      if (existing) {
+        // Update existing record
+        const { error } = await this.supabase
+          .from('openai_audience_inferences')
+          .update(record)
+          .eq('id', existing.id);
+
+        if (error) {
+          console.error('  Error updating database:', error);
+        } else {
+          console.log(`  ✅ Updated database: ${instagramUrl}${validInfluencerId ? ` (influencer: ${validInfluencerId})` : ''}`);
+        }
       } else {
-        console.log(`  ✅ Stored to database: ${instagramUrl}${validInfluencerId ? ` (influencer: ${validInfluencerId})` : ''}`);
+        // Insert new record
+        const { error } = await this.supabase
+          .from('openai_audience_inferences')
+          .insert(record);
+
+        if (error) {
+          console.error('  Error inserting to database:', error);
+        } else {
+          console.log(`  ✅ Inserted to database: ${instagramUrl}${validInfluencerId ? ` (influencer: ${validInfluencerId})` : ''}`);
+        }
       }
     } catch (error) {
       console.error('  Error storing to database:', error);

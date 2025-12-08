@@ -18,7 +18,23 @@ export class InfluencerAudienceController {
   async getSyntheticAudience(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { username, instagram_url, force } = req.query;
+      const { username, instagram_url, force, search_context } = req.query;
+
+      // Parse search context if provided
+      let parsedSearchContext = undefined;
+      if (search_context) {
+        try {
+          parsedSearchContext = JSON.parse(search_context as string);
+          console.log(
+            '[InfluencerAudience] Search context received:',
+            parsedSearchContext,
+          );
+        } catch (e) {
+          console.warn(
+            '[InfluencerAudience] Invalid search_context JSON, ignoring',
+          );
+        }
+      }
 
       let instagramUrl: string;
       let influencerId: string = id;
@@ -26,29 +42,40 @@ export class InfluencerAudienceController {
       // Check if Instagram URL is provided directly
       if (instagram_url) {
         instagramUrl = instagram_url as string;
-        console.log('[InfluencerAudience] Using provided Instagram URL:', instagramUrl);
+        console.log(
+          '[InfluencerAudience] Using provided Instagram URL:',
+          instagramUrl,
+        );
       } else if (username) {
         // Clean username: remove spaces, special chars, convert to lowercase
         const cleanUsername = (username as string)
           .toLowerCase()
           .trim()
-          .replace(/\s+/g, '')  // Remove all spaces
-          .replace(/[^a-z0-9._]/g, '');  // Keep only valid Instagram characters
+          .replace(/\s+/g, '') // Remove all spaces
+          .replace(/[^a-z0-9._]/g, ''); // Keep only valid Instagram characters
 
         instagramUrl = `https://instagram.com/${cleanUsername}`;
-        console.log('[InfluencerAudience] Built Instagram URL from username:', instagramUrl,
-          username !== cleanUsername ? `(cleaned from: ${username})` : '');
+        console.log(
+          '[InfluencerAudience] Built Instagram URL from username:',
+          instagramUrl,
+          username !== cleanUsername ? `(cleaned from: ${username})` : '',
+        );
       } else {
         // Try to get influencer from database
         const influencer = await this.influencerService.getById(id);
         if (!influencer) {
           return res.status(404).json({
             success: false,
-            error: 'Influencer not found in database. Please provide username or instagram_url as query params.'
+            error:
+              'Influencer not found in database. Please provide username or instagram_url as query params.',
           });
         }
 
         // Extract Instagram URL or username from influencer data
+        console.log(
+          '[InfluencerAudience] Fetching influencer from database:',
+          influencer,
+        );
         const influencerUsername =
           influencer.instagram_username ||
           influencer.username ||
@@ -57,12 +84,16 @@ export class InfluencerAudienceController {
         if (!influencerUsername) {
           return res.status(400).json({
             success: false,
-            error: 'No Instagram username found for this influencer. Please provide username or instagram_url.'
+            error:
+              'No Instagram username found for this influencer. Please provide username or instagram_url.',
           });
         }
 
         instagramUrl = `https://instagram.com/${influencerUsername}`;
-        console.log('[InfluencerAudience] Using database influencer Instagram:', instagramUrl);
+        console.log(
+          '[InfluencerAudience] Using database influencer Instagram:',
+          instagramUrl,
+        );
       }
 
       // Call OpenAI inference service
@@ -70,13 +101,14 @@ export class InfluencerAudienceController {
       const result = await this.openaiService.inferAudience(instagramUrl, {
         influencerId: influencerId,
         forceRefresh: force === 'true',
+        searchContext: parsedSearchContext,
       });
 
       if (!result.success) {
         return res.status(500).json({
           success: false,
           error: result.error || 'Failed to infer audience demographics',
-          details: result.details
+          details: result.details,
         });
       }
 
@@ -90,7 +122,7 @@ export class InfluencerAudienceController {
       console.error('[InfluencerAudience] Error inferring audience:', error);
       res.status(500).json({
         success: false,
-        error: error.message || 'Error inferring audience data'
+        error: error.message || 'Error inferring audience data',
       });
     }
   }

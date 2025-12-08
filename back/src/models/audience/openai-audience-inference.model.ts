@@ -160,6 +160,18 @@ export interface CostEntry {
 }
 
 /**
+ * Search context from Explorer UI
+ * Used to provide additional context for OpenAI inference
+ */
+export interface SearchContext {
+  creator_location?: string; // Country code (e.g., "AR", "MX")
+  target_audience_geo?: {
+    countries?: Array<{ id: string; prc: number }>;
+    cities?: Array<{ id: number; prc: number }>;
+  };
+}
+
+/**
  * Inference options
  */
 export interface InferenceOptions {
@@ -170,6 +182,7 @@ export interface InferenceOptions {
   maxRetries?: number; // Max retry attempts for failures
   timeout?: number; // Timeout in milliseconds
   influencerId?: string; // Influencer ID for database caching
+  searchContext?: SearchContext; // Search context from Explorer UI
 }
 
 /**
@@ -226,6 +239,11 @@ export interface OpenAIAudienceInferenceDB {
   audience_geography: any; // Same as demographics.geography
   model_used: string;
   profile_data_snapshot?: Partial<InstagramProfileData>;
+  // Search context fields (added in migration 20251208)
+  search_context?: SearchContext;
+  creator_location?: string;
+  target_audience_geo?: any;
+  // Timestamps
   inferred_at: Date;
   expires_at: Date;
   api_cost: number;

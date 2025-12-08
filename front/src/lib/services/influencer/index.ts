@@ -244,13 +244,17 @@ export class InfluencerService {
    * Obtiene datos sintéticos de audiencia para un influencer
    * GET /influencers/:id/audience/synthetic?username=X&follower_count=Y&platform=Z&niche=W
    */
-  public async getSyntheticAudience(id: string, influencerData?: { username?: string, follower_count?: number, platform?: string, niche?: string }): Promise<any> {
+  public async getSyntheticAudience(id: string, influencerData?: { username?: string, follower_count?: number, platform?: string, niche?: string, search_context?: any }): Promise<any> {
     const params: any = {};
     if (influencerData) {
       if (influencerData.username) params.username = influencerData.username;
       if (influencerData.follower_count) params.follower_count = influencerData.follower_count;
       if (influencerData.platform) params.platform = influencerData.platform;
       if (influencerData.niche) params.niche = influencerData.niche;
+      // Pass search context as JSON string
+      if (influencerData.search_context) {
+        params.search_context = JSON.stringify(influencerData.search_context);
+      }
     }
 
     const response = await httpApiClient.get<any>(`${this.baseUrl}/${id}/audience/synthetic`, {

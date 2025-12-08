@@ -1,25 +1,25 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useMemo, useRef } from "react";
-import { X, Loader2, Info } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { NumberDisplay } from "@/components/ui/NumberDisplay";
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { X, Loader2, Info } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { NumberDisplay } from '@/components/ui/NumberDisplay';
 import {
   getInstagramThumbnailValidated,
   getOptimizedAvatarUrl,
-} from "@/utils/instagram";
+} from '@/utils/instagram';
 import {
   getTikTokThumbnailValidated,
   getTikTokDefaultThumbnail,
   getSafeAvatarUrlForModal,
-} from "@/utils/tiktok";
-import { CountryFlag } from "@/components/ui/country-flag";
-import { influencerService } from "@/lib/services/influencer";
-import { AudienceDemographics } from "@/types/audience";
+} from '@/utils/tiktok';
+import { CountryFlag } from '@/components/ui/country-flag';
+import { influencerService } from '@/lib/services/influencer';
+import { AudienceDemographics } from '@/types/audience';
 import {
   PieChart,
   Pie,
@@ -32,33 +32,47 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
-} from "recharts";
+} from 'recharts';
 
 interface InfluencerProfilePanelProps {
   influencer: any;
   isOpen: boolean;
   onClose: () => void;
   isLoading?: boolean;
+  audienceCache?: {
+    [influencerId: string]: {
+      data: any;
+      timestamp: number;
+    };
+  };
+  onAudienceFetched?: (id: string, data: any) => void;
+  searchContext?: {
+    location?: string;
+    audienceGeo?: {
+      countries: Array<{ id: string; prc: number }>;
+      cities: Array<{ id: number; prc: number }>;
+    };
+  };
 }
 
 // 🎯 Helper para usar iconos desde /public/icons
-const getPlatformIcon = (platform: string, className = "h-5 w-5") => {
-  let iconSrc = "";
+const getPlatformIcon = (platform: string, className = 'h-5 w-5') => {
+  let iconSrc = '';
   switch (platform) {
-    case "Instagram":
-      iconSrc = "/icons/instagram.svg";
+    case 'Instagram':
+      iconSrc = '/icons/instagram.svg';
       break;
-    case "TikTok":
-      iconSrc = "/icons/tiktok.svg";
+    case 'TikTok':
+      iconSrc = '/icons/tiktok.svg';
       break;
-    case "YouTube":
-      iconSrc = "/icons/youtube.svg";
+    case 'YouTube':
+      iconSrc = '/icons/youtube.svg';
       break;
-    case "Facebook":
-      iconSrc = "/icons/facebook.svg";
+    case 'Facebook':
+      iconSrc = '/icons/facebook.svg';
       break;
-    case "Threads":
-      iconSrc = "/icons/threads.svg";
+    case 'Threads':
+      iconSrc = '/icons/threads.svg';
       break;
     default:
       return null;
@@ -130,7 +144,6 @@ const InfluencerProfileSkeleton = () => (
   </div>
 );
 
-
 // 🎯 COMPONENTE DE IMAGEN CON LOADER Y BOTÓN DE RELOAD
 const ImageWithLoader = ({
   src,
@@ -190,7 +203,7 @@ const ImageWithLoader = ({
         src={currentSrc}
         alt={alt}
         className={`w-full h-full object-cover rounded-md transition-all duration-300 ${
-          isLoading ? "opacity-0 scale-95" : "opacity-100 scale-100"
+          isLoading ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
         }`}
         onLoad={handleLoad}
         onError={handleError}
@@ -272,7 +285,7 @@ const AvatarWithLoader = ({
           src={currentSrc}
           alt={alt}
           className={`transition-all duration-300 ${
-            isLoading ? "opacity-0" : "opacity-100"
+            isLoading ? 'opacity-0' : 'opacity-100'
           }`}
           onLoad={handleLoad}
           onError={handleError}
@@ -299,6 +312,9 @@ export function InfluencerProfilePanel({
   isOpen,
   onClose,
   isLoading = false,
+  audienceCache,
+  onAudienceFetched,
+  searchContext,
 }: InfluencerProfilePanelProps) {
   // 🎯 FUNCIÓN PARA DETECTAR SI TIENE DATOS EXTENDIDOS
   const hasExtendedData = useMemo(() => {
@@ -354,20 +370,22 @@ export function InfluencerProfilePanel({
   const getPlatformData = (platform: string) => {
     const pdata = influencer.platformInfo[platform.toLowerCase()];
     if (!pdata) return null;
-    if (platform === "Instagram" && pdata.basicInstagram)
+    if (platform === 'Instagram' && pdata.basicInstagram)
       return pdata.basicInstagram;
-    if (platform === "TikTok" && pdata.basicTikTok) return pdata.basicTikTok;
-    if (platform === "Facebook" && pdata.basicFacebook)
+    if (platform === 'TikTok' && pdata.basicTikTok) return pdata.basicTikTok;
+    if (platform === 'Facebook' && pdata.basicFacebook)
       return pdata.basicFacebook;
-    if (platform === "Threads" && pdata.basicThreads) return pdata.basicThreads;
+    if (platform === 'Threads' && pdata.basicThreads) return pdata.basicThreads;
     return pdata;
   };
 
   // ✨ ESTADO PARA AVATAR PROCESADO
-  const [processedAvatar, setProcessedAvatar] = useState<string>("");
+  const [processedAvatar, setProcessedAvatar] = useState<string>('');
 
   // ✨ ESTADO PARA AUDIENCIA SINTÉTICA
-  const [audienceData, setAudienceData] = useState<AudienceDemographics | null>(null);
+  const [audienceData, setAudienceData] = useState<AudienceDemographics | null>(
+    null,
+  );
   const [loadingAudience, setLoadingAudience] = useState(false);
 
   const availablePlatforms = useMemo(() => {
@@ -388,7 +406,7 @@ export function InfluencerProfilePanel({
         platformInfo.youtube.views > 0 ||
         Object.keys(platformInfo.youtube).length > 0)
     ) {
-      platforms.push("YouTube");
+      platforms.push('YouTube');
     }
 
     // Instagram
@@ -399,7 +417,7 @@ export function InfluencerProfilePanel({
         platformInfo.instagram.basicInstagram?.engageRate > 0 ||
         Object.keys(platformInfo.instagram).length > 0)
     ) {
-      platforms.push("Instagram");
+      platforms.push('Instagram');
     }
 
     // TikTok
@@ -410,7 +428,7 @@ export function InfluencerProfilePanel({
         platformInfo.tiktok.basicTikTok?.engageRate > 0 ||
         Object.keys(platformInfo.tiktok).length > 0)
     ) {
-      platforms.push("TikTok");
+      platforms.push('TikTok');
     }
 
     // Facebook
@@ -421,7 +439,7 @@ export function InfluencerProfilePanel({
         platformInfo.facebook.basicFacebook?.engageRate > 0 ||
         Object.keys(platformInfo.facebook).length > 0)
     ) {
-      platforms.push("Facebook");
+      platforms.push('Facebook');
     }
 
     // Threads
@@ -432,14 +450,14 @@ export function InfluencerProfilePanel({
         platformInfo.threads.basicThreads?.gRateThreadsTabAvgLikes > 0 ||
         Object.keys(platformInfo.threads).length > 0)
     ) {
-      platforms.push("Threads");
+      platforms.push('Threads');
     }
 
     return platforms;
   }, [influencer]);
 
   const [activePlatform, setActivePlatform] = useState(
-    influencer.platform || "YouTube"
+    influencer.platform || 'YouTube',
   );
 
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
@@ -449,16 +467,16 @@ export function InfluencerProfilePanel({
   const fetchAndCacheThumbnail = async (
     key: string,
     platform: string,
-    post: any
+    post: any,
   ) => {
     if (requestedThumbnails.current[key]) return;
     requestedThumbnails.current[key] = true;
-    let url = "";
-    if (platform === "Instagram") {
+    let url = '';
+    if (platform === 'Instagram') {
       url = `https://www.instagram.com/p/${post.shortcode}`;
       const thumb = await getInstagramThumbnailValidated(url);
       setThumbnails((prev) => ({ ...prev, [key]: thumb }));
-    } else if (platform === "TikTok") {
+    } else if (platform === 'TikTok') {
       // Construir la URL del video de TikTok
       const tiktokId =
         platformData?.tiktokId || influencer?.platformInfo?.tiktok?.tiktokId;
@@ -473,21 +491,21 @@ export function InfluencerProfilePanel({
 
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = "hidden";
+      document.body.style.overflow = 'hidden';
       setActivePlatform(
-        influencer.platform || availablePlatforms[0] || "YouTube"
+        influencer.platform || availablePlatforms[0] || 'YouTube',
       );
     }
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.overflow = '';
     };
   }, [isOpen, influencer, availablePlatforms]);
 
   // ✨ PROCESAR AVATAR CUANDO CAMBIE EL INFLUENCER
   useEffect(() => {
     if (influencer) {
-      const originalAvatar = influencer.avatar || influencer.image || "";
-      const influencerName = influencer.name || "Influencer";
+      const originalAvatar = influencer.avatar || influencer.image || '';
+      const influencerName = influencer.name || 'Influencer';
       const processed = getProcessedAvatar(originalAvatar, influencerName);
       setProcessedAvatar(processed);
     }
@@ -496,33 +514,75 @@ export function InfluencerProfilePanel({
   // ✨ CARGAR AUDIENCIA SINTÉTICA CUANDO SE ABRA EL MODAL
   useEffect(() => {
     const loadSyntheticAudience = async () => {
-      if (isOpen && influencer?.id) {
-        setLoadingAudience(true);
-        try {
-          // Prepare influencer data for the API call
-          const influencerData = {
-            username: influencer.name || influencer.id,
-            follower_count: influencer.followersCount || 50000,
-            platform: influencer.mainSocialPlatform || 'instagram',
-            niche: influencer.categories?.[0] || undefined,
-            location: influencer.location || influencer.country || undefined
-          };
+      if (!isOpen || !influencer?.id) {
+        // Clear audience data when panel closes or no influencer
+        setAudienceData(null);
+        return;
+      }
 
-          const response = await influencerService.getSyntheticAudience(influencer.id, influencerData);
-          if (response.success && response.audience) {
-            setAudienceData(response.audience);
+      // Check client-side cache first (5 minute TTL)
+      const cached = audienceCache?.[influencer.id];
+      if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) {
+        console.log(`✅ Client cache hit for influencer ${influencer.id}`);
+        setAudienceData(cached.data);
+        setLoadingAudience(false);
+        return;
+      }
+
+      // If not in cache or expired, fetch from API
+      setLoadingAudience(true);
+      // Clear old data while loading to prevent showing wrong data
+      setAudienceData(null);
+
+      try {
+        // Extract the correct Instagram username from platformInfo
+        console.log(
+          '[InfluencerProfilePanel] Extracting Instagram username for influencer:',
+          influencer,
+        );
+        const instagramUsername =
+          influencer.platformInfo?.instagram?.username ||
+          influencer.name ||
+          influencer.id;
+
+        console.log(
+          '[InfluencerProfilePanel] Using Instagram username:',
+          instagramUsername,
+          '(from platformInfo.instagram.username)',
+        );
+
+        // Prepare influencer data for the API call
+        const influencerData = {
+          username: instagramUsername,
+          follower_count: influencer.followersCount || 50000,
+          platform: influencer.mainSocialPlatform || 'instagram',
+          niche: influencer.categories?.[0] || undefined,
+          location: influencer.location || influencer.country || undefined,
+          // Pass search context for better AI inference
+          search_context: searchContext,
+        };
+
+        const response = await influencerService.getSyntheticAudience(
+          influencer.id,
+          influencerData,
+        );
+        if (response.success && response.audience) {
+          setAudienceData(response.audience);
+          // Update cache
+          if (onAudienceFetched) {
+            onAudienceFetched(influencer.id, response.audience);
           }
-        } catch (error) {
-          console.error('Error loading synthetic audience:', error);
-          setAudienceData(null);
-        } finally {
-          setLoadingAudience(false);
         }
+      } catch (error) {
+        console.error('Error loading synthetic audience:', error);
+        setAudienceData(null);
+      } finally {
+        setLoadingAudience(false);
       }
     };
 
     loadSyntheticAudience();
-  }, [isOpen, influencer?.id]);
+  }, [isOpen, influencer?.id, influencer?.name]);
 
   const platformData = useMemo(() => {
     if (!influencer?.platformInfo) return null;
@@ -556,13 +616,13 @@ export function InfluencerProfilePanel({
   useEffect(() => {
     if (isOpen && influencer?.platformInfo) {
       // Preload thumbnails para todos los posts de Instagram y TikTok
-      ["Instagram", "TikTok"].forEach((platform) => {
+      ['Instagram', 'TikTok'].forEach((platform) => {
         const pdata = getPlatformData(platform);
         if (!pdata) return;
         const posts = pdata.recentPosts || pdata.recentVideos || [];
         posts.forEach((post: any) => {
           let key =
-            platform === "Instagram"
+            platform === 'Instagram'
               ? post.shortcode
               : post.videoId || post.tiktokId || post.id || post.url;
           if (key && !thumbnails[key]) {
@@ -575,7 +635,7 @@ export function InfluencerProfilePanel({
   }, [isOpen, influencer]);
 
   useEffect(() => {
-    if (activePlatform === "TikTok") {
+    if (activePlatform === 'TikTok') {
     }
   }, [activePlatform, platformData]);
 
@@ -584,45 +644,45 @@ export function InfluencerProfilePanel({
   // Icon helper definido arriba
 
   const getPostImageUrl = (post: any, platform: string) => {
-    if (platform === "YouTube") {
+    if (platform === 'YouTube') {
       return `https://img.youtube.com/vi/${post.videoId}/hqdefault.jpg`;
     }
-    if (platform === "Instagram") {
+    if (platform === 'Instagram') {
       const key = post.shortcode;
       if (thumbnails[key]) return thumbnails[key];
       fetchAndCacheThumbnail(key, platform, post);
-      return "/placeholder.svg";
+      return '/placeholder.svg';
     }
-    if (platform === "TikTok") {
+    if (platform === 'TikTok') {
       const key = post.videoId || post.tiktokId || post.id || post.url;
       if (thumbnails[key]) return thumbnails[key];
       fetchAndCacheThumbnail(key, platform, post);
       return getTikTokDefaultThumbnail();
     }
-    return post.photoURL || post.cover || "/placeholder.svg";
+    return post.photoURL || post.cover || '/placeholder.svg';
   };
 
   const getPostUrl = (post: any, platform: string) => {
     switch (platform) {
-      case "Instagram":
+      case 'Instagram':
         return `https://www.instagram.com/p/${post.shortcode}`;
-      case "YouTube":
+      case 'YouTube':
         return `https://www.youtube.com/watch?v=${post.videoId}`;
-      case "TikTok":
+      case 'TikTok':
         return `https://www.tiktok.com/@${platformData.tiktokId}/video/${post.videoId}`;
       default:
-        return "#";
+        return '#';
     }
   };
 
-  console.log(influencer)
+  console.log(influencer);
 
   return (
     <>
       {/* Overlay */}
       <div
         className={`fixed inset-0 bg-black/30 z-40 transition-opacity duration-300 ${
-          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={onClose}
       />
@@ -630,7 +690,7 @@ export function InfluencerProfilePanel({
       {/* Panel */}
       <div
         className={`fixed top-0 left-0 h-full w-full md:w-[550px] lg:w-[650px] bg-white shadow-xl z-50 overflow-y-auto transition-transform duration-300 ease-in-out ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
+          isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="sticky top-0 z-10 flex items-center justify-between p-6 pb-4 border-b bg-white">
@@ -658,27 +718,27 @@ export function InfluencerProfilePanel({
                     src={
                       processedAvatar || influencer.avatar || influencer.image
                     }
-                    alt={influencer.name || "Influencer"}
-                    fallback={influencer.name?.charAt(0) || "I"}
+                    alt={influencer.name || 'Influencer'}
+                    fallback={influencer.name?.charAt(0) || 'I'}
                     className="h-16 w-16"
                   />
                   <div>
                     <h1 className="text-xl font-bold">{influencer.name}</h1>
                     <div className="text-sm text-gray-500">
-                      {influencer.location || influencer.country} •{" "}
+                      {influencer.location || influencer.country} •{' '}
                       <NumberDisplay
                         value={influencer?.followersCount}
                         format="short"
-                      />{" "}
+                      />{' '}
                       Seguidores Totales
                     </div>
                     {/* 🎯 MOSTRAR FUENTE DE DATOS SI ESTÁ DISPONIBLE */}
                     {influencer._metadata?.source && (
                       <div className="text-xs text-blue-600 font-medium mt-1">
-                        📊{" "}
-                        {influencer._metadata.source === "local-database"
-                          ? "Base de Datos"
-                          : "API Externa"}
+                        📊{' '}
+                        {influencer._metadata.source === 'local-database'
+                          ? 'Base de Datos'
+                          : 'API Externa'}
                         {influencer._metadata.completenessScore &&
                           ` • ${influencer._metadata.completenessScore}% completo`}
                       </div>
@@ -698,37 +758,37 @@ export function InfluencerProfilePanel({
                         {influencer.platformInfo.socialNetworks.map(
                           (sn: any, idx: number) => {
                             const platformKey = String(
-                              sn.platform || ""
+                              sn.platform || '',
                             ).toLowerCase();
                             const platformLabel =
-                              platformKey === "instagram"
-                                ? "Instagram"
-                                : platformKey === "youtube"
-                                ? "YouTube"
-                                : platformKey === "tiktok"
-                                ? "TikTok"
-                                : platformKey === "facebook"
-                                ? "Facebook"
-                                : platformKey === "threads"
-                                ? "Threads"
-                                : sn.platform || "";
+                              platformKey === 'instagram'
+                                ? 'Instagram'
+                                : platformKey === 'youtube'
+                                ? 'YouTube'
+                                : platformKey === 'tiktok'
+                                ? 'TikTok'
+                                : platformKey === 'facebook'
+                                ? 'Facebook'
+                                : platformKey === 'threads'
+                                ? 'Threads'
+                                : sn.platform || '';
                             const followers = Number(
-                              sn.followers || sn.followersCount || 0
+                              sn.followers || sn.followersCount || 0,
                             );
                             const engagement =
-                              typeof sn.engagement === "number"
+                              typeof sn.engagement === 'number'
                                 ? sn.engagement
                                 : null; // ya viene en %
-                            const state = String(sn.state || "").toUpperCase();
+                            const state = String(sn.state || '').toUpperCase();
 
                             const stateClasses =
-                              state === "READY"
-                                ? "bg-green-100 text-green-700 border-green-200"
-                                : state === "PENDING"
-                                ? "bg-yellow-100 text-yellow-700 border-yellow-200"
-                                : state === "ERROR"
-                                ? "bg-red-100 text-red-700 border-red-200"
-                                : "bg-gray-100 text-gray-700 border-gray-200";
+                              state === 'READY'
+                                ? 'bg-green-100 text-green-700 border-green-200'
+                                : state === 'PENDING'
+                                ? 'bg-yellow-100 text-yellow-700 border-yellow-200'
+                                : state === 'ERROR'
+                                ? 'bg-red-100 text-red-700 border-red-200'
+                                : 'bg-gray-100 text-gray-700 border-gray-200';
 
                             return (
                               <div
@@ -737,7 +797,7 @@ export function InfluencerProfilePanel({
                               >
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-2 min-w-0">
-                                    {getPlatformIcon(platformLabel, "h-4 w-4")}
+                                    {getPlatformIcon(platformLabel, 'h-4 w-4')}
                                     <span className="text-sm font-medium text-gray-800 truncate">
                                       {platformLabel}
                                     </span>
@@ -767,9 +827,9 @@ export function InfluencerProfilePanel({
                                 <div className="mt-3 flex items-center gap-4 text-sm">
                                   <div className="flex flex-col">
                                     <span className="text-gray-500">
-                                      {platformLabel === "YouTube"
-                                        ? "Suscriptores"
-                                        : "Seguidores"}
+                                      {platformLabel === 'YouTube'
+                                        ? 'Suscriptores'
+                                        : 'Seguidores'}
                                     </span>
                                     <span className="font-semibold text-gray-900">
                                       {formatNumber(followers)}
@@ -780,13 +840,13 @@ export function InfluencerProfilePanel({
                                     <span className="font-semibold text-gray-900">
                                       {engagement !== null
                                         ? `${engagement.toFixed(2)}%`
-                                        : "—"}
+                                        : '—'}
                                     </span>
                                   </div>
                                 </div>
                               </div>
                             );
-                          }
+                          },
                         )}
                       </div>
                     </div>
@@ -807,7 +867,8 @@ export function InfluencerProfilePanel({
                   <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
                     <p className="text-sm text-blue-800">
-                      Estos datos son estimaciones basadas en perfiles similares de influencers
+                      Estos datos son estimaciones basadas en perfiles similares
+                      de influencers
                     </p>
                   </div>
 
@@ -815,90 +876,138 @@ export function InfluencerProfilePanel({
                     <div className="flex items-center justify-center py-8">
                       <div className="flex flex-col items-center gap-2">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        <p className="text-sm text-gray-500">Cargando estadísticas...</p>
+                        <p className="text-sm text-gray-500">
+                          Cargando estadísticas...
+                        </p>
                       </div>
                     </div>
                   ) : audienceData ? (
                     <div className="space-y-6">
                       {/* Age Distribution */}
-                      {audienceData.age && Object.keys(audienceData.age).length > 0 && (
-                        <div>
-                          <h4 className="text-md font-medium mb-3">Distribución por Edad</h4>
-                          <ResponsiveContainer width="100%" height={200}>
-                            <BarChart data={Object.entries(audienceData.age).map(([age, value]) => ({
-                              name: age,
-                              value: parseFloat(value.toFixed(1))
-                            }))}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="name" />
-                              <YAxis />
-                              <Tooltip formatter={(value) => `${value}%`} />
-                              <Bar dataKey="value" fill="#3b82f6" />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </div>
-                      )}
+                      {audienceData.age &&
+                        Object.keys(audienceData.age).length > 0 && (
+                          <div>
+                            <h4 className="text-md font-medium mb-3">
+                              Distribución por Edad
+                            </h4>
+                            <ResponsiveContainer width="100%" height={200}>
+                              <BarChart
+                                data={Object.entries(audienceData.age).map(
+                                  ([age, value]) => ({
+                                    name: age,
+                                    value: parseFloat(value.toFixed(1)),
+                                  }),
+                                )}
+                              >
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="name" />
+                                <YAxis />
+                                <Tooltip formatter={(value) => `${value}%`} />
+                                <Bar dataKey="value" fill="#3b82f6" />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        )}
 
                       {/* Gender Distribution */}
-                      {audienceData.gender && audienceData.gender.male !== undefined && audienceData.gender.female !== undefined && (
-                        <div>
-                          <h4 className="text-md font-medium mb-3">Distribución por Género</h4>
-                          <div className="flex flex-col items-center gap-2">
-                            <ResponsiveContainer width="100%" height={250}>
-                              <PieChart>
-                                <Pie
-                                  data={[
-                                    { name: 'Masculino', value: parseFloat(audienceData.gender.male.toFixed(1)) },
-                                    { name: 'Femenino', value: parseFloat(audienceData.gender.female.toFixed(1)) }
-                                  ]}
-                                  cx="50%"
-                                  cy="50%"
-                                  labelLine={false}
-                                  label={({ name, value }) => `${name}: ${value}%`}
-                                  outerRadius={70}
-                                  fill="#8884d8"
-                                  dataKey="value"
-                                >
-                                  <Cell fill="#3b82f6" />
-                                  <Cell fill="#ec4899" />
-                                </Pie>
-                                <Tooltip formatter={(value) => `${value}%`} />
-                              </PieChart>
-                            </ResponsiveContainer>
-                            <div className="flex items-center gap-4 text-sm">
-                              <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-[#3b82f6] rounded-full"></div>
-                                <span className="text-gray-700">Masculino: {audienceData.gender.male.toFixed(1)}%</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-[#ec4899] rounded-full"></div>
-                                <span className="text-gray-700">Femenino: {audienceData.gender.female.toFixed(1)}%</span>
+                      {audienceData.gender &&
+                        audienceData.gender.male !== undefined &&
+                        audienceData.gender.female !== undefined && (
+                          <div>
+                            <h4 className="text-md font-medium mb-3">
+                              Distribución por Género
+                            </h4>
+                            <div className="flex flex-col items-center gap-2">
+                              <ResponsiveContainer width="100%" height={250}>
+                                <PieChart>
+                                  <Pie
+                                    data={[
+                                      {
+                                        name: 'Masculino',
+                                        value: parseFloat(
+                                          audienceData.gender.male.toFixed(1),
+                                        ),
+                                      },
+                                      {
+                                        name: 'Femenino',
+                                        value: parseFloat(
+                                          audienceData.gender.female.toFixed(1),
+                                        ),
+                                      },
+                                    ]}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    label={({ name, value }) =>
+                                      `${name}: ${value}%`
+                                    }
+                                    outerRadius={70}
+                                    fill="#8884d8"
+                                    dataKey="value"
+                                  >
+                                    <Cell fill="#3b82f6" />
+                                    <Cell fill="#ec4899" />
+                                  </Pie>
+                                  <Tooltip formatter={(value) => `${value}%`} />
+                                </PieChart>
+                              </ResponsiveContainer>
+                              <div className="flex items-center gap-4 text-sm">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-3 h-3 bg-[#3b82f6] rounded-full"></div>
+                                  <span className="text-gray-700">
+                                    Masculino:{' '}
+                                    {audienceData.gender.male.toFixed(1)}%
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-3 h-3 bg-[#ec4899] rounded-full"></div>
+                                  <span className="text-gray-700">
+                                    Femenino:{' '}
+                                    {audienceData.gender.female.toFixed(1)}%
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      )}
+                        )}
 
                       {/* Geographic Distribution */}
-                      {audienceData.geography && audienceData.geography.length > 0 && (
-                        <div>
-                          <h4 className="text-md font-medium mb-3">Distribución Geográfica</h4>
-                          <ResponsiveContainer width="100%" height={Math.max(250, audienceData.geography.length * 30)}>
-                            <BarChart data={audienceData.geography} layout="vertical" margin={{ left: 20 }}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis type="number" />
-                              <YAxis
-                                dataKey="country"
-                                type="category"
-                                width={120}
-                                tick={{ fontSize: 12 }}
-                              />
-                              <Tooltip formatter={(value) => `${Number(value).toFixed(1)}%`} />
-                              <Bar dataKey="percentage" fill="#10b981" />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </div>
-                      )}
+                      {audienceData.geography &&
+                        audienceData.geography.length > 0 && (
+                          <div>
+                            <h4 className="text-md font-medium mb-3">
+                              Distribución Geográfica
+                            </h4>
+                            <ResponsiveContainer
+                              width="100%"
+                              height={Math.max(
+                                250,
+                                audienceData.geography.length * 30,
+                              )}
+                            >
+                              <BarChart
+                                data={audienceData.geography}
+                                layout="vertical"
+                                margin={{ left: 20 }}
+                              >
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis type="number" />
+                                <YAxis
+                                  dataKey="country"
+                                  type="category"
+                                  width={120}
+                                  tick={{ fontSize: 12 }}
+                                />
+                                <Tooltip
+                                  formatter={(value) =>
+                                    `${Number(value).toFixed(1)}%`
+                                  }
+                                />
+                                <Bar dataKey="percentage" fill="#10b981" />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        )}
                     </div>
                   ) : (
                     <div className="text-center py-8 text-gray-500">
@@ -907,7 +1016,6 @@ export function InfluencerProfilePanel({
                   )}
                 </div>
               </Card>
-
             </>
           )}
         </div>
