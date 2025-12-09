@@ -91,7 +91,15 @@ function UsersPage() {
       const response = await httpClient.get<{ members: any[]; total: number }>(
         `/organizations/${ORGANIZATION_ID}/members?limit=100`
       );
-      setUsers(response.data.members || []);
+      
+      const members = response.data.members || [];
+      
+      // 🎯 ELIMINAR DUPLICADOS basados en user_id
+      const uniqueUsers = Array.from(
+        new Map(members.map(user => [user.user_id, user])).values()
+      );
+      
+      setUsers(uniqueUsers);
     } catch (error) {
       console.error("Error fetching users:", error);
       showToast({
