@@ -37,6 +37,8 @@ export interface Campaign {
   created_at: Date;
   updated_at: Date;
   deleted_at?: Date;
+  // Added by join query, not stored in campaigns table
+  is_favorited?: boolean;
 }
 
 export interface CampaignCreateDTO {
@@ -154,4 +156,13 @@ export interface CampaignContentUpdateDTO extends Partial<CampaignContentCreateD
     reach?: number;
     engagement?: number;
   };
+}
+
+// Campaign Favorites DTOs
+export interface CampaignFavoriteDTO {
+  campaign_id: string;
+}
+
+export interface CampaignWithFavorite extends Campaign {
+  is_favorited: boolean;
 } 

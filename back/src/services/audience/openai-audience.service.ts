@@ -443,29 +443,9 @@ export class OpenAIAudienceService {
         // Try to extract category
         const category = getText('header section div[class*="category"]') || undefined;
 
-        // Extract recent posts (reduced to 6 for speed)
-        const posts: any[] = [];
-        const postElements = Array.from(_document.querySelectorAll('article a[href*="/p/"]')).slice(0, 6);
-
-        postElements.forEach((postLink: any) => {
-          const href = postLink.href;
-          const postId = href.split('/p/')[1]?.split('/')[0] || '';
-
-          // Try to extract engagement from image alt text or nearby elements
-          const img = postLink.querySelector('img');
-          const altText = img?.alt || '';
-
-          posts.push({
-            id: postId,
-            caption: altText.substring(0, 500),
-            likesCount: 0, // Can't reliably extract without API
-            commentsCount: 0,
-            hashtags: [],
-            timestamp: new Date(),
-            isVideo: !!postLink.querySelector('video'),
-            mentions: [],
-          });
-        });
+        // ⚡ PERFORMANCE: Skip post extraction for faster inference
+        // Posts are not critical for audience demographics inference
+        // Bio, follower count, and profile data are sufficient
 
         return {
           username,
@@ -475,7 +455,7 @@ export class OpenAIAudienceService {
           postCount,
           isVerified,
           category,
-          recentPosts: posts,
+          recentPosts: [], // Empty array for faster inference
         };
       });
 
@@ -708,12 +688,7 @@ EXAMPLES:
    * Build user prompt for OpenAI
    */
   private buildUserPrompt(profileData: InstagramProfileData, searchContext?: SearchContext): string {
-    const posts = profileData.recentPosts
-      .map(
-        (post, i) =>
-          `Post ${i + 1}: ${post.caption?.substring(0, 150) || 'No caption'}...`
-      )
-      .join('\n');
+    // ⚡ PERFORMANCE: Skip post content processing for faster inference
 
     // Detect if Spanish language
     const isSpanish = profileData.primaryLanguage === 'Spanish' ||
@@ -721,12 +696,10 @@ EXAMPLES:
 
     // Detect Argentine origin (common indicators)
     const isArgentine = profileData.bio?.match(/🇦🇷|argentin|buenos aires|rosario|córdoba|mendoza/i) ||
-                       profileData.url?.includes('.ar') ||
-                       posts.match(/che|boludo|pilcha|laburo|viste/i);  // Argentine slang
+                       profileData.url?.includes('.ar');
 
-    // Detect gaming/tech content
-    const isGaming = profileData.bio?.toLowerCase().match(/gam(ing|er)|stream|twitch|youtube|esports/i) ||
-                    profileData.topHashtags?.some(tag => tag.match(/gam(ing|er)|stream|esports/i));
+    // Detect gaming/tech content from bio
+    const isGaming = profileData.bio?.toLowerCase().match(/gam(ing|er)|stream|twitch|youtube|esports/i);
 
     // Build search context hint
     let searchContextHint = '';
@@ -766,11 +739,6 @@ Bio: "${profileData.bio || 'No bio'}"
 Language: ${profileData.primaryLanguage || 'Unknown'}
 Category: ${profileData.category || 'Unknown'}
 Verified: ${profileData.isVerified ? 'Yes' : 'No'}
-
-CONTENT SAMPLE (Recent ${profileData.recentPosts.length} posts):
-${posts}
-
-TOP HASHTAGS: ${profileData.topHashtags?.join(', ') || 'None'}
 ${searchContextHint}
 
 🎯 CRITICAL GEOGRAPHIC INFERENCE:

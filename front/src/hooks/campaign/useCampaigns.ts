@@ -143,6 +143,16 @@ class CampaignCacheManager {
     }
   }
 
+  // 🚀 NEW: Update a specific campaign in the cache
+  updateCampaignInCache(campaignId: string, updates: Partial<Campaign>) {
+    if (this.cache && this.cache.data) {
+      this.cache.data = this.cache.data.map(campaign =>
+        campaign.id === campaignId ? { ...campaign, ...updates } : campaign
+      );
+      console.log('🌟 [CampaignCache] Updated campaign in cache:', campaignId, updates);
+    }
+  }
+
   // Debug info
   getStats() {
     return {
@@ -471,6 +481,49 @@ export const useCampaigns = () => {
     }
   }, []);
 
+  // ⭐ TOGGLE FAVORITE: Optimistic update for instant UI feedback
+  const toggleCampaignFavorite = useCallback(async (
+    campaignId: string,
+    currentlyFavorited: boolean
+  ): Promise<boolean> => {
+    console.log('🌟 [toggleCampaignFavorite] Starting...', { campaignId, currentlyFavorited });
+
+    const newFavoritedValue = !currentlyFavorited;
+
+    try {
+      // 1. Optimistic update: Update local state immediately
+      setCampaigns(prev => {
+        console.log('🌟 [toggleCampaignFavorite] Current campaigns count:', prev.length);
+        const updated = prev.map(c =>
+          c.id === campaignId ? { ...c, is_favorited: newFavoritedValue } : c
+        );
+        console.log('🌟 [toggleCampaignFavorite] Updated campaign:', updated.find(c => c.id === campaignId));
+        return updated;
+      });
+
+      // 2. Update the cache with the new value to prevent it from being overwritten
+      campaignCache.updateCampaignInCache(campaignId, { is_favorited: newFavoritedValue });
+
+      // 3. Send request to backend
+      console.log('🌟 [toggleCampaignFavorite] Sending to backend...');
+      await campaignService.toggleFavorite(campaignId, currentlyFavorited);
+      console.log('🌟 [toggleCampaignFavorite] Backend update successful');
+
+      return true;
+    } catch (err) {
+      console.error('❌ [useCampaigns] Error toggling favorite:', err);
+
+      // Rollback optimistic update on error (both state and cache)
+      setCampaigns(prev => prev.map(c =>
+        c.id === campaignId ? { ...c, is_favorited: currentlyFavorited } : c
+      ));
+      campaignCache.updateCampaignInCache(campaignId, { is_favorited: currentlyFavorited });
+
+      handleHookError(err, setError, 'Error al actualizar favorito');
+      return false;
+    }
+  }, []);
+
   // 🚀 LISTENER PARA INVALIDACIÓN DE CACHE
   useEffect(() => {
     const handleCacheInvalidation = () => {
@@ -500,6 +553,7 @@ export const useCampaigns = () => {
     deleteCampaign,
     addInfluencerToCampaign,
     removeInfluencerFromCampaign,
+    toggleCampaignFavorite, // ⭐ NEW
     // 🚀 OPTIMISTAS
     createCampaignOptimistic,
     updateCampaignOptimistic,

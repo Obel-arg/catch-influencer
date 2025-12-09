@@ -29,6 +29,8 @@ export interface Campaign {
   influencers_count?: number;
   posts_count?: number;
   avg_engagement_rate?: number;
+  // ⭐ Favorite flag added by backend join
+  is_favorited?: boolean;
 }
 
 export interface CreateCampaignDto {

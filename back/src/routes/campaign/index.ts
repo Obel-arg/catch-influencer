@@ -18,6 +18,11 @@ router.get('/active', authenticateToken, campaignController.getActiveCampaigns.b
 router.get('/date-range', authenticateToken, campaignController.getCampaignsByDateRange.bind(campaignController));
 router.get('/organization/:organizationId', authenticateToken, campaignController.getCampaignsByOrganization.bind(campaignController));
 
+// ⭐ RUTAS PARA FAVORITOS DE CAMPAÑAS (deben ir antes de /:id para evitar conflictos)
+router.post('/:campaignId/favorite', authenticateToken, campaignController.addFavorite.bind(campaignController));
+router.delete('/:campaignId/favorite', authenticateToken, campaignController.removeFavorite.bind(campaignController));
+router.get('/favorites/list', authenticateToken, campaignController.getFavorites.bind(campaignController));
+
 // Rutas para Campaign
 router.post('/', authenticateToken, campaignController.createCampaign.bind(campaignController));
 router.get('/:id', campaignController.getCampaignById.bind(campaignController)); // Removed auth for share links

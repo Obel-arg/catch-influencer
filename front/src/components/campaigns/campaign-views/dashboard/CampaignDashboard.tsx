@@ -11,7 +11,7 @@ interface CampaignDashboardProps {
 
 export const CampaignDashboard = ({ campaign }: CampaignDashboardProps) => {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-dashboard-export>
       <CampaignProgressSection campaign={campaign} />
       <CampaignMetricsCards campaign={campaign} />
       <CampaignChartsSection campaign={campaign} />

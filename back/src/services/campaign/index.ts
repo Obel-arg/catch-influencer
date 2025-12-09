@@ -200,6 +200,17 @@ export class CampaignService {
       return [];
     }
 
+    // ⭐ ADD FAVORITED STATUS
+    // Get user's favorited campaign IDs and add is_favorited flag to each campaign
+    const favoritedIds = await this.getUserFavoriteCampaignIds(userId);
+    const favoritedIdsSet = new Set(favoritedIds);
+
+    // Add is_favorited flag to each campaign
+    campaignsWithMetrics = campaignsWithMetrics.map(campaign => ({
+      ...campaign,
+      is_favorited: favoritedIdsSet.has(campaign.id)
+    }));
+
     // 🔐 BRAND-BASED ACCESS CONTROL
     // Admins see all campaigns, members/viewers only see campaigns from their assigned brands
     const isAdmin = userOrgs.some(org => org.role === 'admin');
@@ -851,5 +862,61 @@ export class CampaignService {
     }
 
     return campaigns || [];
+  }
+
+  // ==========================================
+  // CAMPAIGN FAVORITES METHODS
+  // ==========================================
+
+  /**
+   * Add a campaign to user's favorites
+   */
+  async addCampaignFavorite(userId: string, campaignId: string): Promise<void> {
+    const { error } = await supabase
+      .from('campaign_favorites')
+      .insert({
+        user_id: userId,
+        campaign_id: campaignId,
+        created_at: new Date().toISOString()
+      });
+
+    // Ignore duplicate errors (already favorited)
+    if (error && error.code !== '23505') {
+      console.error('Error adding campaign favorite:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Remove a campaign from user's favorites
+   */
+  async removeCampaignFavorite(userId: string, campaignId: string): Promise<void> {
+    const { error } = await supabase
+      .from('campaign_favorites')
+      .delete()
+      .eq('user_id', userId)
+      .eq('campaign_id', campaignId);
+
+    if (error) {
+      console.error('Error removing campaign favorite:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all favorited campaign IDs for a user
+   */
+  async getUserFavoriteCampaignIds(userId: string): Promise<string[]> {
+    const { data, error } = await supabase
+      .from('campaign_favorites')
+      .select('campaign_id')
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Error getting user favorites:', error);
+      return [];
+    }
+
+    return data?.map(f => f.campaign_id) || [];
   }
 } 

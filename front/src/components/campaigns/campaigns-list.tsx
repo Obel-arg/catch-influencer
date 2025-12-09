@@ -3,7 +3,7 @@
 import { Campaign } from '@/types/campaign';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Edit, Trash2, Loader2 } from "lucide-react";
+import { ExternalLink, Edit, Trash2, Loader2, Star } from "lucide-react";
 import { Loader } from "@/components/ui/loader";
 import { useState, useCallback, memo, lazy, Suspense, useEffect } from 'react';
 import { 
@@ -52,9 +52,10 @@ interface CampaignsListProps {
   onCampaignUpdated?: () => void;
   onCampaignUpdatedOptimistic?: (id: string, data: any) => void;
   onCampaignDeletedOptimistic?: (id: string) => void;
+  onToggleFavorite?: (campaignId: string, currentlyFavorited: boolean) => Promise<boolean>;
 }
 
-const CampaignsListComponent = ({ campaigns, loading, onCampaignUpdated, onCampaignUpdatedOptimistic, onCampaignDeletedOptimistic }: CampaignsListProps) => {
+const CampaignsListComponent = ({ campaigns, loading, onCampaignUpdated, onCampaignUpdatedOptimistic, onCampaignDeletedOptimistic, onToggleFavorite }: CampaignsListProps) => {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
@@ -142,6 +143,7 @@ const CampaignsListComponent = ({ campaigns, loading, onCampaignUpdated, onCampa
             campaign={campaign}
             onEdit={handleEditCampaign}
             onDelete={handleDeleteCampaign}
+            onToggleFavorite={onToggleFavorite}
           />
         ))}
       </div>
@@ -181,18 +183,21 @@ const CampaignsListComponent = ({ campaigns, loading, onCampaignUpdated, onCampa
 };
 
 // Optimización: Memoizar con React.memo y comparación profunda para campaign
-const CampaignListItemComponent = ({ 
-  campaign, 
-  onEdit, 
-  onDelete 
-}: { 
-  campaign: Campaign; 
-  onEdit: (campaign: Campaign) => void; 
-  onDelete: (campaign: Campaign) => void; 
+const CampaignListItemComponent = ({
+  campaign,
+  onEdit,
+  onDelete,
+  onToggleFavorite
+}: {
+  campaign: Campaign;
+  onEdit: (campaign: Campaign) => void;
+  onDelete: (campaign: Campaign) => void;
+  onToggleFavorite?: (campaignId: string, currentlyFavorited: boolean) => Promise<boolean>;
 }) => {
   const [isNavigating, setIsNavigating] = useState(false);
   const [navigationStatus, setNavigationStatus] = useState('');
   const [showDebugInfo, setShowDebugInfo] = useState(false);
+  const [isFavoriting, setIsFavoriting] = useState(false);
   const { isViewer, loading: roleLoading, isRoleCached } = useRoleCache();
 
   // Optimización: Memoizar handlers con useCallback para evitar re-renders
@@ -203,6 +208,29 @@ const CampaignListItemComponent = ({
   const handleDelete = useCallback(() => {
     onDelete(campaign);
   }, [campaign, onDelete]); // Incluir campaign completo
+
+  // ⭐ Handler para toggle de favoritos con optimistic update
+  const handleToggleFavorite = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering parent clicks
+
+    console.log('⭐ [CampaignListItem] handleToggleFavorite clicked', {
+      campaignId: campaign.id,
+      currentlyFavorited: campaign.is_favorited,
+      hasCallback: !!onToggleFavorite,
+      isFavoriting
+    });
+
+    if (!onToggleFavorite || isFavoriting) {
+      console.log('⭐ [CampaignListItem] Skipping toggle - no callback or already favoriting');
+      return;
+    }
+
+    setIsFavoriting(true);
+    console.log('⭐ [CampaignListItem] Calling onToggleFavorite...');
+    const result = await onToggleFavorite(campaign.id, campaign.is_favorited || false);
+    console.log('⭐ [CampaignListItem] Toggle result:', result);
+    setIsFavoriting(false);
+  }, [campaign.id, campaign.is_favorited, onToggleFavorite, isFavoriting]);
 
   // 🚀 OPTIMIZACIÓN CRÍTICA: Navegación que NO triggea Fast Refresh
   const handleNavigateToCampaign = useCallback(async () => {
@@ -294,6 +322,29 @@ const CampaignListItemComponent = ({
       />
 
       <div className="flex items-center gap-2">
+        {/* ⭐ Botón de favorito - disponible para todos los usuarios */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className={`${
+            campaign.is_favorited
+              ? 'text-yellow-500 hover:text-yellow-600 hover:bg-yellow-50'
+              : 'text-gray-400 hover:text-yellow-500 hover:bg-yellow-50'
+          } transition-colors`}
+          onClick={handleToggleFavorite}
+          disabled={isFavoriting}
+          title={campaign.is_favorited ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+        >
+          {isFavoriting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Star className={`h-4 w-4 ${campaign.is_favorited ? 'fill-current' : ''}`} />
+          )}
+          <span className="sr-only">
+            {campaign.is_favorited ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+          </span>
+        </Button>
+
         {/* Solo mostrar botones de editar y eliminar si NO es viewer */}
         {(!roleLoading && isRoleCached() && !isViewer()) && (
           <>
@@ -351,8 +402,10 @@ const CampaignListItem = memo(CampaignListItemComponent, (prevProps, nextProps) 
     prevProps.campaign.budget === nextProps.campaign.budget &&
     prevProps.campaign.start_date === nextProps.campaign.start_date &&
     prevProps.campaign.end_date === nextProps.campaign.end_date &&
+    prevProps.campaign.is_favorited === nextProps.campaign.is_favorited &&
     prevProps.onEdit === nextProps.onEdit &&
-    prevProps.onDelete === nextProps.onDelete
+    prevProps.onDelete === nextProps.onDelete &&
+    prevProps.onToggleFavorite === nextProps.onToggleFavorite
   );
 });
 

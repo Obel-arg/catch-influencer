@@ -410,6 +410,14 @@ export class HypeAuditorDiscoveryService {
         request,
       );
 
+      // 🔍 LOG: Complete response structure for username debugging
+      console.log('🔍 [HypeAuditor Discovery] FULL RESPONSE:', JSON.stringify(response, null, 2));
+
+      // Log first result to see structure clearly
+      if (response?.result?.items && response.result.items.length > 0) {
+        console.log('🔍 [HypeAuditor Discovery] FIRST ITEM STRUCTURE:', JSON.stringify(response.result.items[0], null, 2));
+      }
+
       return response;
     } catch (error: any) {
       throw new Error(error.message);

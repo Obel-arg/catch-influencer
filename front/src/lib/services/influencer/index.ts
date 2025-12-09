@@ -1,6 +1,6 @@
 import { httpApiClient } from '@/lib/http';
 import { Influencer } from '@/types/influencer';
-import { AxiosHeaders } from "axios";
+import { AxiosHeaders } from 'axios';
 import { withContext } from '@/lib/http/httpInterceptor';
 
 export class InfluencerService {
@@ -25,43 +25,54 @@ export class InfluencerService {
     const response = await httpApiClient.get<any>(this.baseUrl, {
       params,
       headers: new AxiosHeaders({
-        "Content-Type": "application/json",
-        ...withContext('InfluencerService', 'getInfluencers').headers
-      })
+        'Content-Type': 'application/json',
+        ...withContext('InfluencerService', 'getInfluencers').headers,
+      }),
     });
     return response.data;
   }
 
   public async getInfluencerById(id: string): Promise<Influencer> {
-    const response = await httpApiClient.get<Influencer>(`${this.baseUrl}/${id}`, {
-      headers: new AxiosHeaders({
-        "Content-Type": "application/json",
-        ...withContext('InfluencerService', `getInfluencerById(${id})`).headers
-      })
-    });
-    console.log("Getting influencer by id", response.data);
+    const response = await httpApiClient.get<Influencer>(
+      `${this.baseUrl}/${id}`,
+      {
+        headers: new AxiosHeaders({
+          'Content-Type': 'application/json',
+          ...withContext('InfluencerService', `getInfluencerById(${id})`)
+            .headers,
+        }),
+      },
+    );
+    console.log('Getting influencer by id', response.data);
     return response.data;
   }
 
   public async createInfluencer(data: any): Promise<any> {
     try {
-      const response = await httpApiClient.post<any>(`${this.baseUrl}/new`, data, {
-        headers: new AxiosHeaders({
-          'Content-Type': 'application/json',
-          ...withContext('InfluencerService', 'createInfluencer').headers
-        })
-      });
+      const response = await httpApiClient.post<any>(
+        `${this.baseUrl}/new`,
+        data,
+        {
+          headers: new AxiosHeaders({
+            'Content-Type': 'application/json',
+            ...withContext('InfluencerService', 'createInfluencer').headers,
+          }),
+        },
+      );
       return response.data;
     } catch (error: any) {
       // Manejar duplicado proveniente del backend
       const status = error?.response?.status;
       const dataResp = error?.response?.data || {};
-      if (status === 409 && (dataResp.duplicate || dataResp.existingInfluencer)) {
+      if (
+        status === 409 &&
+        (dataResp.duplicate || dataResp.existingInfluencer)
+      ) {
         return {
           success: false,
           duplicate: true,
           existingInfluencer: dataResp.existingInfluencer,
-          message: dataResp.message || 'Duplicated influencer'
+          message: dataResp.message || 'Duplicated influencer',
         };
       }
       console.error('Error en createInfluencer:', error);
@@ -70,21 +81,26 @@ export class InfluencerService {
   }
 
   public async updateInfluencer(id: string, data: any): Promise<Influencer> {
-    const response = await httpApiClient.put<Influencer>(`${this.baseUrl}/${id}`, data, {
-      headers: new AxiosHeaders({
-        "Content-Type": "application/json",
-        ...withContext('InfluencerService', `updateInfluencer(${id})`).headers
-      })
-    });
+    const response = await httpApiClient.put<Influencer>(
+      `${this.baseUrl}/${id}`,
+      data,
+      {
+        headers: new AxiosHeaders({
+          'Content-Type': 'application/json',
+          ...withContext('InfluencerService', `updateInfluencer(${id})`)
+            .headers,
+        }),
+      },
+    );
     return response.data;
   }
 
   public async deleteInfluencer(id: string): Promise<void> {
     const response = await httpApiClient.delete<void>(`${this.baseUrl}/${id}`, {
       headers: new AxiosHeaders({
-        "Content-Type": "application/json",
-        ...withContext('InfluencerService', `deleteInfluencer(${id})`).headers
-      })
+        'Content-Type': 'application/json',
+        ...withContext('InfluencerService', `deleteInfluencer(${id})`).headers,
+      }),
     });
     return response.data;
   }
@@ -94,32 +110,45 @@ export class InfluencerService {
    * POST /influencers/:id/refresh
    */
   public async refreshInfluencerData(id: string): Promise<any> {
-    const response = await httpApiClient.post<any>(`${this.baseUrl}/${id}/refresh`, {}, {
-      headers: new AxiosHeaders({
-        "Content-Type": "application/json",
-        ...withContext('InfluencerService', `refreshInfluencerData(${id})`).headers
-      })
-    });
+    const response = await httpApiClient.post<any>(
+      `${this.baseUrl}/${id}/refresh`,
+      {},
+      {
+        headers: new AxiosHeaders({
+          'Content-Type': 'application/json',
+          ...withContext('InfluencerService', `refreshInfluencerData(${id})`)
+            .headers,
+        }),
+      },
+    );
     return response.data;
   }
 
   public async getInfluencerMetrics(id: string): Promise<any> {
-    const response = await httpApiClient.get<any>(`${this.baseUrl}/${id}/metrics`, {
-      headers: new AxiosHeaders({
-        "Content-Type": "application/json",
-        ...withContext('InfluencerService', `getInfluencerMetrics(${id})`).headers
-      })
-    });
+    const response = await httpApiClient.get<any>(
+      `${this.baseUrl}/${id}/metrics`,
+      {
+        headers: new AxiosHeaders({
+          'Content-Type': 'application/json',
+          ...withContext('InfluencerService', `getInfluencerMetrics(${id})`)
+            .headers,
+        }),
+      },
+    );
     return response.data;
   }
 
   public async getInfluencerCampaigns(id: string): Promise<any[]> {
-    const response = await httpApiClient.get<any[]>(`${this.baseUrl}/${id}/campaigns`, {
-      headers: new AxiosHeaders({
-        "Content-Type": "application/json",
-        ...withContext('InfluencerService', `getInfluencerCampaigns(${id})`).headers
-      })
-    });
+    const response = await httpApiClient.get<any[]>(
+      `${this.baseUrl}/${id}/campaigns`,
+      {
+        headers: new AxiosHeaders({
+          'Content-Type': 'application/json',
+          ...withContext('InfluencerService', `getInfluencerCampaigns(${id})`)
+            .headers,
+        }),
+      },
+    );
     return response.data;
   }
 
@@ -127,9 +156,10 @@ export class InfluencerService {
     const response = await httpApiClient.get<any>(`${this.baseUrl}/search`, {
       params: { query, ...params },
       headers: new AxiosHeaders({
-        "Content-Type": "application/json",
-        ...withContext('InfluencerService', `searchInfluencers(${query})`).headers
-      })
+        'Content-Type': 'application/json',
+        ...withContext('InfluencerService', `searchInfluencers(${query})`)
+          .headers,
+      }),
     });
     return response.data;
   }
@@ -138,16 +168,20 @@ export class InfluencerService {
    * Obtiene datos básicos de las plataformas disponibles sin guardar en BD
    * Usado para mostrar datos en el panel del influencer
    */
-  public async getBasicPlatformData(params: { youtubeId?: string, instagramId?: string, tiktokId?: string }): Promise<any> {
+  public async getBasicPlatformData(params: {
+    youtubeId?: string;
+    instagramId?: string;
+    tiktokId?: string;
+  }): Promise<any> {
     const { youtubeId, instagramId, tiktokId } = params;
-    
+
     if (!youtubeId && !instagramId && !tiktokId) {
       throw new Error('Al menos un ID de plataforma es requerido');
     }
 
     // Construir query string con todos los IDs disponibles
     const query: string[] = [];
-    
+
     if (youtubeId) {
       query.push(`youtubeId=${encodeURIComponent(youtubeId)}`);
     }
@@ -157,15 +191,21 @@ export class InfluencerService {
     if (tiktokId) {
       query.push(`tiktokId=${encodeURIComponent(tiktokId)}`);
     }
-    
+
     const queryString = query.length > 0 ? `?${query.join('&')}` : '';
-    
-    const response = await httpApiClient.get<any>(`${this.baseUrl}/platforms/basic-data${queryString}`, {
-      headers: new AxiosHeaders({
-        "Content-Type": "application/json",
-        ...withContext('InfluencerService', `getBasicPlatformData(${query.join(', ')})`).headers
-      })
-    });
+
+    const response = await httpApiClient.get<any>(
+      `${this.baseUrl}/platforms/basic-data${queryString}`,
+      {
+        headers: new AxiosHeaders({
+          'Content-Type': 'application/json',
+          ...withContext(
+            'InfluencerService',
+            `getBasicPlatformData(${query.join(', ')})`,
+          ).headers,
+        }),
+      },
+    );
     return response.data;
   }
 
@@ -173,19 +213,23 @@ export class InfluencerService {
    * Obtiene la data unificada de un influencer a partir de youtubeId, instagramId o tiktokId.
    * 🔧 NUEVA VERSIÓN: Detecta automáticamente la plataforma y usa el endpoint mejorado.
    */
-  public async getFullInfluencerData(params: { youtubeId?: string, instagramId?: string, tiktokId?: string }): Promise<any> {
+  public async getFullInfluencerData(params: {
+    youtubeId?: string;
+    instagramId?: string;
+    tiktokId?: string;
+  }): Promise<any> {
     const { youtubeId, instagramId, tiktokId } = params;
-    
+
     if (!youtubeId && !instagramId && !tiktokId) {
       throw new Error('Al menos un ID de plataforma es requerido');
     }
 
     // 🔧 NUEVA LÓGICA: Usar el primer ID disponible como path param
     const pathParam = youtubeId || instagramId || tiktokId || 'null';
-    
+
     // Construir query string para especificar la plataforma si tenemos múltiples IDs
     const query: string[] = [];
-    
+
     // Si tenemos múltiples IDs, especificar cual es cual
     if (youtubeId && (instagramId || tiktokId)) {
       query.push(`youtubeId=${encodeURIComponent(youtubeId)}`);
@@ -205,16 +249,22 @@ export class InfluencerService {
     } else if (tiktokId && !youtubeId && !instagramId) {
       query.push('socialPlatform=tiktok');
     }
-    console.log("Query", query);
-    
+    console.log('Query', query);
+
     const queryString = query.length > 0 ? `?${query.join('&')}` : '';
-    
-    const response = await httpApiClient.get<any>(`${this.baseUrl}/full/${pathParam}${queryString}`, {
-      headers: new AxiosHeaders({
-        "Content-Type": "application/json",
-        ...withContext('InfluencerService', `getFullInfluencerData(${pathParam})`).headers
-      })
-    });
+
+    const response = await httpApiClient.get<any>(
+      `${this.baseUrl}/full/${pathParam}${queryString}`,
+      {
+        headers: new AxiosHeaders({
+          'Content-Type': 'application/json',
+          ...withContext(
+            'InfluencerService',
+            `getFullInfluencerData(${pathParam})`,
+          ).headers,
+        }),
+      },
+    );
     return response.data;
   }
 
@@ -230,13 +280,19 @@ export class InfluencerService {
     page?: number;
     size?: number;
   }): Promise<any> {
-    const response = await httpApiClient.get<any>(`${this.baseUrl}/search/local`, {
-      params,
-      headers: new AxiosHeaders({
-        "Content-Type": "application/json",
-        ...withContext('InfluencerService', `searchLocal(page: ${params.page || 1})`).headers
-      })
-    });
+    const response = await httpApiClient.get<any>(
+      `${this.baseUrl}/search/local`,
+      {
+        params,
+        headers: new AxiosHeaders({
+          'Content-Type': 'application/json',
+          ...withContext(
+            'InfluencerService',
+            `searchLocal(page: ${params.page || 1})`,
+          ).headers,
+        }),
+      },
+    );
     return response.data;
   }
 
@@ -244,11 +300,22 @@ export class InfluencerService {
    * Obtiene datos sintéticos de audiencia para un influencer
    * GET /influencers/:id/audience/synthetic?username=X&follower_count=Y&platform=Z&niche=W
    */
-  public async getSyntheticAudience(id: string, influencerData?: { username?: string, follower_count?: number, platform?: string, niche?: string, search_context?: any }): Promise<any> {
+  public async getSyntheticAudience(
+    id: string,
+    influencerData?: {
+      username?: string;
+      follower_count?: number;
+      platform?: string;
+      niche?: string;
+      search_context?: any;
+    },
+  ): Promise<any> {
     const params: any = {};
     if (influencerData) {
+      console.log('Influencer data for synthetic audience:', influencerData);
       if (influencerData.username) params.username = influencerData.username;
-      if (influencerData.follower_count) params.follower_count = influencerData.follower_count;
+      if (influencerData.follower_count)
+        params.follower_count = influencerData.follower_count;
       if (influencerData.platform) params.platform = influencerData.platform;
       if (influencerData.niche) params.niche = influencerData.niche;
       // Pass search context as JSON string
@@ -257,13 +324,17 @@ export class InfluencerService {
       }
     }
 
-    const response = await httpApiClient.get<any>(`${this.baseUrl}/${id}/audience/synthetic`, {
-      params,
-      headers: new AxiosHeaders({
-        "Content-Type": "application/json",
-        ...withContext('InfluencerService', `getSyntheticAudience(${id})`).headers
-      })
-    });
+    const response = await httpApiClient.get<any>(
+      `${this.baseUrl}/${id}/audience/synthetic`,
+      {
+        params,
+        headers: new AxiosHeaders({
+          'Content-Type': 'application/json',
+          ...withContext('InfluencerService', `getSyntheticAudience(${id})`)
+            .headers,
+        }),
+      },
+    );
     return response.data;
   }
 }
@@ -272,4 +343,10 @@ export const influencerService = InfluencerService.getInstance();
 
 // Exportar el servicio extendido
 export { InfluencerExtendedService } from './influencer-extended.service';
-export type { ExtendedInfluencerData, ExtendedDataStatus, ExtendedSyncRequest, ExtendedSyncResponse, ExtendedStatusResponse } from './influencer-extended.service';
+export type {
+  ExtendedInfluencerData,
+  ExtendedDataStatus,
+  ExtendedSyncRequest,
+  ExtendedSyncResponse,
+  ExtendedStatusResponse,
+} from './influencer-extended.service';

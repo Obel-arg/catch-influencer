@@ -15,7 +15,16 @@ import {
   CalendarDays,
   Loader2,
   Share2,
+  ChevronDown,
+  FileSpreadsheet,
+  FileText,
 } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { CampaignProvider, useCampaignContext } from "@/contexts/CampaignContext"
 import { CampaignStatus } from "@/components/campaigns/campaign-components"
 import { CampaignDashboard } from "@/components/campaigns/campaign-views/dashboard"
@@ -23,7 +32,7 @@ import { CampaignPosts } from "@/components/campaigns/campaign-views/posts"
 import { CampaignInfluencers } from "@/components/campaigns/campaign-views/influencers"
 import { CampaignProgramming } from "@/components/campaigns/campaign-views/programming"
 import { formatDateRange } from "@/utils/campaign"
-import { useCampaignExport } from "@/hooks/campaign/useCampaignExport"
+import { useCampaignExport, ExportFormat } from "@/hooks/campaign/useCampaignExport"
 import { useCampaignPosts } from "@/hooks/campaign/useCampaignPosts"
 import { toast } from "sonner"
 import { generateShareLink } from "@/services/campaign-share.service"
@@ -179,6 +188,19 @@ function CampaignDetailContent() {
     toast.success('Enlace copiado')
   }
 
+  const handleExport = async (format: ExportFormat) => {
+    if (campaign && posts) {
+      try {
+        await exportCampaign(campaign, posts, format);
+        toast.success(`${format === 'pdf' ? 'PDF' : 'Excel'} exportado exitosamente`);
+      } catch (error) {
+        toast.error(`Error al exportar el ${format === 'pdf' ? 'PDF' : 'Excel'}`);
+      }
+    } else {
+      toast.error('No hay datos para exportar');
+    }
+  }
+
   const navigationItems = [
     { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
     { id: "posts", label: "Posts", icon: <Image className="h-4 w-4" /> },
@@ -238,34 +260,43 @@ function CampaignDetailContent() {
             )}
             
             <CampaignStatus status={campaign.status} />
-            
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-7 gap-1 text-gray-500 hover:bg-gray-50 hover:text-gray-700"
-              onClick={async () => {
-                if (campaign && posts) {
-                  try {
-                    await exportCampaign(campaign, posts);
-                    toast.success('Excel exportado exitosamente');
-                  } catch (error) {
-                    toast.error('Error al exportar el Excel');
-                  }
-                } else {
-                  toast.error('No hay datos para exportar');
-                }
-              }}
-              disabled={isExporting || !campaign || !posts}
-            >
-              {isExporting ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Download className="h-3.5 w-3.5" />
-              )}
-              <span className="hidden sm:inline text-xs">
-                {isExporting ? 'Exportando...' : 'Exportar'}
-              </span>
-            </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1 text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+                  disabled={isExporting || !campaign || !posts}
+                >
+                  {isExporting ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Download className="h-3.5 w-3.5" />
+                  )}
+                  <span className="hidden sm:inline text-xs">
+                    {isExporting ? 'Exportando...' : 'Exportar'}
+                  </span>
+                  {!isExporting && <ChevronDown className="h-3 w-3 ml-0.5" />}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuItem
+                  onClick={() => handleExport('excel')}
+                  className="cursor-pointer"
+                >
+                  <FileSpreadsheet className="h-4 w-4 mr-2 text-green-600" />
+                  <span>Exportar Excel</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleExport('pdf')}
+                  className="cursor-pointer"
+                >
+                  <FileText className="h-4 w-4 mr-2 text-red-600" />
+                  <span>Exportar PDF</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <Button
               variant="ghost"

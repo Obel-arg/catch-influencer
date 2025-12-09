@@ -340,4 +340,58 @@ export class CampaignController {
       res.status(500).json({ error: error.message || 'Error al obtener campañas del usuario' });
     }
   }
+
+  // ==========================================
+  // CAMPAIGN FAVORITES ENDPOINTS
+  // ==========================================
+
+  async addFavorite(req: Request, res: Response) {
+    try {
+      const { campaignId } = req.params;
+      const userId = req.user?.id;
+
+      if (!userId) {
+        return res.status(401).json({ error: 'Usuario no autenticado' });
+      }
+
+      await this.campaignService.addCampaignFavorite(userId, campaignId);
+      res.status(200).json({ message: 'Campaign favorited successfully' });
+    } catch (error: any) {
+      console.error('Error favoriting campaign:', error);
+      res.status(500).json({ error: error.message || 'Error al marcar como favorito' });
+    }
+  }
+
+  async removeFavorite(req: Request, res: Response) {
+    try {
+      const { campaignId } = req.params;
+      const userId = req.user?.id;
+
+      if (!userId) {
+        return res.status(401).json({ error: 'Usuario no autenticado' });
+      }
+
+      await this.campaignService.removeCampaignFavorite(userId, campaignId);
+      res.status(200).json({ message: 'Campaign unfavorited successfully' });
+    } catch (error: any) {
+      console.error('Error unfavoriting campaign:', error);
+      res.status(500).json({ error: error.message || 'Error al quitar de favoritos' });
+    }
+  }
+
+  async getFavorites(req: Request, res: Response) {
+    try {
+      const userId = req.user?.id;
+
+      if (!userId) {
+        return res.status(401).json({ error: 'Usuario no autenticado' });
+      }
+
+      const favoriteIds = await this.campaignService.getUserFavoriteCampaignIds(userId);
+      res.json(favoriteIds);
+    } catch (error: any) {
+      console.error('Error getting favorites:', error);
+      res.status(500).json({ error: error.message || 'Error al obtener favoritos' });
+    }
+  }
 } 

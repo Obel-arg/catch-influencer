@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Filter, RefreshCw } from "lucide-react";
+import { Plus, Search, Filter, RefreshCw, Star } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useRoleCache } from "@/hooks/auth/useRoleCache";
 import { OutlineButton } from "@/components/ui/robust-buttons";
@@ -35,7 +35,7 @@ export function CampaignsView() {
   const [sortBy, setSortBy] = useState("name");
   const [page, setPage] = useState(1);
   const pageSize = 6;
-  const { campaigns, loading, error, getCampaignsWithMetrics, createCampaign } = useCampaigns();
+  const { campaigns, loading, error, getCampaignsWithMetrics, createCampaign, toggleCampaignFavorite } = useCampaigns();
   const { isViewer, loading: roleLoading, isRoleCached } = useRoleCache();
 
   // Cargar campañas al montar el componente
@@ -83,39 +83,55 @@ export function CampaignsView() {
     window.location.reload();
   }, []);
 
-  // Filtrar y ordenar campañas
-  const filteredAndSortedCampaigns = campaigns
-    .filter((campaign) => {
-      // Filtro de búsqueda
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        return (
-          campaign.name.toLowerCase().includes(query) ||
-          campaign.description?.toLowerCase().includes(query)
-        );
-      }
-      return true;
-    })
-    .filter((campaign) => {
-      // Filtro por estado
-      if (statusFilter !== "all") {
-        return campaign.status === statusFilter;
-      }
-      return true;
-    })
-    .sort((a, b) => {
+  // Filtrar y ordenar campañas (con favoritos siempre al inicio)
+  const filteredAndSortedCampaigns = useMemo(() => {
+    // 1. Apply filters
+    let filtered = campaigns
+      .filter((campaign) => {
+        // Filtro de búsqueda
+        if (searchQuery.trim()) {
+          const query = searchQuery.toLowerCase();
+          return (
+            campaign.name.toLowerCase().includes(query) ||
+            campaign.description?.toLowerCase().includes(query)
+          );
+        }
+        return true;
+      })
+      .filter((campaign) => {
+        // Filtro por estado
+        if (statusFilter !== "all") {
+          return campaign.status === statusFilter;
+        }
+        return true;
+      });
+
+    // 2. Separate favorites from non-favorites
+    const favorites = filtered.filter(c => c.is_favorited);
+    const nonFavorites = filtered.filter(c => !c.is_favorited);
+
+    // 3. Sort function
+    const sortFunction = (a: any, b: any) => {
       switch (sortBy) {
         case "date":
-          return (
-            new Date(b.start_date).getTime() - new Date(a.start_date).getTime()
-          );
+          return new Date(b.start_date).getTime() - new Date(a.start_date).getTime();
+        case "recently-created":
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         case "budget":
           return b.budget - a.budget;
         case "name":
         default:
           return a.name.localeCompare(b.name);
       }
-    });
+    };
+
+    // 4. Sort each group separately
+    favorites.sort(sortFunction);
+    nonFavorites.sort(sortFunction);
+
+    // 5. Favorites first, then non-favorites
+    return [...favorites, ...nonFavorites];
+  }, [campaigns, searchQuery, statusFilter, sortBy]);
 
   // Paginación
   const totalPages = Math.ceil(filteredAndSortedCampaigns.length / pageSize);
@@ -214,7 +230,8 @@ export function CampaignsView() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="name">Nombre</SelectItem>
-                      <SelectItem value="date">Fecha</SelectItem>
+                      <SelectItem value="date">Fecha de inicio</SelectItem>
+                      <SelectItem value="recently-created">Creadas recientemente</SelectItem>
                       <SelectItem value="budget">Presupuesto</SelectItem>
                     </SelectContent>
                   </Select>
@@ -256,6 +273,7 @@ export function CampaignsView() {
                 onCampaignUpdated={forceReload}
                 onCampaignUpdatedOptimistic={forceReload}
                 onCampaignDeletedOptimistic={forceReload}
+                onToggleFavorite={toggleCampaignFavorite}
               />
             </div>
           </div>

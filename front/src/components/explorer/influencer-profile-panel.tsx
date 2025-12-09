@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { X, Loader2, Info } from 'lucide-react';
+import { X, Loader2, Info, Download } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { NumberDisplay } from '@/components/ui/NumberDisplay';
+import { toast } from 'sonner';
+import { exportInfluencerProfileToPDF } from '@/utils/influencer-pdf-export';
 import {
   getInstagramThumbnailValidated,
   getOptimizedAvatarUrl,
@@ -462,6 +464,21 @@ export function InfluencerProfilePanel({
 
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
   const requestedThumbnails = useRef<Record<string, boolean>>({});
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
+
+  // 📄 Export to PDF handler
+  const handleExportPDF = async () => {
+    try {
+      setIsExportingPDF(true);
+      await exportInfluencerProfileToPDF(influencer.name);
+      toast.success('PDF exportado exitosamente');
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      toast.error('Error al exportar el PDF');
+    } finally {
+      setIsExportingPDF(false);
+    }
+  };
 
   // Función asíncrona para obtener y cachear thumbnails
   const fetchAndCacheThumbnail = async (
@@ -542,7 +559,7 @@ export function InfluencerProfilePanel({
         );
         const instagramUsername =
           influencer.platformInfo?.instagram?.username ||
-          influencer.name ||
+          influencer.creatorId ||
           influencer.id;
 
         console.log(
@@ -695,17 +712,35 @@ export function InfluencerProfilePanel({
       >
         <div className="sticky top-0 z-10 flex items-center justify-between p-6 pb-4 border-b bg-white">
           <h2 className="text-lg font-semibold">Detalles del Influencer</h2>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="h-8 w-8"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleExportPDF}
+              disabled={isExportingPDF || isLoading}
+              className="h-8 gap-1.5"
+            >
+              {isExportingPDF ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              <span className="text-xs">
+                {isExportingPDF ? 'Exportando...' : 'Exportar PDF'}
+              </span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="h-8 w-8"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
-        <div className="p-6 pt-4 space-y-4">
+        <div className="p-6 pt-4 space-y-4" data-influencer-export>
           {/* 🎯 LÓGICA CONDICIONAL DE RENDERIZADO */}
           {isLoading ? (
             // ⏳ SKELETON MIENTRAS CARGA

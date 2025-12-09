@@ -296,6 +296,31 @@ export class CampaignService {
     });
     return response.data;
   }
+
+  // ==========================================
+  // CAMPAIGN FAVORITES METHODS
+  // ==========================================
+
+  public async toggleFavorite(campaignId: string, currentlyFavorited: boolean): Promise<void> {
+    const method = currentlyFavorited ? 'delete' : 'post';
+
+    await httpApiClient[method](`${this.baseUrl}/${campaignId}/favorite`, undefined, {
+      headers: new AxiosHeaders({
+        "Content-Type": "application/json",
+        ...withContext('CampaignService', `toggleFavorite(${campaignId})`).headers
+      })
+    });
+  }
+
+  public async getFavorites(): Promise<string[]> {
+    const response = await httpApiClient.get<string[]>(`${this.baseUrl}/favorites/list`, {
+      headers: new AxiosHeaders({
+        "Content-Type": "application/json",
+        ...withContext('CampaignService', 'getFavorites').headers
+      })
+    });
+    return response.data;
+  }
 }
 
 export const campaignService = CampaignService.getInstance(); 

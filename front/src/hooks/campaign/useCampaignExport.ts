@@ -1,13 +1,20 @@
 import { useState } from 'react';
 import { exportCampaignPostsToExcel, CampaignData } from '@/utils/excel-export';
+import { exportCampaignPostsToPDF } from '@/utils/pdf-export';
 import { Campaign } from '@/types/campaign';
 import { InfluencerPost } from '@/lib/services/influencer-posts';
+
+export type ExportFormat = 'excel' | 'pdf';
 
 export function useCampaignExport() {
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
-  const exportCampaign = async (campaign: Campaign, posts: InfluencerPost[]) => {
+  const exportCampaign = async (
+    campaign: Campaign,
+    posts: InfluencerPost[],
+    format: ExportFormat = 'excel'
+  ) => {
     setIsExporting(true);
     setExportError(null);
 
@@ -47,10 +54,15 @@ export function useCampaignExport() {
         })
       };
 
-      // Exportar a Excel
-      await exportCampaignPostsToExcel(campaignData);
-      
-      
+      // Exportar según el formato seleccionado
+      if (format === 'pdf') {
+        await exportCampaignPostsToPDF(campaignData);
+        console.log('✅ PDF exportado exitosamente');
+      } else {
+        await exportCampaignPostsToExcel(campaignData);
+        console.log('✅ Excel exportado exitosamente');
+      }
+
     } catch (error) {
       console.error('❌ Error en la exportación:', error);
       setExportError(error instanceof Error ? error.message : 'Error desconocido al exportar');
