@@ -153,24 +153,21 @@ function ProtectedLayoutContent({ children }: ProtectedLayoutProps) {
           <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
             <MainSidebar collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed((v) => !v)} />
             <div className={sidebarCollapsed ? "flex-1 ml-16 transition-all duration-300 ease-in-out" : "flex-1 ml-56 transition-all duration-300 ease-in-out"}>
-              {/* Hide topbar on Explorer route */}
-              {!pathname?.startsWith("/explorer") && (
-                <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-white/80 backdrop-blur-md px-4 md:px-6 shadow-sm">
-                  <div className="ml-auto flex gap-2 items-center">
-                    <button
-                      onClick={() => setSidebarCollapsed((v) => !v)}
-                      className="px-3 py-1.5 text-sm border rounded-md hover:bg-gray-50"
-                      aria-label="Toggle navigation sidebar"
-                      title="Toggle navigation sidebar"
-                    >
-                      {sidebarCollapsed ? 'Expandir' : 'Colapsar'}
-                    </button>
-                    <FeedbackSystem userEmail={userEmail} />
-                    {/* <NotificationsPopover /> */}
-                    {/* UserProfileDropdown moved to sidebar bottom */}
-                  </div>
-                </header>
-              )}
+              <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-white/80 backdrop-blur-md px-4 md:px-6 shadow-sm">
+                <div className="ml-auto flex gap-2 items-center">
+                  <button
+                    onClick={() => setSidebarCollapsed((v) => !v)}
+                    className="px-3 py-1.5 text-sm border rounded-md hover:bg-gray-50"
+                    aria-label="Toggle navigation sidebar"
+                    title="Toggle navigation sidebar"
+                  >
+                    {sidebarCollapsed ? 'Expandir' : 'Colapsar'}
+                  </button>
+                  <FeedbackSystem userEmail={userEmail} />
+                  {/* <NotificationsPopover /> */}
+                  {/* UserProfileDropdown moved to sidebar bottom */}
+                </div>
+              </header>
               <main className="flex-1 p-4 md:p-6">{children}</main>
             </div>
 

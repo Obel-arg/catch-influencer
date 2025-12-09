@@ -117,45 +117,10 @@ export class CampaignService {
       return [];
     }
 
-    // 🔐 BRAND-BASED ACCESS CONTROL
-    // Admins see all campaigns, members/viewers only see campaigns from their assigned brands
-    const isAdmin = userOrgs.some(org => org.role === 'admin');
-
-    if (isAdmin) {
-      // Admins bypass brand filtering
-      return campaigns;
-    }
-
-    // For non-admins: filter by assigned brands
-    // Get user's brand IDs for all their organizations
-    const userBrandIdsPromises = orgIds.map(orgId =>
-      this.userBrandService.getUserBrandIds(userId, orgId)
-    );
-    const userBrandIdsArrays = await Promise.all(userBrandIdsPromises);
-    const userBrandIds = userBrandIdsArrays.flat();
-
-    if (userBrandIds.length === 0) {
-      // User has no brand assignments, cannot see any campaigns
-      return [];
-    }
-
-    // Get campaign IDs that belong to user's brands via brands_campaigns junction table
-    const { data: brandCampaigns, error: bcError } = await supabase
-      .from('brands_campaigns')
-      .select('campaign_id')
-      .in('brand_id', userBrandIds);
-
-    if (bcError) throw bcError;
-
-    if (!brandCampaigns || brandCampaigns.length === 0) {
-      return [];
-    }
-
-    // Create a Set for O(1) lookup performance
-    const allowedCampaignIds = new Set(brandCampaigns.map(bc => bc.campaign_id));
-
-    // Filter campaigns to only those the user has brand access to
-    return campaigns.filter(campaign => allowedCampaignIds.has(campaign.id));
+    // 🔐 ACCESS CONTROL
+    // All users (admin, member, viewer) can see all campaigns in their organizations
+    // No brand-based filtering - members can see all campaigns
+    return campaigns;
   }
 
   async getMyCampaignsWithMetrics(userId: string): Promise<any[]> {
@@ -211,45 +176,10 @@ export class CampaignService {
       is_favorited: favoritedIdsSet.has(campaign.id)
     }));
 
-    // 🔐 BRAND-BASED ACCESS CONTROL
-    // Admins see all campaigns, members/viewers only see campaigns from their assigned brands
-    const isAdmin = userOrgs.some(org => org.role === 'admin');
-
-    if (isAdmin) {
-      // Admins bypass brand filtering
-      return campaignsWithMetrics;
-    }
-
-    // For non-admins: filter by assigned brands
-    // Get user's brand IDs for all their organizations
-    const userBrandIdsPromises = orgIds.map(orgId =>
-      this.userBrandService.getUserBrandIds(userId, orgId)
-    );
-    const userBrandIdsArrays = await Promise.all(userBrandIdsPromises);
-    const userBrandIds = userBrandIdsArrays.flat();
-
-    if (userBrandIds.length === 0) {
-      // User has no brand assignments, cannot see any campaigns
-      return [];
-    }
-
-    // Get campaign IDs that belong to user's brands via brands_campaigns junction table
-    const { data: brandCampaigns, error: bcError } = await supabase
-      .from('brands_campaigns')
-      .select('campaign_id')
-      .in('brand_id', userBrandIds);
-
-    if (bcError) throw bcError;
-
-    if (!brandCampaigns || brandCampaigns.length === 0) {
-      return [];
-    }
-
-    // Create a Set for O(1) lookup performance
-    const allowedCampaignIds = new Set(brandCampaigns.map(bc => bc.campaign_id));
-
-    // Filter campaigns to only those the user has brand access to
-    return campaignsWithMetrics.filter(campaign => allowedCampaignIds.has(campaign.id));
+    // 🔐 ACCESS CONTROL
+    // All users (admin, member, viewer) can see all campaigns in their organizations
+    // No brand-based filtering - members can see all campaigns
+    return campaignsWithMetrics;
   }
 
   // 🚀 NUEVO: Método optimizado con query manual más eficiente
