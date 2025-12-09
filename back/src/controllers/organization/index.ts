@@ -181,12 +181,8 @@ export class OrganizationController {
         return res.status(400).json({ error: 'Rol inválido' });
       }
 
-      // Brand validation for non-admin users
-      if (role !== 'admin') {
-        if (!brand_ids || !Array.isArray(brand_ids) || brand_ids.length === 0) {
-          return res.status(400).json({ error: 'Al menos una marca debe ser asignada para miembros y viewers' });
-        }
-      }
+      // Brand selection is optional for all roles
+      // No validation required - users can be invited without brands
 
       const result = await this.organizationService.inviteUser(
         id,

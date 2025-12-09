@@ -314,8 +314,9 @@ export class OrganizationService {
       throw new Error('Configuración de Supabase Admin no disponible');
     }
 
-    // Validar que las marcas pertenecen a la organización (si no es admin)
-    if (role !== 'admin' && brandIds.length > 0) {
+    // Validar que las marcas pertenecen a la organización (solo si se proporcionan marcas)
+    // Las marcas son opcionales para todos los roles
+    if (brandIds.length > 0) {
       const brandValidations = await Promise.all(
         brandIds.map(brandId =>
           this.userBrandService.verifyBrandInOrganization(brandId, organizationId)

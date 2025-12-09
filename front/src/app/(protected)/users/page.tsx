@@ -175,14 +175,10 @@ function UsersPage() {
     );
   });
 
-  // Handle role change - clear brands if admin selected
+  // Handle role change - brands are optional for all roles
   const handleRoleChange = (value: "admin" | "member" | "viewer") => {
     setInviteRole(value);
-    if (value === "admin") {
-      setSelectedBrandIds([]);
-      setBrandSearch("");
-      setBrandDropdownOpen(false);
-    }
+    // Brands are optional, no need to clear them
   };
 
   // Handle brand selection toggle
@@ -203,13 +199,10 @@ function UsersPage() {
     );
   };
 
-  // Handle role change in edit modal
+  // Handle role change in edit modal - brands are optional for all roles
   const handleEditRoleChange = (value: "admin" | "member" | "viewer") => {
     setNewRole(value);
-    if (value === "admin") {
-      setEditSelectedBrandIds([]);
-      setEditBrandSearch("");
-    }
+    // Brands are optional, no need to clear them
   };
 
   // Invite user
@@ -223,15 +216,7 @@ function UsersPage() {
       return;
     }
 
-    // Brand validation for non-admin users
-    if (inviteRole !== "admin" && selectedBrandIds.length === 0) {
-      showToast({
-        title: "Error",
-        description: "Debes seleccionar al menos una marca para este rol",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Brand selection is optional for all roles
 
     try {
       setSubmitting(true);
@@ -239,7 +224,7 @@ function UsersPage() {
         email: inviteEmail,
         full_name: inviteName,
         role: inviteRole,
-        brand_ids: inviteRole === "admin" ? [] : selectedBrandIds,
+        brand_ids: [],
       });
 
       showToast({
@@ -251,8 +236,6 @@ function UsersPage() {
       setInviteEmail("");
       setInviteName("");
       setInviteRole("member");
-      setSelectedBrandIds([]);
-      setBrandSearch("");
       await fetchUsers();
     } catch (error: any) {
       console.error("Error inviting user:", error);
@@ -270,15 +253,7 @@ function UsersPage() {
   const handleUpdateRole = async () => {
     if (!selectedUser) return;
 
-    // Validate brand selection for non-admin users
-    if (newRole !== "admin" && editSelectedBrandIds.length === 0) {
-      showToast({
-        title: "Error",
-        description: "Debes seleccionar al menos una marca para este rol",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Brand selection is optional for all roles
 
     try {
       setSubmitting(true);
@@ -289,13 +264,7 @@ function UsersPage() {
         { role: newRole }
       );
 
-      // Update brands (only for non-admin users)
-      if (newRole !== "admin") {
-        await httpClient.put(
-          `/user-brands/organizations/${ORGANIZATION_ID}/users/${selectedUser.user_id}/brands`,
-          { brand_ids: editSelectedBrandIds }
-        );
-      }
+      // Brands are no longer managed through this modal
 
       showToast({
         title: "Éxito",
@@ -352,12 +321,6 @@ function UsersPage() {
     setSelectedUser(user);
     setNewRole(user.role);
     setEditRoleModalOpen(true);
-    setEditBrandSearch("");
-    setEditSelectedBrandIds([]);
-    setEditBrandDropdownOpen(false);
-
-    // Load brands
-    loadEditBrands(user.user_id);
   };
 
   // Open delete modal
@@ -640,114 +603,10 @@ function UsersPage() {
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Brand Selection - Only for non-admin roles */}
-            {inviteRole !== "admin" && (
-              <div className="space-y-3">
-                <div>
-                  <Label>Marcas *</Label>
-                  <p className="text-sm text-gray-500">
-                    Selecciona las marcas a las que el usuario tendrá acceso
-                  </p>
-                </div>
-
-                {loadingBrands ? (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-                    <span className="ml-2 text-sm text-gray-500">Cargando marcas...</span>
-                  </div>
-                ) : brandsError ? (
-                  <div className="text-sm text-red-600 py-2">{brandsError}</div>
-                ) : brands.length === 0 ? (
-                  <div className="text-sm text-gray-500 py-2">
-                    No hay marcas activas disponibles
-                  </div>
-                ) : (
-                  <div className="relative">
-                    {/* Search Input */}
-                    <div className="relative">
-                      <Input
-                        type="text"
-                        placeholder="Buscar marcas..."
-                        value={brandSearch}
-                        onChange={(e) => setBrandSearch(e.target.value)}
-                        onFocus={() => setBrandDropdownOpen(true)}
-                        className="w-full"
-                        autoComplete="off"
-                        data-form-type="other"
-                        data-lpignore="true"
-                      />
-                    </div>
-
-                    {/* Dropdown List - Only shows when focused/open */}
-                    {brandDropdownOpen && (
-                      <>
-                        {/* Backdrop to close dropdown */}
-                        <div
-                          className="fixed inset-0 z-10"
-                          onClick={() => setBrandDropdownOpen(false)}
-                        />
-
-                        {/* Brand List */}
-                        <div className="absolute z-20 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-64 overflow-y-auto">
-                          <div className="p-2 space-y-1">
-                            {filteredBrands.length === 0 ? (
-                              <p className="text-sm text-gray-500 text-center py-2">
-                                No se encontraron marcas
-                              </p>
-                            ) : (
-                              filteredBrands.map((brand) => (
-                                <div
-                                  key={brand.id}
-                                  className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                                  onClick={() => handleBrandToggle(brand.id)}
-                                >
-                                  <Checkbox
-                                    id={`brand-${brand.id}`}
-                                    checked={selectedBrandIds.includes(brand.id)}
-                                    onCheckedChange={() => handleBrandToggle(brand.id)}
-                                    onClick={(e) => e.stopPropagation()}
-                                  />
-                                  <label
-                                    htmlFor={`brand-${brand.id}`}
-                                    className="flex items-center space-x-2 text-sm cursor-pointer flex-1"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    {brand.logo_url && (
-                                      <img
-                                        src={brand.logo_url}
-                                        alt={brand.name}
-                                        className="h-6 w-6 rounded object-cover"
-                                      />
-                                    )}
-                                    <span className="font-medium">{brand.name}</span>
-                                    {brand.industry && (
-                                      <span className="text-gray-500 text-xs">({brand.industry})</span>
-                                    )}
-                                  </label>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    {/* Selected count */}
-                    <p className="text-xs text-gray-500 mt-2">
-                      {selectedBrandIds.length} marca{selectedBrandIds.length !== 1 ? 's' : ''} seleccionada{selectedBrandIds.length !== 1 ? 's' : ''}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => {
               setInviteModalOpen(false);
-              setBrandSearch("");
-              setSelectedBrandIds([]);
-              setBrandDropdownOpen(false);
             }}>
               Cancelar
             </Button>
@@ -783,109 +642,6 @@ function UsersPage() {
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Brand Selection - Only for non-admin roles */}
-            {newRole !== "admin" && (
-              <div className="space-y-3">
-                <div>
-                  <Label>Marcas *</Label>
-                  <p className="text-sm text-gray-500">
-                    Selecciona las marcas a las que el usuario tendrá acceso
-                  </p>
-                </div>
-
-                {editLoadingBrands ? (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-                    <span className="ml-2 text-sm text-gray-500">Cargando marcas...</span>
-                  </div>
-                ) : editBrandsError ? (
-                  <div className="text-sm text-red-600 py-2">{editBrandsError}</div>
-                ) : editBrands.length === 0 ? (
-                  <div className="text-sm text-gray-500 py-2">
-                    No hay marcas activas disponibles
-                  </div>
-                ) : (
-                  <div className="relative">
-                    {/* Search Input */}
-                    <div className="relative">
-                      <Input
-                        type="text"
-                        placeholder="Buscar marcas..."
-                        value={editBrandSearch}
-                        onChange={(e) => setEditBrandSearch(e.target.value)}
-                        onFocus={() => setEditBrandDropdownOpen(true)}
-                        className="w-full"
-                        autoComplete="off"
-                        data-form-type="other"
-                        data-lpignore="true"
-                      />
-                    </div>
-
-                    {/* Dropdown List - Only shows when focused/open */}
-                    {editBrandDropdownOpen && (
-                      <>
-                        {/* Backdrop to close dropdown */}
-                        <div
-                          className="fixed inset-0 z-10"
-                          onClick={() => setEditBrandDropdownOpen(false)}
-                        />
-
-                        {/* Brand List */}
-                        <div className="absolute z-20 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-64 overflow-y-auto">
-                          <div className="p-2 space-y-1">
-                            {editBrands
-                              .filter(brand => {
-                                const searchLower = editBrandSearch.toLowerCase();
-                                return (
-                                  brand.name.toLowerCase().includes(searchLower) ||
-                                  brand.industry?.toLowerCase().includes(searchLower)
-                                );
-                              })
-                              .map((brand) => (
-                                <div
-                                  key={brand.id}
-                                  className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                                  onClick={() => handleEditBrandToggle(brand.id)}
-                                >
-                                  <Checkbox
-                                    id={`edit-brand-${brand.id}`}
-                                    checked={editSelectedBrandIds.includes(brand.id)}
-                                    onCheckedChange={() => handleEditBrandToggle(brand.id)}
-                                    onClick={(e) => e.stopPropagation()}
-                                  />
-                                  <label
-                                    htmlFor={`edit-brand-${brand.id}`}
-                                    className="flex items-center space-x-2 text-sm cursor-pointer flex-1"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    {brand.logo_url && (
-                                      <img
-                                        src={brand.logo_url}
-                                        alt={brand.name}
-                                        className="h-6 w-6 rounded object-cover"
-                                      />
-                                    )}
-                                    <span className="font-medium">{brand.name}</span>
-                                    {brand.industry && (
-                                      <span className="text-gray-500 text-xs">({brand.industry})</span>
-                                    )}
-                                  </label>
-                                </div>
-                              ))}
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    {/* Selected count */}
-                    <p className="text-xs text-gray-500 mt-2">
-                      {editSelectedBrandIds.length} marca{editSelectedBrandIds.length !== 1 ? 's' : ''} seleccionada{editSelectedBrandIds.length !== 1 ? 's' : ''}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditRoleModalOpen(false)}>
