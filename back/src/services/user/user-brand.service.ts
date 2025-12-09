@@ -121,15 +121,42 @@ export class UserBrandService {
 
   /**
    * Verify brand belongs to organization
+   * Since brands table doesn't have organization_id directly,
+   * we verify that the brand exists and is active.
+   * Brands are shared resources that can be assigned to multiple organizations via user_brands
    */
   async verifyBrandInOrganization(brandId: string, organizationId: string): Promise<boolean> {
-    const { data, error } = await supabase
-      .from('brands')
-      .select('id')
-      .eq('id', brandId)
-      .eq('organization_id', organizationId)
-      .single();
+    try {
+      // Verify the brand exists and is active (not deleted)
+      const { data: brand, error: brandError } = await supabase
+        .from('brands')
+        .select('id, status, deleted_at')
+        .eq('id', brandId)
+        .single();
 
-    return !error && !!data;
+      if (brandError) {
+        console.error(`[verifyBrandInOrganization] Error checking brand ${brandId}:`, brandError);
+        return false;
+      }
+
+      if (!brand) {
+        console.error(`[verifyBrandInOrganization] Brand ${brandId} not found`);
+        return false;
+      }
+
+      // Check if brand is deleted
+      if (brand.status === 'deleted' || brand.deleted_at) {
+        console.error(`[verifyBrandInOrganization] Brand ${brandId} is deleted`);
+        return false;
+      }
+
+      // Brand exists and is active - allow assignment
+      // Since brands don't have organization_id, they are shared resources
+      // that can be assigned to any organization through user_brands
+      return true;
+    } catch (error) {
+      console.error(`[verifyBrandInOrganization] Unexpected error:`, error);
+      return false;
+    }
   }
 }

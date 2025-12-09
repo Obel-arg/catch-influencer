@@ -261,6 +261,29 @@ export class OrganizationService {
     return data?.role === 'admin';
   }
 
+  // Validar formato de email
+  private validateEmail(email: string): boolean {
+    if (!email || typeof email !== 'string') {
+      return false;
+    }
+    
+    // Normalizar email: trim y lowercase
+    const normalizedEmail = email.trim().toLowerCase();
+    
+    // Validar formato básico de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return false;
+    }
+    
+    // Validar longitud
+    if (normalizedEmail.length > 254) {
+      return false;
+    }
+    
+    return true;
+  }
+
   // Invitar usuario por email usando Supabase Auth
   async inviteUser(
     organizationId: string,
@@ -270,6 +293,17 @@ export class OrganizationService {
     invitedBy: string,
     brandIds: string[] = []
   ): Promise<any> {
+    // Validar y normalizar email
+    if (!email || typeof email !== 'string') {
+      throw new Error('El email es requerido y debe ser una cadena de texto');
+    }
+    
+    const normalizedEmail = email.trim().toLowerCase();
+    
+    if (!this.validateEmail(normalizedEmail)) {
+      throw new Error('El formato del email no es válido');
+    }
+
     // Verificar que quien invita sea admin
     const isAdmin = await this.isUserAdmin(organizationId, invitedBy);
     if (!isAdmin) {
