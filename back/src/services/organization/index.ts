@@ -190,8 +190,16 @@ export class OrganizationService {
 
   async removeMemberFromOrganization(organizationId: string, userId: string): Promise<void> {
     try {
-      // Only remove from organization_members
-      // Don't delete the user's profile or auth account
+      // 1. Remove from Supabase Auth first
+      if (supabaseAdmin) {
+        try {
+          await supabaseAdmin.auth.admin.deleteUser(userId, true);
+        } catch (authError: any) {
+          console.warn('Error deleting user from auth:', authError.message);
+        }
+      }
+
+      // 2. Remove from organization_members
       const { error: orgError } = await supabase
         .from('organization_members')
         .delete()
@@ -199,13 +207,23 @@ export class OrganizationService {
         .eq('user_id', userId);
 
       if (orgError) {
-        console.error('Error removing member from organization:', orgError);
         throw orgError;
       }
 
-      console.log(`✅ User ${userId} removed from organization ${organizationId}`);
+      // 3. Remove from user_brands
+      await supabase
+        .from('user_brands')
+        .delete()
+        .eq('user_id', userId);
+
+      // 4. Remove from user_profiles
+      await supabase
+        .from('user_profiles')
+        .delete()
+        .eq('id', userId);
+
     } catch (error) {
-      console.error('Error in removeMemberFromOrganization:', error);
+      console.error('Error removing user:', error);
       throw error;
     }
   }
