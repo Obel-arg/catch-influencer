@@ -49,7 +49,7 @@ export class OpenAIAudienceService {
     });
     this.supabase = createClient(
       config.supabase.url || '',
-      config.supabase.anonKey || ''
+      config.supabase.anonKey || '',
     );
   }
 
@@ -58,7 +58,7 @@ export class OpenAIAudienceService {
    */
   async inferAudience(
     instagramUrl: string,
-    options: InferenceOptions = {}
+    options: InferenceOptions = {},
   ): Promise<InferenceResult> {
     try {
       const startTime = Date.now();
@@ -72,7 +72,7 @@ export class OpenAIAudienceService {
         const dbCached = await this.checkDatabaseCache(
           normalizedUrl,
           options.influencerId,
-          options.searchContext
+          options.searchContext,
         );
         if (dbCached) {
           console.log(`✅ Database cache hit: ${normalizedUrl}`);
@@ -91,7 +91,11 @@ export class OpenAIAudienceService {
       }
 
       // Check file cache second (unless force refresh or skip cache)
-      if (!options.forceRefresh && !options.skipCache && this.config.cache.enabled) {
+      if (
+        !options.forceRefresh &&
+        !options.skipCache &&
+        this.config.cache.enabled
+      ) {
         const cached = await this.checkCache(cacheKey);
         if (cached) {
           console.log(`✅ File cache hit: ${normalizedUrl}`);
@@ -107,7 +111,7 @@ export class OpenAIAudienceService {
             options.influencerId,
             cached.api_cost,
             cached.profile_snapshot,
-            options.searchContext
+            options.searchContext,
           );
 
           return {
@@ -124,19 +128,15 @@ export class OpenAIAudienceService {
         }
       }
 
-      // Fetch Instagram profile
-      console.log(`🔍 Fetching Instagram profile: ${normalizedUrl}`);
-      const profileData = await this.fetchInstagramProfile(normalizedUrl, options);
-
       // Dry run mode - skip OpenAI call
       if (options.dryRun) {
-        console.log('✅ Dry run completed - profile data extracted successfully');
+        console.log('✅ Dry run mode - skipping inference');
         return {
           success: true,
           demographics: this.createMockDemographics(),
           cached: false,
           cost: 0,
-          details: { profileData, dryRun: true },
+          details: { dryRun: true },
         };
       }
 
@@ -152,57 +152,14 @@ export class OpenAIAudienceService {
         };
       }
 
-      // Check daily cost limit
-      if (this.config.costControl.enabled) {
-        await this.checkDailyBudget();
-      }
+      // Use OpenAI web browsing to analyze Instagram profile directly
+      console.log(`🤖 Using OpenAI web browsing to analyze: ${normalizedUrl}`);
+      console.log(`  Search Context: ${JSON.stringify(options.searchContext)}`);
+      const { demographics, cost, username } = await this.inferWithWebBrowsing(
+        normalizedUrl,
+        options.searchContext,
+      );
 
-      // Call OpenAI API with search context (with retries for hallucinated countries)
-      console.log(`🤖 Calling OpenAI API (${this.config.openai.model})...`);
-      if (options.searchContext) {
-        console.log('📍 Using search context for enhanced inference');
-      }
-
-      let rawDemographics: OpenAIInferenceResponse;
-      let attempts = 0;
-      const maxAttempts = 3;
-
-      while (attempts < maxAttempts) {
-        attempts++;
-        rawDemographics = await this.callOpenAIAPI(profileData, options.searchContext);
-
-        // HARD VALIDATION: Check for hallucinated countries
-        const hallucinatedCountries = this.detectHallucinatedCountries(rawDemographics, profileData);
-        if (hallucinatedCountries.length > 0) {
-          console.warn(`❌ Attempt ${attempts}: OpenAI hallucinated impossible countries: ${hallucinatedCountries.join(', ')}`);
-          if (attempts < maxAttempts) {
-            console.log(`🔄 Retrying with stricter prompt...`);
-            continue;
-          } else {
-            throw new Error(`OpenAI keeps hallucinating impossible countries after ${maxAttempts} attempts: ${hallucinatedCountries.join(', ')}`);
-          }
-        }
-        break;
-      }
-
-      // Validate and normalize
-      console.log('✅ Validating and normalizing output...');
-      const validation = this.validateAndNormalize(rawDemographics!);
-      if (!validation.valid) {
-        throw new Error(
-          `Validation failed: ${validation.errors.map((e) => e.message).join(', ')}`
-        );
-      }
-
-      const demographics: AudienceDemographicsExtended = {
-        ...validation.normalized!,
-        inference_source: 'openai',
-        model_used: this.config.openai.model,
-        inferred_at: new Date(),
-      };
-
-      // Estimate cost
-      const cost = 0.05; // Approximate cost per inference
       const duration = Date.now() - startTime;
 
       // Track cost
@@ -217,29 +174,27 @@ export class OpenAIAudienceService {
         });
       }
 
-      // Use the actual scraped Instagram URL (in case of redirects like TR1 -> trueno)
-      const actualInstagramUrl = `https://instagram.com/${profileData.username}`;
+      // Use the extracted username from web browsing
+      const actualInstagramUrl = `https://instagram.com/${username}`;
 
-      // Store to database first (with correct scraped username and URL)
+      // Store to database
       if (!options.skipCache) {
         await this.storeToDatabase(
           actualInstagramUrl,
-          profileData.username,
+          username,
           demographics,
           options.influencerId,
           cost,
-          profileData,
-          options.searchContext
+          undefined, // No profile snapshot needed with web browsing
+          options.searchContext,
         );
       }
 
-      // Cache result to file (secondary cache) - also use actual URL
-      if (!options.skipCache && this.config.cache.enabled) {
-        const actualCacheKey = this.generateCacheKey(actualInstagramUrl);
-        await this.cacheResult(actualCacheKey, actualInstagramUrl, profileData.username, demographics, cost);
-      }
-
-      console.log(`✅ Inference completed in ${(duration / 1000).toFixed(2)}s (cost: $${cost})`);
+      console.log(
+        `✅ Inference completed in ${(duration / 1000).toFixed(
+          2,
+        )}s (cost: $${cost.toFixed(2)})`,
+      );
 
       return {
         success: true,
@@ -275,7 +230,7 @@ export class OpenAIAudienceService {
    */
   private async fetchInstagramProfile(
     url: string,
-    options: InferenceOptions
+    options: InferenceOptions,
   ): Promise<InstagramProfileData> {
     const maxRetries = options.maxRetries || this.config.scraping.retries;
     let lastError: Error | null = null;
@@ -296,7 +251,9 @@ export class OpenAIAudienceService {
       }
     }
 
-    throw new Error(`Failed to fetch Instagram profile after ${maxRetries} attempts: ${lastError?.message}`);
+    throw new Error(
+      `Failed to fetch Instagram profile after ${maxRetries} attempts: ${lastError?.message}`,
+    );
   }
 
   /**
@@ -304,14 +261,15 @@ export class OpenAIAudienceService {
    */
   private async _fetchWithPuppeteer(
     url: string,
-    timeout?: number
+    timeout?: number,
   ): Promise<InstagramProfileData> {
     let browser: Browser | null = null;
     let page: Page | null = null;
 
     try {
       // Determine if we're in production (Vercel/serverless)
-      const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL;
+      const isProduction =
+        process.env.NODE_ENV === 'production' || process.env.VERCEL;
 
       // Launch browser with appropriate configuration
       if (isProduction) {
@@ -327,7 +285,11 @@ export class OpenAIAudienceService {
         const puppeteerLocal = require('puppeteer');
         browser = await puppeteerLocal.launch({
           headless: this.config.scraping.headless,
-          args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+          ],
           timeout: timeout || this.config.scraping.timeout,
         });
       }
@@ -370,11 +332,13 @@ export class OpenAIAudienceService {
           page.waitForSelector('article', { timeout: 10000 }),
         ]);
       } catch (error) {
-        console.log('  Warning: Standard selectors not found, trying to extract data anyway...');
+        console.log(
+          '  Warning: Standard selectors not found, trying to extract data anyway...',
+        );
       }
 
       // Additional wait for dynamic content
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // Extract profile data
       // Note: This function runs in the browser context, so DOM APIs are available
@@ -396,12 +360,15 @@ export class OpenAIAudienceService {
         };
 
         // Extract username from URL (primary method)
-        let username = _window.location.pathname.split('/').filter((x: any) => x)[0] || '';
+        let username =
+          _window.location.pathname.split('/').filter((x: any) => x)[0] || '';
 
         // Fallback: Try to extract from meta tags or JSON-LD data
         if (!username) {
           // Try meta property og:url
-          const ogUrl = _document.querySelector('meta[property="og:url"]')?.getAttribute('content');
+          const ogUrl = _document
+            .querySelector('meta[property="og:url"]')
+            ?.getAttribute('content');
           if (ogUrl) {
             const match = ogUrl.match(/instagram\.com\/([^\/\?]+)/);
             if (match) username = match[1];
@@ -410,7 +377,9 @@ export class OpenAIAudienceService {
 
         // Additional fallback: Try canonical link
         if (!username) {
-          const canonical = _document.querySelector('link[rel="canonical"]')?.getAttribute('href');
+          const canonical = _document
+            .querySelector('link[rel="canonical"]')
+            ?.getAttribute('href');
           if (canonical) {
             const match = canonical.match(/instagram\.com\/([^\/\?]+)/);
             if (match) username = match[1];
@@ -421,7 +390,9 @@ export class OpenAIAudienceService {
         const bio = getText('header section div:last-child span') || '';
 
         // Extract counts (followers, following, posts)
-        const metaElements = Array.from(_document.querySelectorAll('header section ul li'));
+        const metaElements = Array.from(
+          _document.querySelectorAll('header section ul li'),
+        );
         let followerCount = 0;
         let followingCount = 0;
         let postCount = 0;
@@ -430,7 +401,10 @@ export class OpenAIAudienceService {
           const text = el.textContent || '';
           if (text.includes('posts') || text.includes('publications')) {
             postCount = extractNumber(text);
-          } else if (text.includes('followers') || text.includes('seguidores')) {
+          } else if (
+            text.includes('followers') ||
+            text.includes('seguidores')
+          ) {
             followerCount = extractNumber(text);
           } else if (text.includes('following') || text.includes('seguidos')) {
             followingCount = extractNumber(text);
@@ -438,10 +412,13 @@ export class OpenAIAudienceService {
         });
 
         // Check if verified
-        const isVerified = !!_document.querySelector('svg[aria-label*="Verified"]');
+        const isVerified = !!_document.querySelector(
+          'svg[aria-label*="Verified"]',
+        );
 
         // Try to extract category
-        const category = getText('header section div[class*="category"]') || undefined;
+        const category =
+          getText('header section div[class*="category"]') || undefined;
 
         // ⚡ PERFORMANCE: Skip post extraction for faster inference
         // Posts are not critical for audience demographics inference
@@ -479,7 +456,47 @@ export class OpenAIAudienceService {
         topHashtags: this.extractTopHashtags(profileData.recentPosts),
       };
 
-      console.log(`  ✅ Profile extracted: @${fullProfile.username} (${fullProfile.followerCount} followers)`);
+      console.log(
+        `  ✅ Profile extracted: @${fullProfile.username} (${fullProfile.followerCount} followers)`,
+      );
+
+      // Validation: Detect Instagram redirects to error pages
+      const requestedUsername = url
+        .split('/')
+        .filter((x) => x)
+        .pop()
+        ?.toLowerCase();
+      const extractedUsername = fullProfile.username.toLowerCase();
+
+      // Check for common Instagram error pages/redirects
+      const invalidUsernames = [
+        'accounts',
+        'login',
+        'p',
+        'explore',
+        'stories',
+        'direct',
+      ];
+
+      if (invalidUsernames.includes(extractedUsername)) {
+        throw new Error(
+          `Instagram redirected to /${extractedUsername} - profile may be private, deleted, or rate-limited`,
+        );
+      }
+
+      // Validate username matches (allow small variations)
+      if (requestedUsername && extractedUsername !== requestedUsername) {
+        throw new Error(
+          `Username mismatch: requested @${requestedUsername} but got @${extractedUsername} (possible redirect)`,
+        );
+      }
+
+      // Validate profile has reasonable data
+      if (fullProfile.followerCount === 0 && fullProfile.postCount === 0) {
+        throw new Error(
+          `Invalid profile data: @${extractedUsername} has 0 followers and 0 posts (likely a redirect or error page)`,
+        );
+      }
 
       return fullProfile;
     } catch (error: any) {
@@ -491,9 +508,152 @@ export class OpenAIAudienceService {
   }
 
   /**
+   * Infer audience demographics using OpenAI web browsing
+   * This replaces Puppeteer scraping - OpenAI browses Instagram directly
+   */
+  private async inferWithWebBrowsing(
+    instagramUrl: string,
+    searchContext?: SearchContext,
+  ): Promise<{
+    demographics: AudienceDemographicsExtended;
+    cost: number;
+    username: string;
+  }> {
+    try {
+      // Build the prompt for OpenAI web browsing
+      const systemPrompt = `You are an expert social media analyst. You will browse an Instagram profile and infer the likely AUDIENCE demographics (who follows this account).
+
+CRITICAL: You MUST browse the Instagram URL provided and analyze the actual profile content, bio, posts, and language used.
+
+You MUST respond with ONLY valid JSON in this exact format:
+{
+  "username": "<extracted username>",
+  "age": {
+    "13-17": <percentage>,
+    "18-24": <percentage>,
+    "25-34": <percentage>,
+    "35-44": <percentage>,
+    "45-54": <percentage>,
+    "55+": <percentage>
+  },
+  "gender": {
+    "male": <percentage>,
+    "female": <percentage>
+  },
+  "geography": [
+    {"country": "<full name>", "country_code": "<ISO 2-letter>", "percentage": <percentage>},
+    ...top 10 countries only
+  ]
+}
+
+GEOGRAPHIC INFERENCE RULES (CRITICAL):
+1. **Spanish content**: 70-90% MUST be Spanish-speaking countries (AR, MX, CO, CL, ES, PE)
+   - Argentine markers → Argentina 40-55%, Mexico 10-18%
+   - Mexican markers → Mexico 45-60%
+   - NO India, Pakistan, Nigeria, Asian, or non-Spanish speaking countries
+
+2. **Portuguese content**: Brazil 70-90%, Portugal 5-10%
+
+3. **English content**: Check location clues first
+   - Generic English → US 30%, UK 20%, Canada 10%, Australia 10%
+
+4. **Content type matters**:
+   - Music/Entertainment: 60-70% creator's country
+   - Gaming: Creator's region primary
+
+ABSOLUTE PROHIBITIONS for Spanish content:
+- NO Sweden, New Zealand, France, Germany, Ireland, Netherlands, Australia, UK
+- NO India, Pakistan, Bangladesh, Nigeria, Kenya, Asian countries
+
+${
+  searchContext?.creator_location
+    ? `\n🌍 SEARCH CONTEXT: User is searching from ${searchContext.creator_location}. This means the profile is HIGHLY LIKELY to have a ${searchContext.creator_location}-based audience. Weight this heavily in your inference.`
+    : ''
+}`;
+
+      const userPrompt = `Browse this Instagram profile and infer the audience demographics: ${instagramUrl}
+
+Extract the username and analyze the content, bio, posts, and language to determine who follows this account.`;
+
+      console.log(`🌐 Calling OpenAI with web browsing...`);
+      if (searchContext) {
+        console.log(`📍 Search context: ${JSON.stringify(searchContext)}`);
+      }
+
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4o', // gpt-4o supports web browsing
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        response_format: { type: 'json_object' },
+        max_tokens: 1500,
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error('OpenAI returned empty response');
+      }
+
+      // Parse JSON response
+      const parsed = JSON.parse(content);
+
+      // Extract username
+      const username =
+        parsed.username ||
+        instagramUrl
+          .split('/')
+          .filter((x) => x)
+          .pop();
+
+      // Validate username is not an error page
+      const invalidUsernames = [
+        'accounts',
+        'login',
+        'explore',
+        'p',
+        'stories',
+        'direct',
+      ];
+      if (invalidUsernames.includes(username.toLowerCase())) {
+        throw new Error(
+          `Invalid username extracted: ${username} - likely an Instagram error page`,
+        );
+      }
+
+      // Validate and normalize demographics
+      const validation = this.validateAndNormalize(parsed);
+      if (!validation.valid) {
+        throw new Error(
+          `Validation failed: ${validation.errors
+            .map((e) => e.message)
+            .join(', ')}`,
+        );
+      }
+
+      const demographics: AudienceDemographicsExtended = {
+        ...validation.normalized!,
+        inference_source: 'openai',
+        model_used: 'gpt-4o',
+        inferred_at: new Date(),
+      };
+
+      // Estimate cost (gpt-4o is more expensive than gpt-3.5, but cheaper than scraping infrastructure)
+      const cost = 0.08; // Approximate cost for gpt-4o web browsing
+
+      return { demographics, cost, username };
+    } catch (error: any) {
+      throw new Error(`OpenAI web browsing failed: ${error.message}`);
+    }
+  }
+
+  /**
    * Call OpenAI API for audience inference
    */
-  private async callOpenAIAPI(profileData: InstagramProfileData, searchContext?: SearchContext): Promise<OpenAIInferenceResponse> {
+  private async callOpenAIAPI(
+    profileData: InstagramProfileData,
+    searchContext?: SearchContext,
+  ): Promise<OpenAIInferenceResponse> {
     const systemPrompt = this.buildSystemPrompt();
     const userPrompt = this.buildUserPrompt(profileData, searchContext);
 
@@ -509,7 +669,9 @@ export class OpenAIAudienceService {
       };
 
       // GPT-5 and o1 models have different parameter requirements
-      const isGpt5OrO1 = this.config.openai.model.startsWith('gpt-5') || this.config.openai.model.startsWith('o1');
+      const isGpt5OrO1 =
+        this.config.openai.model.startsWith('gpt-5') ||
+        this.config.openai.model.startsWith('o1');
 
       if (isGpt5OrO1) {
         // GPT-5/o1: use max_completion_tokens, no temperature/top_p (must use default)
@@ -613,29 +775,98 @@ EXAMPLES:
    */
   private detectHallucinatedCountries(
     response: OpenAIInferenceResponse,
-    profileData: InstagramProfileData
+    profileData: InstagramProfileData,
   ): string[] {
     const hallucinated: string[] = [];
 
     // Detect language
-    const isSpanish = profileData.primaryLanguage === 'Spanish' ||
-                     profileData.bio?.match(/[áéíóúñ¿¡]/i);
-    const isPortuguese = profileData.primaryLanguage === 'Portuguese' ||
-                        profileData.bio?.match(/ã|õ|ç/i);
+    const isSpanish =
+      profileData.primaryLanguage === 'Spanish' ||
+      profileData.bio?.match(/[áéíóúñ¿¡]/i);
+    const isPortuguese =
+      profileData.primaryLanguage === 'Portuguese' ||
+      profileData.bio?.match(/ã|õ|ç/i);
 
     // FORBIDDEN countries for Spanish content (LATAM creators)
     const forbiddenForSpanish = [
-      'SE', 'NZ', 'FR', 'DE', 'CA', 'IE', 'NL', 'NO', 'DK', 'FI', 'IS', 'AU',
-      'IN', 'PK', 'BD', 'LK', 'NP', 'NG', 'KE', 'GH', 'TZ', 'UG', 'ZA', 'EG',
-      'PH', 'ID', 'TH', 'VN', 'MY', 'SG', 'JP', 'KR', 'CN', 'TW', 'HK', 'GB'
+      'SE',
+      'NZ',
+      'FR',
+      'DE',
+      'CA',
+      'IE',
+      'NL',
+      'NO',
+      'DK',
+      'FI',
+      'IS',
+      'AU',
+      'IN',
+      'PK',
+      'BD',
+      'LK',
+      'NP',
+      'NG',
+      'KE',
+      'GH',
+      'TZ',
+      'UG',
+      'ZA',
+      'EG',
+      'PH',
+      'ID',
+      'TH',
+      'VN',
+      'MY',
+      'SG',
+      'JP',
+      'KR',
+      'CN',
+      'TW',
+      'HK',
+      'GB',
     ];
 
     // FORBIDDEN countries for Portuguese content (Brazil)
     const forbiddenForPortuguese = [
-      'SE', 'NZ', 'FR', 'DE', 'CA', 'IE', 'NL', 'NO', 'DK', 'FI', 'IS',
-      'IN', 'PK', 'BD', 'LK', 'NP', 'NG', 'KE', 'GH', 'TZ', 'UG', 'EG',
-      'PH', 'ID', 'TH', 'VN', 'MY', 'SG', 'JP', 'KR', 'CN', 'TW', 'HK',
-      'AR', 'MX', 'CO', 'CL', 'ES' // No Spanish countries for Portuguese
+      'SE',
+      'NZ',
+      'FR',
+      'DE',
+      'CA',
+      'IE',
+      'NL',
+      'NO',
+      'DK',
+      'FI',
+      'IS',
+      'IN',
+      'PK',
+      'BD',
+      'LK',
+      'NP',
+      'NG',
+      'KE',
+      'GH',
+      'TZ',
+      'UG',
+      'EG',
+      'PH',
+      'ID',
+      'TH',
+      'VN',
+      'MY',
+      'SG',
+      'JP',
+      'KR',
+      'CN',
+      'TW',
+      'HK',
+      'AR',
+      'MX',
+      'CO',
+      'CL',
+      'ES', // No Spanish countries for Portuguese
     ];
 
     // Check geography array for forbidden countries
@@ -643,9 +874,13 @@ EXAMPLES:
       const code = geo.country_code.toUpperCase();
 
       if (isSpanish && forbiddenForSpanish.includes(code)) {
-        hallucinated.push(`${geo.country} (${code}) - impossible for Spanish content`);
+        hallucinated.push(
+          `${geo.country} (${code}) - impossible for Spanish content`,
+        );
       } else if (isPortuguese && forbiddenForPortuguese.includes(code)) {
-        hallucinated.push(`${geo.country} (${code}) - impossible for Portuguese content`);
+        hallucinated.push(
+          `${geo.country} (${code}) - impossible for Portuguese content`,
+        );
       }
     }
 
@@ -657,29 +892,29 @@ EXAMPLES:
    */
   private getCountryName(code: string): string {
     const countries: { [key: string]: string } = {
-      'AR': 'Argentina',
-      'MX': 'Mexico',
-      'US': 'United States',
-      'BR': 'Brazil',
-      'CO': 'Colombia',
-      'CL': 'Chile',
-      'ES': 'Spain',
-      'GB': 'United Kingdom',
-      'PE': 'Peru',
-      'UY': 'Uruguay',
-      'EC': 'Ecuador',
-      'VE': 'Venezuela',
-      'BO': 'Bolivia',
-      'PY': 'Paraguay',
-      'FR': 'France',
-      'DE': 'Germany',
-      'IT': 'Italy',
-      'CA': 'Canada',
-      'AU': 'Australia',
-      'JP': 'Japan',
-      'KR': 'South Korea',
-      'IN': 'India',
-      'CN': 'China',
+      AR: 'Argentina',
+      MX: 'Mexico',
+      US: 'United States',
+      BR: 'Brazil',
+      CO: 'Colombia',
+      CL: 'Chile',
+      ES: 'Spain',
+      GB: 'United Kingdom',
+      PE: 'Peru',
+      UY: 'Uruguay',
+      EC: 'Ecuador',
+      VE: 'Venezuela',
+      BO: 'Bolivia',
+      PY: 'Paraguay',
+      FR: 'France',
+      DE: 'Germany',
+      IT: 'Italy',
+      CA: 'Canada',
+      AU: 'Australia',
+      JP: 'Japan',
+      KR: 'South Korea',
+      IN: 'India',
+      CN: 'China',
     };
     return countries[code.toUpperCase()] || code;
   }
@@ -687,33 +922,46 @@ EXAMPLES:
   /**
    * Build user prompt for OpenAI
    */
-  private buildUserPrompt(profileData: InstagramProfileData, searchContext?: SearchContext): string {
+  private buildUserPrompt(
+    profileData: InstagramProfileData,
+    searchContext?: SearchContext,
+  ): string {
     // ⚡ PERFORMANCE: Skip post content processing for faster inference
 
     // Detect if Spanish language
-    const isSpanish = profileData.primaryLanguage === 'Spanish' ||
-                     profileData.bio?.match(/[áéíóúñ¿¡]/i);
+    const isSpanish =
+      profileData.primaryLanguage === 'Spanish' ||
+      profileData.bio?.match(/[áéíóúñ¿¡]/i);
 
     // Detect Argentine origin (common indicators)
-    const isArgentine = profileData.bio?.match(/🇦🇷|argentin|buenos aires|rosario|córdoba|mendoza/i) ||
-                       profileData.url?.includes('.ar');
+    const isArgentine =
+      profileData.bio?.match(
+        /🇦🇷|argentin|buenos aires|rosario|córdoba|mendoza/i,
+      ) || profileData.url?.includes('.ar');
 
     // Detect gaming/tech content from bio
-    const isGaming = profileData.bio?.toLowerCase().match(/gam(ing|er)|stream|twitch|youtube|esports/i);
+    const isGaming = profileData.bio
+      ?.toLowerCase()
+      .match(/gam(ing|er)|stream|twitch|youtube|esports/i);
 
     // Build search context hint
     let searchContextHint = '';
     if (searchContext) {
       if (searchContext.creator_location) {
-        const locationName = this.getCountryName(searchContext.creator_location);
+        const locationName = this.getCountryName(
+          searchContext.creator_location,
+        );
         searchContextHint += `\n🎯 SEARCH CONTEXT - Creator Location: ${locationName} (${searchContext.creator_location})`;
         searchContextHint += `\n   → User is specifically searching for creators from ${locationName}`;
         searchContextHint += `\n   → Audience should reflect ${locationName}-based creator patterns`;
       }
 
-      if (searchContext.target_audience_geo?.countries && searchContext.target_audience_geo.countries.length > 0) {
+      if (
+        searchContext.target_audience_geo?.countries &&
+        searchContext.target_audience_geo.countries.length > 0
+      ) {
         const targetCountries = searchContext.target_audience_geo.countries
-          .map(c => `${this.getCountryName(c.id)} (${c.prc}%)`)
+          .map((c) => `${this.getCountryName(c.id)} (${c.prc}%)`)
           .join(', ');
         searchContextHint += `\n🎯 SEARCH CONTEXT - Target Audience Geography: ${targetCountries}`;
         searchContextHint += `\n   → User wants creators whose audience is in these countries`;
@@ -724,9 +972,11 @@ EXAMPLES:
     let geographicHint = '';
     if (isSpanish) {
       if (isArgentine) {
-        geographicHint = '🇦🇷 ARGENTINE CREATOR detected → PRIMARY audience: Argentina 40-55%, Mexico 12-18%, Chile 6-10%, Colombia 5-8%, Spain 3-5%';
+        geographicHint =
+          '🇦🇷 ARGENTINE CREATOR detected → PRIMARY audience: Argentina 40-55%, Mexico 12-18%, Chile 6-10%, Colombia 5-8%, Spain 3-5%';
       } else {
-        geographicHint = '🌎 Spanish LATAM content → PRIMARY audience: Spanish-speaking countries 70-80% (AR, MX, CO, CL, ES)';
+        geographicHint =
+          '🌎 Spanish LATAM content → PRIMARY audience: Spanish-speaking countries 70-80% (AR, MX, CO, CL, ES)';
       }
     }
 
@@ -734,7 +984,9 @@ EXAMPLES:
 
 CREATOR PROFILE:
 Instagram: ${profileData.url}
-@${profileData.username} | ${profileData.followerCount.toLocaleString()} followers
+@${
+      profileData.username
+    } | ${profileData.followerCount.toLocaleString()} followers
 Bio: "${profileData.bio || 'No bio'}"
 Language: ${profileData.primaryLanguage || 'Unknown'}
 Category: ${profileData.category || 'Unknown'}
@@ -743,12 +995,26 @@ ${searchContextHint}
 
 🎯 CRITICAL GEOGRAPHIC INFERENCE:
 ${geographicHint}
-${isGaming ? '🎮 Gaming content: Audience skews male (65-75%), ages 18-34, primarily from creator\'s region' : ''}
+${
+  isGaming
+    ? "🎮 Gaming content: Audience skews male (65-75%), ages 18-34, primarily from creator's region"
+    : ''
+}
 
-${searchContext?.target_audience_geo ? '⚠️ IMPORTANT: The user is searching for creators with specific target audience geography. Weight this heavily in your inference.' : ''}
+${
+  searchContext?.target_audience_geo
+    ? '⚠️ IMPORTANT: The user is searching for creators with specific target audience geography. Weight this heavily in your inference.'
+    : ''
+}
 ⚠️ DO NOT default to US/UK unless creator is clearly English-speaking from those regions.
 ✅ Match audience geography to creator's language and location.
-${searchContext?.creator_location ? `✅ Consider that this creator is from ${this.getCountryName(searchContext.creator_location)}` : ''}
+${
+  searchContext?.creator_location
+    ? `✅ Consider that this creator is from ${this.getCountryName(
+        searchContext.creator_location,
+      )}`
+    : ''
+}
 
 Now infer the audience demographics as JSON:`;
   }
@@ -756,22 +1022,40 @@ Now infer the audience demographics as JSON:`;
   /**
    * Validate and normalize OpenAI response
    */
-  private validateAndNormalize(response: OpenAIInferenceResponse): ValidationResult {
+  private validateAndNormalize(
+    response: OpenAIInferenceResponse,
+  ): ValidationResult {
     const errors: ValidationError[] = [];
 
     // Validate age distribution
     if (!response.age || typeof response.age !== 'object') {
-      errors.push({ field: 'age', message: 'Age distribution is missing or invalid' });
+      errors.push({
+        field: 'age',
+        message: 'Age distribution is missing or invalid',
+      });
     } else {
-      const ageRanges: Array<keyof typeof response.age> = ['13-17', '18-24', '25-34', '35-44', '45-54', '55+'];
+      const ageRanges: Array<keyof typeof response.age> = [
+        '13-17',
+        '18-24',
+        '25-34',
+        '35-44',
+        '45-54',
+        '55+',
+      ];
       for (const range of ageRanges) {
         if (typeof response.age[range] !== 'number') {
-          errors.push({ field: `age.${range}`, message: `Missing or invalid age range: ${range}` });
+          errors.push({
+            field: `age.${range}`,
+            message: `Missing or invalid age range: ${range}`,
+          });
         }
       }
 
       // Check sum
-      const ageSum = Object.values(response.age).reduce((sum, val) => sum + (val as number), 0);
+      const ageSum = Object.values(response.age).reduce(
+        (sum, val) => sum + (val as number),
+        0,
+      );
       if (Math.abs(ageSum - 100) > 0.1) {
         console.warn(`Age sum is ${ageSum}, will normalize to 100`);
       }
@@ -779,10 +1063,19 @@ Now infer the audience demographics as JSON:`;
 
     // Validate gender distribution
     if (!response.gender || typeof response.gender !== 'object') {
-      errors.push({ field: 'gender', message: 'Gender distribution is missing or invalid' });
+      errors.push({
+        field: 'gender',
+        message: 'Gender distribution is missing or invalid',
+      });
     } else {
-      if (typeof response.gender.male !== 'number' || typeof response.gender.female !== 'number') {
-        errors.push({ field: 'gender', message: 'Male or female percentage is missing or invalid' });
+      if (
+        typeof response.gender.male !== 'number' ||
+        typeof response.gender.female !== 'number'
+      ) {
+        errors.push({
+          field: 'gender',
+          message: 'Male or female percentage is missing or invalid',
+        });
       }
 
       const genderSum = response.gender.male + response.gender.female;
@@ -793,21 +1086,40 @@ Now infer the audience demographics as JSON:`;
 
     // Validate geography
     if (!Array.isArray(response.geography) || response.geography.length === 0) {
-      errors.push({ field: 'geography', message: 'Geography array is missing or empty' });
+      errors.push({
+        field: 'geography',
+        message: 'Geography array is missing or empty',
+      });
     } else {
       response.geography.forEach((geo, i) => {
         if (!geo.country || typeof geo.country !== 'string') {
-          errors.push({ field: `geography[${i}].country`, message: 'Country name is missing' });
+          errors.push({
+            field: `geography[${i}].country`,
+            message: 'Country name is missing',
+          });
         }
-        if (!geo.country_code || typeof geo.country_code !== 'string' || geo.country_code.length !== 2) {
-          errors.push({ field: `geography[${i}].country_code`, message: 'Invalid country code' });
+        if (
+          !geo.country_code ||
+          typeof geo.country_code !== 'string' ||
+          geo.country_code.length !== 2
+        ) {
+          errors.push({
+            field: `geography[${i}].country_code`,
+            message: 'Invalid country code',
+          });
         }
         if (typeof geo.percentage !== 'number') {
-          errors.push({ field: `geography[${i}].percentage`, message: 'Invalid percentage' });
+          errors.push({
+            field: `geography[${i}].percentage`,
+            message: 'Invalid percentage',
+          });
         }
       });
 
-      const geoSum = response.geography.reduce((sum, geo) => sum + geo.percentage, 0);
+      const geoSum = response.geography.reduce(
+        (sum, geo) => sum + geo.percentage,
+        0,
+      );
       if (Math.abs(geoSum - 100) > 0.1) {
         console.warn(`Geography sum is ${geoSum}, will normalize to 100`);
       }
@@ -857,10 +1169,11 @@ Now infer the audience demographics as JSON:`;
     const sum = Object.values(normalized).reduce((s, v) => s + v, 0);
     if (Math.abs(sum - 100) > 0.01) {
       const largest = Object.keys(normalized).reduce((a, b) =>
-        (normalized as any)[a] > (normalized as any)[b] ? a : b
+        (normalized as any)[a] > (normalized as any)[b] ? a : b,
       );
       (normalized as any)[largest] += 100 - sum;
-      (normalized as any)[largest] = Math.round((normalized as any)[largest] * 10) / 10;
+      (normalized as any)[largest] =
+        Math.round((normalized as any)[largest] * 10) / 10;
     }
 
     return normalized;
@@ -907,7 +1220,7 @@ Now infer the audience demographics as JSON:`;
   private async checkDatabaseCache(
     instagramUrl: string,
     influencerId?: string,
-    searchContext?: SearchContext
+    searchContext?: SearchContext,
   ): Promise<OpenAIAudienceInferenceDB | null> {
     try {
       console.log(`[Cache Check] Starting database cache check`);
@@ -952,7 +1265,7 @@ Now infer the audience demographics as JSON:`;
         instagram_url: data.instagram_url,
         inferred_at: data.inferred_at,
         expires_at: data.expires_at,
-        model_used: data.model_used
+        model_used: data.model_used,
       });
 
       // Check if expired - ensure proper date comparison
@@ -969,8 +1282,12 @@ Now infer the audience demographics as JSON:`;
         return null;
       }
 
-      const daysUntilExpiry = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-      console.log(`[Cache Check] ✅ Cache HIT - valid for ${daysUntilExpiry} more days`);
+      const daysUntilExpiry = Math.ceil(
+        (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+      );
+      console.log(
+        `[Cache Check] ✅ Cache HIT - valid for ${daysUntilExpiry} more days`,
+      );
 
       return {
         ...data,
@@ -989,7 +1306,8 @@ Now infer the audience demographics as JSON:`;
    * Validate if string is a valid UUID
    */
   private isValidUUID(str: string): boolean {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     return uuidRegex.test(str);
   }
 
@@ -1003,14 +1321,15 @@ Now infer the audience demographics as JSON:`;
     influencerId?: string,
     cost: number = 0.05,
     profileSnapshot?: Partial<InstagramProfileData>,
-    searchContext?: SearchContext
+    searchContext?: SearchContext,
   ): Promise<void> {
     try {
       const now = new Date();
       const expiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000); // 90 days
 
       // Validate influencer_id is a valid UUID before including it
-      const validInfluencerId = influencerId && this.isValidUUID(influencerId) ? influencerId : null;
+      const validInfluencerId =
+        influencerId && this.isValidUUID(influencerId) ? influencerId : null;
 
       const record: any = {
         instagram_url: instagramUrl,
@@ -1034,7 +1353,11 @@ Now infer the audience demographics as JSON:`;
       }
 
       // Check if entry exists with same URL + context
-      const existing = await this.checkDatabaseCache(instagramUrl, validInfluencerId || undefined, searchContext);
+      const existing = await this.checkDatabaseCache(
+        instagramUrl,
+        validInfluencerId || undefined,
+        searchContext,
+      );
 
       if (existing) {
         // Update existing record
@@ -1046,7 +1369,11 @@ Now infer the audience demographics as JSON:`;
         if (error) {
           console.error('  Error updating database:', error);
         } else {
-          console.log(`  ✅ Updated database: ${instagramUrl}${validInfluencerId ? ` (influencer: ${validInfluencerId})` : ''}`);
+          console.log(
+            `  ✅ Updated database: ${instagramUrl}${
+              validInfluencerId ? ` (influencer: ${validInfluencerId})` : ''
+            }`,
+          );
         }
       } else {
         // Insert new record
@@ -1057,7 +1384,11 @@ Now infer the audience demographics as JSON:`;
         if (error) {
           console.error('  Error inserting to database:', error);
         } else {
-          console.log(`  ✅ Inserted to database: ${instagramUrl}${validInfluencerId ? ` (influencer: ${validInfluencerId})` : ''}`);
+          console.log(
+            `  ✅ Inserted to database: ${instagramUrl}${
+              validInfluencerId ? ` (influencer: ${validInfluencerId})` : ''
+            }`,
+          );
         }
       }
     } catch (error) {
@@ -1080,7 +1411,7 @@ Now infer the audience demographics as JSON:`;
     url: string,
     username: string,
     demographics: AudienceDemographics,
-    cost: number
+    cost: number,
   ): Promise<void> {
     // File cache disabled - no operation performed
     // Results are cached in database only
@@ -1126,7 +1457,9 @@ Now infer the audience demographics as JSON:`;
 
     if (spent + 0.05 > this.config.costControl.maxCostPerDay) {
       throw new Error(
-        `Daily budget exceeded: $${spent.toFixed(2)}/$${this.config.costControl.maxCostPerDay}`
+        `Daily budget exceeded: $${spent.toFixed(2)}/$${
+          this.config.costControl.maxCostPerDay
+        }`,
       );
     }
   }
@@ -1135,7 +1468,8 @@ Now infer the audience demographics as JSON:`;
    * Get log file path (use /tmp in production for writable filesystem)
    */
   private getLogFilePath(): string {
-    const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL;
+    const isProduction =
+      process.env.NODE_ENV === 'production' || process.env.VERCEL;
 
     if (isProduction) {
       // Use /tmp directory in serverless environments (writable)
@@ -1175,7 +1509,11 @@ Now infer the audience demographics as JSON:`;
       // Ensure log directory exists (ignore errors in production)
       await fs.mkdir(logDir, { recursive: true }).catch(() => {});
 
-      const line = `${entry.timestamp.toISOString()},${entry.operation},${entry.cost},${entry.model},${entry.success ? 'success' : 'failed'},${entry.url || ''}\n`;
+      const line = `${entry.timestamp.toISOString()},${entry.operation},${
+        entry.cost
+      },${entry.model},${entry.success ? 'success' : 'failed'},${
+        entry.url || ''
+      }\n`;
       await fs.appendFile(logFile, line);
     } catch (error) {
       // Don't fail the request if cost tracking fails
