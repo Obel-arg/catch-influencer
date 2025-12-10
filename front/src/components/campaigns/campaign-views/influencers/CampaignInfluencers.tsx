@@ -519,8 +519,9 @@ export const CampaignInfluencers = ({ campaign }: CampaignInfluencersProps) => {
           onClose={handleCloseModal}
           onSubmit={handleCreatePost}
           onSuccess={() => {
-            // No hacer refetch inmediatamente para permitir que el toast se muestre
-            // El refetch se hará cuando el usuario navegue o recargue la página
+            // Invalidar cache de posts para que se reflejen las métricas actualizadas
+            CacheInvalidators.onPostUpdate(campaign.id, selectedInfluencer.id);
+            // El refetch automático ocurrirá al navegar a la tab de Posts
           }}
           influencerName={selectedInfluencer.name}
           campaignId={campaign.id}
