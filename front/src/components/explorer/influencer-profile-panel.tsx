@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { NumberDisplay } from '@/components/ui/NumberDisplay';
 import { toast } from 'sonner';
-import { exportInfluencerProfileToPDF } from '@/utils/influencer-pdf-export';
+import { exportInfluencerSquadPDF } from '@/utils/influencer-pdf-export';
+import { InfluencerSquadPDFTemplate } from '@/components/explorer/pdf-templates/InfluencerSquadPDFTemplate';
 import {
   getInstagramThumbnailValidated,
   getOptimizedAvatarUrl,
@@ -470,7 +471,7 @@ export function InfluencerProfilePanel({
   const handleExportPDF = async () => {
     try {
       setIsExportingPDF(true);
-      await exportInfluencerProfileToPDF(influencer.name);
+      await exportInfluencerSquadPDF(influencer.name);
       toast.success('PDF exportado exitosamente');
     } catch (error) {
       console.error('Error exporting PDF:', error);
@@ -696,6 +697,16 @@ export function InfluencerProfilePanel({
 
   return (
     <>
+      {/* Hidden PDF Template for Export */}
+      {isOpen && influencer && (
+        <div className="fixed -left-[9999px] top-0" aria-hidden="true">
+          <InfluencerSquadPDFTemplate
+            influencer={influencer}
+            audienceData={audienceData}
+          />
+        </div>
+      )}
+
       {/* Overlay */}
       <div
         className={`fixed inset-0 bg-black/30 z-40 transition-opacity duration-300 ${

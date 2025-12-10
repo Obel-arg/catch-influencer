@@ -1,8 +1,88 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { PDF_BRANDING } from '@/constants/pdf-branding';
+
+/**
+ * Export influencer profile in Squad format to PDF
+ */
+export async function exportInfluencerSquadPDF(influencerName: string): Promise<void> {
+  try {
+    console.log('📸 Starting Squad PDF capture...');
+
+    // Find the Squad template element
+    const templateElement = document.querySelector('[data-squad-pdf-template]') as HTMLElement;
+
+    if (!templateElement) {
+      throw new Error('Squad PDF template not found. Make sure to render InfluencerSquadPDFTemplate component.');
+    }
+
+    // Wait for layout and fonts to load
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Wait for fonts
+    try {
+      await document.fonts.ready;
+    } catch (e) {
+      console.warn('Font loading warning:', e);
+    }
+
+    // Additional wait for Recharts to render
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    console.log(`📸 Capturing template at ${PDF_BRANDING.dimensions.a4Width}px x ${PDF_BRANDING.dimensions.a4Height}px...`);
+
+    // Capture the template as canvas with high quality
+    const canvas = await html2canvas(templateElement, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#F3F4F6',
+      width: PDF_BRANDING.dimensions.a4Width,
+      height: PDF_BRANDING.dimensions.a4Height,
+      windowWidth: PDF_BRANDING.dimensions.a4Width,
+      windowHeight: PDF_BRANDING.dimensions.a4Height,
+      scrollX: 0,
+      scrollY: 0,
+      allowTaint: false,
+      foreignObjectRendering: false,
+      imageTimeout: 0,
+    });
+
+    console.log('✅ Canvas captured, dimensions:', canvas.width, 'x', canvas.height);
+    console.log('📄 Creating PDF...');
+
+    // A4 dimensions in mm (landscape)
+    const pdfWidth = 297; // A4 width in landscape
+    const pdfHeight = 210; // A4 height in landscape
+
+    // Create PDF
+    const pdf = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4',
+      compress: true
+    });
+
+    // Convert canvas to image
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+    // Add image to PDF (single page, fixed size)
+    pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+
+    // Save the PDF
+    const fileName = `Squad_${influencerName.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+    pdf.save(fileName);
+
+    console.log('✅ Squad PDF exported successfully:', fileName);
+  } catch (error) {
+    console.error('❌ Error exporting Squad PDF:', error);
+    throw new Error('Error al generar el PDF del Squad');
+  }
+}
 
 /**
  * Export influencer profile modal to PDF by capturing the visual content
+ * @deprecated Use exportInfluencerSquadPDF for the new Squad format
  */
 export async function exportInfluencerProfileToPDF(influencerName: string): Promise<void> {
   try {

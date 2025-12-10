@@ -857,7 +857,7 @@ export const AddPostModal: React.FC<AddPostModalProps> = ({
 
       // Usar fetch para evitar interferencia del httpApiClient con headers
       const token = localStorage.getItem('token');
-      const apiBaseUrl = 'http://localhost:5001/api';
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
 
       const fetchResponse = await fetch(
         `${apiBaseUrl}/influencer-posts/upload-image`,
