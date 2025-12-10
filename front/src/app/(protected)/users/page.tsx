@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { withAdminOnly } from "@/components/auth/withRole";
 import { Button } from "@/components/ui/button";
-import { Plus, Loader2, Trash2, Edit, Mail, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Loader2, Trash2, Edit, Mail, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
@@ -24,9 +24,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/common/useToast";
 import { httpClient } from "@/lib/http";
-import { brandService } from "@/lib/services/brands";
-import { Brand } from "@/types/brands";
-import { Checkbox } from "@/components/ui/checkbox";
 
 // Types
 interface User {
@@ -58,28 +55,15 @@ function UsersPage() {
   const [inviteName, setInviteName] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "member" | "viewer">("member");
 
-  // Brand selection
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [selectedBrandIds, setSelectedBrandIds] = useState<string[]>([]);
-  const [loadingBrands, setLoadingBrands] = useState(false);
-  const [brandsError, setBrandsError] = useState<string | null>(null);
-  const [brandSearch, setBrandSearch] = useState("");
-  const [brandDropdownOpen, setBrandDropdownOpen] = useState(false);
-
   // Edit role
   const [newRole, setNewRole] = useState<"admin" | "member" | "viewer">("member");
-
-  // Edit brand management
-  const [editBrands, setEditBrands] = useState<Brand[]>([]);
-  const [editSelectedBrandIds, setEditSelectedBrandIds] = useState<string[]>([]);
-  const [editLoadingBrands, setEditLoadingBrands] = useState(false);
-  const [editBrandSearch, setEditBrandSearch] = useState("");
-  const [editBrandsError, setEditBrandsError] = useState<string | null>(null);
-  const [editBrandDropdownOpen, setEditBrandDropdownOpen] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const USERS_PER_PAGE = 10;
+
+  // Search
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { showToast } = useToast();
 
@@ -116,95 +100,6 @@ function UsersPage() {
     fetchUsers();
   }, []);
 
-  // Load brands when invite modal opens
-  useEffect(() => {
-    if (inviteModalOpen) {
-      loadBrands();
-    }
-  }, [inviteModalOpen]);
-
-  const loadBrands = async () => {
-    try {
-      setLoadingBrands(true);
-      setBrandsError(null);
-      const activeBrands = await brandService.getBrands({ status: 'active' });
-      setBrands(activeBrands);
-    } catch (error) {
-      console.error("Error loading brands:", error);
-      setBrandsError("No se pudieron cargar las marcas");
-    } finally {
-      setLoadingBrands(false);
-    }
-  };
-
-  // Load brands for edit modal
-  const loadEditBrands = async (userId: string) => {
-    try {
-      setEditLoadingBrands(true);
-      setEditBrandsError(null);
-
-      // Load all active brands
-      const activeBrands = await brandService.getBrands({ status: 'active' });
-      setEditBrands(activeBrands);
-
-      // Load user's current brand assignments
-      try {
-        const response = await httpClient.get(
-          `/user-brands/organizations/${ORGANIZATION_ID}/users/${userId}/brands`
-        );
-        const userBrandIds = response.data.brands?.map((b: Brand) => b.id) || [];
-        setEditSelectedBrandIds(userBrandIds);
-      } catch (error) {
-        console.error('Error loading user brands:', error);
-        setEditSelectedBrandIds([]);
-      }
-    } catch (error) {
-      console.error('Error loading brands for edit:', error);
-      setEditBrandsError('No se pudieron cargar las marcas');
-    } finally {
-      setEditLoadingBrands(false);
-    }
-  };
-
-  // Filter brands based on search query
-  const filteredBrands = brands.filter(brand => {
-    const searchLower = brandSearch.toLowerCase();
-    return (
-      brand.name.toLowerCase().includes(searchLower) ||
-      brand.industry?.toLowerCase().includes(searchLower)
-    );
-  });
-
-  // Handle role change - brands are optional for all roles
-  const handleRoleChange = (value: "admin" | "member" | "viewer") => {
-    setInviteRole(value);
-    // Brands are optional, no need to clear them
-  };
-
-  // Handle brand selection toggle
-  const handleBrandToggle = (brandId: string) => {
-    setSelectedBrandIds(prev =>
-      prev.includes(brandId)
-        ? prev.filter(id => id !== brandId)
-        : [...prev, brandId]
-    );
-  };
-
-  // Handle brand selection toggle in edit modal
-  const handleEditBrandToggle = (brandId: string) => {
-    setEditSelectedBrandIds(prev =>
-      prev.includes(brandId)
-        ? prev.filter(id => id !== brandId)
-        : [...prev, brandId]
-    );
-  };
-
-  // Handle role change in edit modal - brands are optional for all roles
-  const handleEditRoleChange = (value: "admin" | "member" | "viewer") => {
-    setNewRole(value);
-    // Brands are optional, no need to clear them
-  };
-
   // Invite user
   const handleInvite = async () => {
     if (!inviteEmail || !inviteName) {
@@ -215,8 +110,6 @@ function UsersPage() {
       });
       return;
     }
-
-    // Brand selection is optional for all roles
 
     try {
       setSubmitting(true);
@@ -253,18 +146,13 @@ function UsersPage() {
   const handleUpdateRole = async () => {
     if (!selectedUser) return;
 
-    // Brand selection is optional for all roles
-
     try {
       setSubmitting(true);
 
-      // Update role
       await httpClient.put(
         `/organizations/${ORGANIZATION_ID}/members/${selectedUser.user_id}/role`,
         { role: newRole }
       );
-
-      // Brands are no longer managed through this modal
 
       showToast({
         title: "Éxito",
@@ -355,18 +243,32 @@ function UsersPage() {
     }
   };
 
+  // Filter users based on search query
+  const filteredUsers = useMemo(() => {
+    if (!searchQuery.trim()) return users;
+    
+    const query = searchQuery.toLowerCase().trim();
+    return users.filter(user => {
+      const fullName = user.user_profiles?.full_name?.toLowerCase() || "";
+      const email = user.user_profiles?.email?.toLowerCase() || "";
+      const role = getRoleLabel(user.role).toLowerCase();
+      
+      return fullName.includes(query) || email.includes(query) || role.includes(query);
+    });
+  }, [users, searchQuery]);
+
   // Pagination logic
-  const totalPages = Math.ceil(users.length / USERS_PER_PAGE);
+  const totalPages = Math.ceil(filteredUsers.length / USERS_PER_PAGE);
   const paginatedUsers = useMemo(() => {
     const startIndex = (currentPage - 1) * USERS_PER_PAGE;
     const endIndex = startIndex + USERS_PER_PAGE;
-    return users.slice(startIndex, endIndex);
-  }, [users, currentPage]);
+    return filteredUsers.slice(startIndex, endIndex);
+  }, [filteredUsers, currentPage]);
 
-  // Reset to page 1 when users change
+  // Reset to page 1 when users or search changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [users.length]);
+  }, [users.length, searchQuery]);
 
   const goToPage = (page: number) => {
     setCurrentPage(Math.max(1, Math.min(page, totalPages)));
@@ -375,16 +277,30 @@ function UsersPage() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Usuarios</h1>
-          <p className="text-gray-500 mt-1">
-            Administra los miembros de tu organización
-          </p>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Usuarios</h1>
+        <p className="text-gray-500 mt-1">
+          Administra los miembros de tu organización
+        </p>
+      </div>
+
+      {/* Search Bar and Invite Button */}
+      <div className="flex gap-3 items-start">
+        <div className="flex-1 bg-white rounded-lg p-2 border border-gray-200">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="Buscar por nombre, email o rol..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 border-0 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500/20 h-9"
+            />
+          </div>
         </div>
         <Button
           onClick={() => setInviteModalOpen(true)}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 h-[49px] px-4"
         >
           <Plus className="h-4 w-4" />
           Invitar Usuario
@@ -422,10 +338,12 @@ function UsersPage() {
                     <p className="text-gray-500 mt-2">Cargando usuarios...</p>
                   </td>
                 </tr>
-              ) : users.length === 0 ? (
+              ) : filteredUsers.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center">
-                    <p className="text-gray-500">No hay usuarios en esta organización</p>
+                    <p className="text-gray-500">
+                      {searchQuery ? "No se encontraron usuarios que coincidan con la búsqueda" : "No hay usuarios en esta organización"}
+                    </p>
                   </td>
                 </tr>
               ) : (
@@ -492,11 +410,11 @@ function UsersPage() {
         </div>
 
         {/* Pagination Controls */}
-        {!loading && users.length > 0 && totalPages > 1 && (
+        {!loading && filteredUsers.length > 0 && totalPages > 1 && (
           <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm text-gray-700">
               <span>
-                Mostrando {((currentPage - 1) * USERS_PER_PAGE) + 1} - {Math.min(currentPage * USERS_PER_PAGE, users.length)} de {users.length} usuarios
+                Mostrando {((currentPage - 1) * USERS_PER_PAGE) + 1} - {Math.min(currentPage * USERS_PER_PAGE, filteredUsers.length)} de {filteredUsers.length} usuarios
               </span>
             </div>
 
@@ -592,7 +510,7 @@ function UsersPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="role">Rol</Label>
-              <Select value={inviteRole} onValueChange={handleRoleChange}>
+              <Select value={inviteRole} onValueChange={setInviteRole}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -620,18 +538,17 @@ function UsersPage() {
 
       {/* Edit Role Modal */}
       <Dialog open={editRoleModalOpen} onOpenChange={setEditRoleModalOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Cambiar Rol</DialogTitle>
             <DialogDescription>
-              Modifica el rol y marcas de {selectedUser?.user_profiles?.full_name || "este usuario"}
+              Modifica el rol de {selectedUser?.user_profiles?.full_name || "este usuario"}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {/* Role Selection */}
             <div className="space-y-2">
               <Label htmlFor="new-role">Nuevo Rol</Label>
-              <Select value={newRole} onValueChange={handleEditRoleChange}>
+              <Select value={newRole} onValueChange={setNewRole}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
