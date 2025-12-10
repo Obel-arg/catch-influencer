@@ -14,6 +14,7 @@ import { InfluencersProvider } from "@/contexts/InfluencersContext";
 import { UsersProvider } from "@/contexts/UsersContext";
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
 import { RoleProvider } from "@/contexts/RoleContext";
+import { FeedbackSystem } from "@/components/feedback/FeedbackSystem";
 
 interface ProtectedLayoutProps {
   children: React.ReactNode;
@@ -143,8 +144,11 @@ function ProtectedLayoutContent({ children }: ProtectedLayoutProps) {
           <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
             <MainSidebar collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed((v) => !v)} />
             <div className={sidebarCollapsed ? "flex-1 ml-16 transition-all duration-300 ease-in-out" : "flex-1 ml-56 transition-all duration-300 ease-in-out"}>
-              <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-white/80 backdrop-blur-md px-4 md:px-6 shadow-sm">
-                {/* Header content removed */}
+              <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b bg-white/80 backdrop-blur-md px-4 md:px-6 shadow-sm">
+                <div></div>
+                <div className="flex items-center gap-4">
+                  {user?.email && <FeedbackSystem userEmail={user.email} />}
+                </div>
               </header>
               <main className="flex-1 p-4 md:p-6">{children}</main>
             </div>

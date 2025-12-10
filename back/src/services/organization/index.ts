@@ -211,9 +211,10 @@ export class OrganizationService {
   }
 
   async updateMemberRole(organizationId: string, userId: string, role: string): Promise<void> {
+    // Update role in organization_members
     const { error } = await supabase
       .from('organization_members')
-      .update({ 
+      .update({
         role,
         updated_at: new Date().toISOString()
       })
@@ -221,6 +222,20 @@ export class OrganizationService {
       .eq('user_id', userId);
 
     if (error) throw error;
+
+    // Also update role in user_profiles to keep JWT token in sync
+    const { error: profileError } = await supabase
+      .from('user_profiles')
+      .update({
+        role,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId);
+
+    if (profileError) {
+      console.error('Error updating user_profiles role:', profileError);
+      // Don't throw - organization_members update succeeded
+    }
   }
 
   async updateMemberName(organizationId: string, userId: string, fullName: string): Promise<void> {

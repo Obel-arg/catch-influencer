@@ -184,13 +184,42 @@ export const UsersProvider: React.FC<UsersProviderProps> = ({
 
       try {
         setLoading(true);
-        await usersService.updateUserRole(currentOrganizationId, userData);
+        const result = await usersService.updateUserRole(currentOrganizationId, userData);
 
         showToast({
           title: "Éxito",
           description: "Rol actualizado correctamente",
           variant: "default",
         });
+
+        // Si el backend indica que se requiere refrescar el token
+        if (result.requiresTokenRefresh) {
+          // Refrescar el token del usuario actual
+          try {
+            const refreshToken = localStorage.getItem('refreshToken');
+            if (refreshToken) {
+              const refreshResponse = await fetch('/api/auth/refresh', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refreshToken })
+              });
+
+              if (refreshResponse.ok) {
+                const data = await refreshResponse.json();
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('refreshToken', data.refreshToken);
+
+                // Actualizar también el cache de rol
+                localStorage.removeItem('userRoleCache');
+
+                console.log('✅ Token refreshed after role update');
+              }
+            }
+          } catch (refreshError) {
+            console.error('Error refreshing token after role update:', refreshError);
+            // No lanzar error, el rol ya se actualizó correctamente
+          }
+        }
 
         // Limpiar cache y recargar
         clearUsersCache();

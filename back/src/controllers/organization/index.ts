@@ -138,7 +138,10 @@ export class OrganizationController {
       const { id, userId } = req.params;
       const { role } = req.body;
       await this.organizationService.updateMemberRole(id, userId, role);
-      res.json({ message: 'Rol actualizado exitosamente' });
+      res.json({
+        message: 'Rol actualizado exitosamente',
+        requiresTokenRefresh: true // Signal to frontend to refresh token
+      });
     } catch (error) {
       console.error('Error al actualizar rol:', error);
       res.status(500).json({ error: 'Error al actualizar rol' });

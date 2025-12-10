@@ -1067,30 +1067,12 @@ Now infer the audience demographics as JSON:`;
 
   /**
    * File cache management methods
+   * File caching is disabled - using database cache only
    */
   private async checkCache(cacheKey: string): Promise<CacheEntry | null> {
-    if (!this.config.cache.enabled) return null;
-
-    try {
-      const cache = await this.readCacheFile();
-      const entry = cache.entries[cacheKey];
-
-      if (!entry) return null;
-
-      // Check expiration
-      const expiresAt = new Date(entry.expires_at);
-      if (expiresAt < new Date()) {
-        console.log(`  Cache entry expired, removing...`);
-        delete cache.entries[cacheKey];
-        await this.writeCacheFile(cache);
-        return null;
-      }
-
-      return entry;
-    } catch (error) {
-      console.warn('Cache read error:', error);
-      return null;
-    }
+    // File cache disabled - return null to skip file cache check
+    // Database cache is checked separately in inferAudience()
+    return null;
   }
 
   private async cacheResult(
@@ -1100,83 +1082,38 @@ Now infer the audience demographics as JSON:`;
     demographics: AudienceDemographics,
     cost: number
   ): Promise<void> {
-    try {
-      const cache = await this.readCacheFile();
-
-      const entry: CacheEntry = {
-        url,
-        username,
-        demographics,
-        model: this.config.openai.model,
-        cached_at: new Date().toISOString(),
-        expires_at: new Date(
-          Date.now() + this.config.cache.ttlDays * 24 * 60 * 60 * 1000
-        ).toISOString(),
-        api_cost: cost,
-      };
-
-      cache.entries[cacheKey] = entry;
-      await this.writeCacheFile(cache);
-      console.log(`  ✅ Cached result (expires: ${entry.expires_at.split('T')[0]})`);
-    } catch (error) {
-      console.warn('Cache write error:', error);
-    }
+    // File cache disabled - no operation performed
+    // Results are cached in database only
+    return;
   }
 
   private async readCacheFile(): Promise<CacheFile> {
-    try {
-      const content = await fs.readFile(this.config.cache.file, 'utf-8');
-      return JSON.parse(content);
-    } catch (error) {
-      // File doesn't exist or is invalid, return empty cache
-      return { version: '1.0.0', entries: {} };
-    }
+    // File caching disabled - using database cache only
+    // Return empty cache structure
+    return { version: '1.0.0', entries: {} };
   }
 
   private async writeCacheFile(cache: CacheFile): Promise<void> {
-    // Ensure directory exists
-    const dir = path.dirname(this.config.cache.file);
-    await fs.mkdir(dir, { recursive: true });
-
-    await fs.writeFile(this.config.cache.file, JSON.stringify(cache, null, 2), 'utf-8');
+    // File caching disabled - using database cache only
+    // No file operations performed
+    return;
   }
 
   async clearCache(): Promise<void> {
-    const cache: CacheFile = { version: '1.0.0', entries: {} };
-    await this.writeCacheFile(cache);
-    console.log('✅ Cache cleared');
+    // File cache disabled - no operation needed
+    // Database cache is managed separately
+    console.log('⏭️  File cache is disabled - use database cache management');
+    return;
   }
 
   async getCacheStats(): Promise<CacheStats> {
-    const cache = await this.readCacheFile();
-    const entries = Object.values(cache.entries);
-
-    if (entries.length === 0) {
-      return {
-        totalEntries: 0,
-        totalCost: 0,
-        averageCost: 0,
-        expirationBreakdown: { valid: 0, expired: 0 },
-      };
-    }
-
-    const now = new Date();
-    const valid = entries.filter((e) => new Date(e.expires_at) >= now);
-    const expired = entries.filter((e) => new Date(e.expires_at) < now);
-
-    const totalCost = entries.reduce((sum, e) => sum + e.api_cost, 0);
-    const dates = entries.map((e) => new Date(e.cached_at));
-
+    // File cache disabled - return empty stats
+    // Use database cache stats instead
     return {
-      totalEntries: entries.length,
-      totalCost,
-      oldestEntry: new Date(Math.min(...dates.map((d) => d.getTime()))),
-      newestEntry: new Date(Math.max(...dates.map((d) => d.getTime()))),
-      averageCost: totalCost / entries.length,
-      expirationBreakdown: {
-        valid: valid.length,
-        expired: expired.length,
-      },
+      totalEntries: 0,
+      totalCost: 0,
+      averageCost: 0,
+      expirationBreakdown: { valid: 0, expired: 0 },
     };
   }
 

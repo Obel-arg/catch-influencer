@@ -92,17 +92,18 @@ export class UsersService {
    * Actualiza el rol de un usuario
    */
   async updateUserRole(
-    organizationId: string, 
+    organizationId: string,
     userData: UpdateUserRoleData
-  ): Promise<void> {
+  ): Promise<{ requiresTokenRefresh?: boolean }> {
     try {
-      await httpClient.put(
+      const response = await httpClient.put<{ message: string; requiresTokenRefresh?: boolean }>(
         `${this.baseUrl}/${organizationId}/members/${userData.userId}/role`,
         {
           role: userData.role,
           permissions: userData.permissions
         }
       );
+      return response.data;
     } catch (error) {
       console.error('Error al actualizar rol:', error);
       throw new Error('No se pudo actualizar el rol del usuario');
