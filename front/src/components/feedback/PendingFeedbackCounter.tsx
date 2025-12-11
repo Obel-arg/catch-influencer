@@ -40,10 +40,6 @@ export function PendingFeedbackCounter({ userEmail }: PendingFeedbackCounterProp
   const [isLoading, setIsLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<'pending' | 'resolved'>('pending')
 
-  if (!userEmail.includes('@obel.la')) {
-    return null
-  }
-
   const fetchPendingCount = async () => {
     try {
       const backendUrl = getApiBaseUrl();

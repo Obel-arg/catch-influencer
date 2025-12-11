@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Calendar, Building2, Search, Users, Contact, PanelRightOpen, PanelRightClose } from "lucide-react";
+import { Calendar, Building2, Search, Users, Contact, PanelRightOpen, PanelRightClose, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { useRoleCache } from "@/hooks/auth/useRoleCache";
@@ -50,7 +50,7 @@ export function MainSidebar({ collapsed = false, onToggleCollapse }: { collapsed
       icon: <Users className="h-5 w-5" />,
       label: "Influencers",
     },
-    // Solo mostrar "Usuarios" si el usuario es admin u owner
+    // Solo mostrar "Usuarios" y "Feedback" si el usuario es admin u owner
     // Y si hay caché de rol disponible
     ...(!roleLoading && isRoleCached() && (isAdmin() || isOwner())
       ? [
@@ -58,6 +58,11 @@ export function MainSidebar({ collapsed = false, onToggleCollapse }: { collapsed
             path: "/users",
             icon: <Contact className="h-5 w-5" />,
             label: "Usuarios",
+          },
+          {
+            path: "/admin/feedback",
+            icon: <MessageSquare className="h-5 w-5" />,
+            label: "Feedback",
           },
         ]
       : []),

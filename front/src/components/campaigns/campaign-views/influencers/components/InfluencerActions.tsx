@@ -55,8 +55,7 @@ export const InfluencerActions = ({
   };
 
   return (
-    <div className="flex items-center justify-between mt-4 gap-3">
-      {renderViewProfileButton()}
+    <div className="flex items-center justify-end mt-4 gap-3">
       <Button
         onClick={() => onAddPost(influencerId, influencerName)}
         variant="outline"

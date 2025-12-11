@@ -18,11 +18,6 @@ export function FeedbackButton({ userEmail }: FeedbackButtonProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
 
-  // Solo mostrar para usuarios que NO tienen email de obel.la
-  if (userEmail.includes('@obel.la')) {
-    return null
-  }
-
   const handleSubmit = async () => {
     if (!message.trim()) {
       toast({
