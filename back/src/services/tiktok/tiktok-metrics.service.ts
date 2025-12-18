@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { postgresCacheService } from '../cache/postgres-cache.service';
+import { BlobStorageService } from '../blob-storage.service';
 
 // TikTok API configuration
 const APIFY_API_TOKEN = process.env.APIFY_API_TOKEN || '';
@@ -159,6 +160,43 @@ export class TikTokMetricsService {
   }
 
   /**
+   * Uploads TikTok thumbnail to Vercel Blob storage
+   * @param thumbnailUrl - Original TikTok CDN URL
+   * @param videoId - TikTok video ID for filename
+   * @returns Permanent Blob URL or original URL if upload fails
+   */
+  private async uploadThumbnailToBlob(
+    thumbnailUrl: string,
+    videoId: string
+  ): Promise<string> {
+    try {
+      console.log(`🖼️ [TIKTOK-THUMBNAILS] Uploading thumbnail for video ${videoId}`);
+
+      // Generate unique filename: tiktok-{videoId}-{timestamp}.jpg
+      const timestamp = Date.now();
+      const fileName = `tiktok-${videoId}-${timestamp}.jpg`;
+
+      const uploadStartTime = Date.now();
+      const blobUrl = await BlobStorageService.uploadImageFromUrl(
+        thumbnailUrl,
+        fileName
+      );
+      const uploadDuration = Date.now() - uploadStartTime;
+
+      console.log(`✅ [TIKTOK-THUMBNAILS] Upload successful in ${uploadDuration}ms`);
+      console.log(`✅ [TIKTOK-THUMBNAILS] Blob URL: ${blobUrl}`);
+
+      return blobUrl;
+    } catch (error) {
+      console.error(`❌ [TIKTOK-THUMBNAILS] Upload failed for video ${videoId}:`, error);
+      console.error(`❌ [TIKTOK-THUMBNAILS] Falling back to original URL`);
+
+      // Fallback: return original URL if upload fails
+      return thumbnailUrl;
+    }
+  }
+
+  /**
    * Get video metrics using Apify actor
    */
   async getVideoMetrics(videoUrl: string): Promise<{
@@ -232,28 +270,34 @@ export class TikTokMetricsService {
   /**
    * Convert TikTok metrics to CreatorDB format for consistency
    */
-  convertToSystemFormat(
+  async convertToSystemFormat(
     postId: string,
     videoUrl: string,
     tiktokMetrics: TikTokVideoMetrics
-  ): any {
+  ): Promise<any> {
     // Calculate engagement rate as (comments + likes) / followers * 100 for percentage
-    let engagementRate = tiktokMetrics.authorMeta.fans > 0 
+    let engagementRate = tiktokMetrics.authorMeta.fans > 0
       ? ((tiktokMetrics.commentCount + tiktokMetrics.diggCount) / tiktokMetrics.authorMeta.fans)
       : 0;
-    
+
     // Cap engagement rate at 100% to avoid unrealistic values
     if (engagementRate > 100) {
       console.warn(`⚠️ [TIKTOK-METRICS] Unrealistic engagement rate: ${engagementRate.toFixed(2)}%, capping at 100%`);
       engagementRate = 100;
     }
 
+    // Upload thumbnail to Vercel Blob
+    const thumbnailUrl = await this.uploadThumbnailToBlob(
+      tiktokMetrics.videoMeta.coverUrl,
+      tiktokMetrics.id
+    );
+
     // Create CreatorDB format response
     const creatorDbFormat = {
       data: {
         basicTikTokVideo: {
           isAd: tiktokMetrics.isAd,
-          cover: tiktokMetrics.videoMeta.coverUrl,
+          cover: thumbnailUrl,
           plays: tiktokMetrics.playCount,
           hearts: tiktokMetrics.diggCount,
           length: tiktokMetrics.videoMeta.duration,
@@ -296,7 +340,7 @@ export class TikTokMetricsService {
       api_success: true,
       api_error: undefined,
       raw_response: creatorDbFormat,
-      thumbnail_url: tiktokMetrics.videoMeta.coverUrl // 🖼️ Incluir thumbnail para actualizar el post
+      thumbnail_url: thumbnailUrl // 🖼️ Use Blob URL
     };
   }
 } 

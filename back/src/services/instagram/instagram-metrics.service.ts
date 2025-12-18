@@ -41,18 +41,34 @@ export class InstagramMetricsService {
     data?: InstagramMetrics;
     error?: string;
   }> {
+    const methodStartTime = Date.now();
+    console.log(`\n${'*'.repeat(70)}`);
+    console.log(`📸 [INSTAGRAM-METRICS] ========== getPostMetrics CALLED ==========`);
+    console.log(`📸 [INSTAGRAM-METRICS] Post URL: ${postUrl}`);
+    console.log(`📸 [INSTAGRAM-METRICS] Timestamp: ${new Date().toISOString()}`);
+    console.log(`📸 [INSTAGRAM-METRICS] API Token configured: ${this.apiToken ? 'YES (length: ' + this.apiToken.length + ')' : 'NO - MISSING!'}`);
+    console.log(`📸 [INSTAGRAM-METRICS] Actor ID: ${this.actorId}`);
+    console.log(`📸 [INSTAGRAM-METRICS] Base URL: ${this.baseUrl}`);
+
     try {
       // Omitir métricas para historias de Instagram por ahora
+      console.log(`📸 [INSTAGRAM-METRICS] Checking if URL is a story...`);
       if (/instagram\.com\/stories\//i.test(postUrl)) {
+        console.log(`⚠️ [INSTAGRAM-METRICS] URL is a story - skipping metrics extraction`);
         return {
           success: false,
           error: 'Stories de Instagram: métricas deshabilitadas temporalmente'
         };
       }
+      console.log(`📸 [INSTAGRAM-METRICS] URL is NOT a story - proceeding`);
 
       // Extraer post ID de la URL
+      console.log(`📸 [INSTAGRAM-METRICS] Extracting post ID from URL...`);
       const postId = this.extractPostIdFromUrl(postUrl);
+      console.log(`📸 [INSTAGRAM-METRICS] Extracted post ID: ${postId}`);
+
       if (!postId) {
+        console.error(`❌ [INSTAGRAM-METRICS] Failed to extract post ID from URL: ${postUrl}`);
         return {
           success: false,
           error: 'No se pudo extraer el ID del post de la URL de Instagram'
@@ -63,10 +79,20 @@ export class InstagramMetricsService {
       const input = {
         username: [postUrl]
       };
+      console.log(`📸 [INSTAGRAM-METRICS] Apify input configured:`, JSON.stringify(input, null, 2));
 
       // Ejecutar el actor de Apify
+      const apifyUrl = `${this.baseUrl}/acts/${this.actorId}/run-sync-get-dataset-items`;
+      console.log(`\n🌐 [INSTAGRAM-METRICS] -------- CALLING APIFY API --------`);
+      console.log(`🌐 [INSTAGRAM-METRICS] Full URL: ${apifyUrl}`);
+      console.log(`🌐 [INSTAGRAM-METRICS] Method: POST`);
+      console.log(`🌐 [INSTAGRAM-METRICS] Headers: Authorization=Bearer ${this.apiToken?.substring(0, 10)}...`);
+      console.log(`🌐 [INSTAGRAM-METRICS] Timeout: 60000ms`);
+      console.log(`🌐 [INSTAGRAM-METRICS] Request start time: ${new Date().toISOString()}`);
+
+      const apiStartTime = Date.now();
       const response = await axios.post(
-        `${this.baseUrl}/acts/${this.actorId}/run-sync-get-dataset-items`,
+        apifyUrl,
         input,
         {
           headers: {
@@ -81,25 +107,50 @@ export class InstagramMetricsService {
           timeout: 60000 // 60 segundos timeout
         }
       );
+      const apiDuration = Date.now() - apiStartTime;
+
+      console.log(`\n🌐 [INSTAGRAM-METRICS] -------- APIFY API RESPONSE --------`);
+      console.log(`🌐 [INSTAGRAM-METRICS] Response status: ${response.status}`);
+      console.log(`🌐 [INSTAGRAM-METRICS] Response statusText: ${response.statusText}`);
+      console.log(`🌐 [INSTAGRAM-METRICS] API call duration: ${apiDuration}ms`);
+      console.log(`🌐 [INSTAGRAM-METRICS] Response headers:`, JSON.stringify(response.headers, null, 2));
+      console.log(`🌐 [INSTAGRAM-METRICS] Response data type: ${typeof response.data}`);
+      console.log(`🌐 [INSTAGRAM-METRICS] Response data is array: ${Array.isArray(response.data)}`);
+      console.log(`🌐 [INSTAGRAM-METRICS] Response data length: ${response.data?.length || 0}`);
+      console.log(`🌐 [INSTAGRAM-METRICS] Raw response data:`, JSON.stringify(response.data, null, 2));
 
       const results = response.data || [];
-      
+
       if (!results || results.length === 0) {
+        console.error(`❌ [INSTAGRAM-METRICS] No results returned from Apify!`);
+        console.error(`❌ [INSTAGRAM-METRICS] Response was: ${JSON.stringify(response.data)}`);
         return {
           success: false,
           error: 'No se obtuvieron resultados del actor de Instagram'
         };
       }
 
+      console.log(`✅ [INSTAGRAM-METRICS] Got ${results.length} result(s) from Apify`);
+
       // Procesar los resultados
+      console.log(`\n🔄 [INSTAGRAM-METRICS] -------- PROCESSING APIFY RESPONSE --------`);
       const processedData = this.processApifyResponse(results, postUrl, postId);
 
       if (!processedData) {
+        console.error(`❌ [INSTAGRAM-METRICS] Failed to process Apify response`);
         return {
           success: false,
           error: 'No se pudieron procesar los datos del post de Instagram'
         };
       }
+
+      const totalDuration = Date.now() - methodStartTime;
+      console.log(`\n✅ [INSTAGRAM-METRICS] ========== getPostMetrics COMPLETED ==========`);
+      console.log(`✅ [INSTAGRAM-METRICS] Total duration: ${totalDuration}ms`);
+      console.log(`✅ [INSTAGRAM-METRICS] API call duration: ${apiDuration}ms`);
+      console.log(`✅ [INSTAGRAM-METRICS] Processing duration: ${totalDuration - apiDuration}ms`);
+      console.log(`✅ [INSTAGRAM-METRICS] Final processed data:`, JSON.stringify(processedData, null, 2));
+      console.log(`${'*'.repeat(70)}\n`);
 
       return {
         success: true,
@@ -107,7 +158,26 @@ export class InstagramMetricsService {
       };
 
     } catch (error) {
-      console.error(`❌ [INSTAGRAM-METRICS] Critical error:`, error);
+      const errorDuration = Date.now() - methodStartTime;
+      console.error(`\n❌ [INSTAGRAM-METRICS] ========== CRITICAL ERROR ==========`);
+      console.error(`❌ [INSTAGRAM-METRICS] Post URL: ${postUrl}`);
+      console.error(`❌ [INSTAGRAM-METRICS] Duration until error: ${errorDuration}ms`);
+      console.error(`❌ [INSTAGRAM-METRICS] Error type: ${error?.constructor?.name || 'Unknown'}`);
+      console.error(`❌ [INSTAGRAM-METRICS] Error message: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+
+      if (axios.isAxiosError(error)) {
+        console.error(`❌ [INSTAGRAM-METRICS] Axios error details:`);
+        console.error(`❌ [INSTAGRAM-METRICS]   - Status: ${error.response?.status}`);
+        console.error(`❌ [INSTAGRAM-METRICS]   - StatusText: ${error.response?.statusText}`);
+        console.error(`❌ [INSTAGRAM-METRICS]   - Response data: ${JSON.stringify(error.response?.data)}`);
+        console.error(`❌ [INSTAGRAM-METRICS]   - Request URL: ${error.config?.url}`);
+        console.error(`❌ [INSTAGRAM-METRICS]   - Request method: ${error.config?.method}`);
+        console.error(`❌ [INSTAGRAM-METRICS]   - Timeout: ${error.code === 'ECONNABORTED' ? 'YES' : 'NO'}`);
+      }
+
+      console.error(`❌ [INSTAGRAM-METRICS] Error stack:`, error instanceof Error ? error.stack : 'N/A');
+      console.error(`${'*'.repeat(70)}\n`);
+
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Error desconocido'
@@ -119,33 +189,72 @@ export class InstagramMetricsService {
    * Procesa la respuesta de Apify y la convierte al formato del sistema
    */
   private processApifyResponse(apifyData: any, postUrl: string, postId: string): InstagramMetrics | null {
+    console.log(`🔄 [INSTAGRAM-METRICS] processApifyResponse called`);
+    console.log(`🔄 [INSTAGRAM-METRICS] Post URL: ${postUrl}`);
+    console.log(`🔄 [INSTAGRAM-METRICS] Post ID: ${postId}`);
+    console.log(`🔄 [INSTAGRAM-METRICS] Apify data type: ${typeof apifyData}`);
+    console.log(`🔄 [INSTAGRAM-METRICS] Apify data is array: ${Array.isArray(apifyData)}`);
+    console.log(`🔄 [INSTAGRAM-METRICS] Apify data length: ${apifyData?.length || 0}`);
+
     try {
       // Verificar que hay datos válidos
       if (!apifyData || !Array.isArray(apifyData) || apifyData.length === 0) {
         console.warn(`⚠️ [INSTAGRAM-METRICS] No valid data in Apify response`);
+        console.warn(`⚠️ [INSTAGRAM-METRICS] apifyData: ${JSON.stringify(apifyData)}`);
         return null;
       }
 
       const postData = apifyData[0];
-      
+      console.log(`🔄 [INSTAGRAM-METRICS] First item from Apify response:`, JSON.stringify(postData, null, 2));
+      console.log(`🔄 [INSTAGRAM-METRICS] Available keys in postData: ${Object.keys(postData || {}).join(', ')}`);
+
       // Extraer métricas básicas
+      console.log(`\n📊 [INSTAGRAM-METRICS] -------- EXTRACTING METRICS --------`);
+      console.log(`📊 [INSTAGRAM-METRICS] postData.likesCount: ${postData.likesCount}`);
+      console.log(`📊 [INSTAGRAM-METRICS] postData.likes: ${postData.likes}`);
+      console.log(`📊 [INSTAGRAM-METRICS] postData.commentsCount: ${postData.commentsCount}`);
+      console.log(`📊 [INSTAGRAM-METRICS] postData.comments: ${postData.comments}`);
+      console.log(`📊 [INSTAGRAM-METRICS] postData.videoViewCount: ${postData.videoViewCount}`);
+      console.log(`📊 [INSTAGRAM-METRICS] postData.views: ${postData.views}`);
+
       const likes = postData.likesCount || postData.likes || 0;
       const comments = postData.commentsCount || postData.comments || 0;
       const views = postData.videoViewCount || postData.views || 0;
-      
+
+      console.log(`📊 [INSTAGRAM-METRICS] Final likes: ${likes}`);
+      console.log(`📊 [INSTAGRAM-METRICS] Final comments: ${comments}`);
+      console.log(`📊 [INSTAGRAM-METRICS] Final views: ${views}`);
+
       // Calcular engagement rate (likes + comments) / followers
       // Como no tenemos followers, usamos un cálculo basado en likes
       const engagementRate = likes > 0 ? (likes + comments) / (likes * 10) : 0;
-      
+      console.log(`📊 [INSTAGRAM-METRICS] Calculated engagement rate: ${engagementRate}`);
+
       // Extraer hashtags y menciones
-      const hashtags = this.extractHashtags(postData.caption || '');
-      const mentions = this.extractMentions(postData.caption || '');
+      const caption = postData.caption || '';
+      console.log(`📊 [INSTAGRAM-METRICS] Caption (first 200 chars): ${caption.substring(0, 200)}...`);
+
+      const hashtags = this.extractHashtags(caption);
+      const mentions = this.extractMentions(caption);
+      console.log(`📊 [INSTAGRAM-METRICS] Extracted hashtags: ${hashtags.join(', ')}`);
+      console.log(`📊 [INSTAGRAM-METRICS] Extracted mentions: ${mentions.join(', ')}`);
 
       // Determinar si es video
+      console.log(`📊 [INSTAGRAM-METRICS] postData.type: ${postData.type}`);
+      console.log(`📊 [INSTAGRAM-METRICS] postData.isVideo: ${postData.isVideo}`);
       const isVideo = postData.type === 'video' || postData.isVideo || false;
+      console.log(`📊 [INSTAGRAM-METRICS] Is video: ${isVideo}`);
 
       // Extraer fecha de subida
+      console.log(`📊 [INSTAGRAM-METRICS] postData.timestamp: ${postData.timestamp}`);
       const uploadDate = postData.timestamp ? new Date(postData.timestamp) : undefined;
+      console.log(`📊 [INSTAGRAM-METRICS] Upload date: ${uploadDate}`);
+
+      // Extraer URLs de medios
+      console.log(`📊 [INSTAGRAM-METRICS] postData.displayUrl: ${postData.displayUrl}`);
+      console.log(`📊 [INSTAGRAM-METRICS] postData.imageUrl: ${postData.imageUrl}`);
+      console.log(`📊 [INSTAGRAM-METRICS] postData.mediaUrl: ${postData.mediaUrl}`);
+      console.log(`📊 [INSTAGRAM-METRICS] postData.videoUrl: ${postData.videoUrl}`);
 
       const metrics: InstagramMetrics = {
         postId,
@@ -165,10 +274,23 @@ export class InstagramMetricsService {
         rawData: postData
       };
 
+      console.log(`\n✅ [INSTAGRAM-METRICS] -------- METRICS OBJECT CREATED --------`);
+      console.log(`✅ [INSTAGRAM-METRICS] metrics.postId: ${metrics.postId}`);
+      console.log(`✅ [INSTAGRAM-METRICS] metrics.likes: ${metrics.likes}`);
+      console.log(`✅ [INSTAGRAM-METRICS] metrics.comments: ${metrics.comments}`);
+      console.log(`✅ [INSTAGRAM-METRICS] metrics.views: ${metrics.views}`);
+      console.log(`✅ [INSTAGRAM-METRICS] metrics.engagementRate: ${metrics.engagementRate}`);
+      console.log(`✅ [INSTAGRAM-METRICS] metrics.isVideo: ${metrics.isVideo}`);
+      console.log(`✅ [INSTAGRAM-METRICS] metrics.imageUrl: ${metrics.imageUrl}`);
+
       return metrics;
 
     } catch (error) {
-      console.error(`❌ [INSTAGRAM-METRICS] Error processing Apify response:`, error);
+      console.error(`❌ [INSTAGRAM-METRICS] Error processing Apify response:`);
+      console.error(`❌ [INSTAGRAM-METRICS] Error type: ${error?.constructor?.name}`);
+      console.error(`❌ [INSTAGRAM-METRICS] Error message: ${error instanceof Error ? error.message : 'Unknown'}`);
+      console.error(`❌ [INSTAGRAM-METRICS] Error stack:`, error instanceof Error ? error.stack : 'N/A');
+      console.error(`❌ [INSTAGRAM-METRICS] Apify data was:`, JSON.stringify(apifyData, null, 2));
       return null;
     }
   }
