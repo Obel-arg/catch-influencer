@@ -284,8 +284,10 @@ export class AgentAudienceService {
 
   constructor() {
     // 1. Inicializar Modelos
+    // Usando llama-3.1-8b-instruct que es más rápido que llama-4-scout-17b
+    // Groq optimiza estos modelos para velocidad máxima
     this.llamaModel = new ChatGroq({
-      model: "meta-llama/llama-4-scout-17b-16e-instruct",
+      model: "llama-3.1-8b-instant",
       temperature: 0.5,
       apiKey: process.env.GROQ_API_KEY,
     });
@@ -317,11 +319,11 @@ export class AgentAudienceService {
    * Calcula el costo aproximado de una llamada a Groq
    */
   private estimateGroqCost(inputTokens: number, outputTokens: number): number {
-    // Groq pricing: llama-4-scout-17b-16e-instruct
-    // Input: ~$0.10 per 1M tokens
-    // Output: ~$0.30 per 1M tokens
-    const inputCost = (inputTokens / 1_000_000) * 0.1;
-    const outputCost = (outputTokens / 1_000_000) * 0.3;
+    // Groq pricing: llama-3.1-8b-instruct (más rápido y económico que llama-4-scout-17b)
+    // Input: ~$0.05 per 1M tokens
+    // Output: ~$0.20 per 1M tokens
+    const inputCost = (inputTokens / 1_000_000) * 0.05;
+    const outputCost = (outputTokens / 1_000_000) * 0.2;
     return inputCost + outputCost;
   }
 
@@ -825,19 +827,19 @@ Retorna SOLO el texto de la biografía, sin explicaciones adicionales ni formato
       const scrapedData = await this.scrapeProfile(url);
       timings.scraping = Date.now() - scrapingStart;
 
-      // 2. Generate bio using AI based on scraped data
-      const bioResult = await this.generateBio(scrapedData);
-      timings.bioGeneration = bioResult.time;
-      costs.bioGeneration = bioResult.cost;
-
-      // 3. Run parallel analysis with LLaMA and Gemini
-      const [llamaAnalysis, geminiAnalysis] = await Promise.all([
+      // 2. Run ALL AI operations in parallel (bio generation + both analyses)
+      // This significantly reduces total time since they don't depend on each other
+      console.log("🚀 [Service] Starting parallel AI operations...");
+      const [bioResult, llamaAnalysis, geminiAnalysis] = await Promise.all([
+        this.generateBio(scrapedData),
         this.analyzeWithLlama(scrapedData),
         this.analyzeWithGemini(scrapedData),
       ]);
 
+      timings.bioGeneration = bioResult.time;
       timings.llamaAnalysis = llamaAnalysis.time;
       timings.geminiAnalysis = geminiAnalysis.time;
+      costs.bioGeneration = bioResult.cost;
       costs.llamaAnalysis = llamaAnalysis.cost;
       costs.geminiAnalysis = geminiAnalysis.cost;
 
