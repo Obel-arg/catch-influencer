@@ -6,6 +6,8 @@ import { RunnableSequence } from "@langchain/core/runnables";
 import { AudienceAnalysis } from "../../config/agent-audience";
 import { tavily } from "@tavily/core";
 import * as dotenv from "dotenv";
+import * as fs from "fs/promises";
+import * as path from "path";
 
 dotenv.config();
 
@@ -348,6 +350,44 @@ export class AgentAudienceService {
   private estimateTokens(text: string): number {
     // Aproximación: 1 token ≈ 4 caracteres para inglés, ~3 para español
     return Math.ceil(text.length / 3.5);
+  }
+
+  /**
+   * Obtiene la ruta del archivo de costos (similar a openai-audience.service)
+   */
+  private getCostLogFilePath(): string {
+    const isProduction =
+      process.env.NODE_ENV === "production" || process.env.VERCEL;
+    if (isProduction) {
+      return "/tmp/agent-audience-costs.log";
+    }
+    return path.join(process.cwd(), "logs", "agent-audience-costs.log");
+  }
+
+  /**
+   * Registra costo por modelo/operación
+   */
+  private async recordCost(entry: {
+    operation: string;
+    cost: number;
+    model: string;
+    success: boolean;
+    url?: string;
+  }): Promise<void> {
+    try {
+      const logFile = this.getCostLogFilePath();
+      const logDir = path.dirname(logFile);
+      await fs.mkdir(logDir, { recursive: true }).catch(() => {});
+
+      const line = `${new Date().toISOString()},${entry.operation},${
+        entry.cost
+      },${entry.model},${entry.success ? "success" : "failed"},${
+        entry.url || ""
+      }\n`;
+      await fs.appendFile(logFile, line);
+    } catch (err) {
+      console.warn("[CostTracking] Failed to record cost:", err);
+    }
   }
 
   private async scrapeProfile(url: string): Promise<string> {
@@ -854,6 +894,45 @@ Retorna SOLO el texto de la biografía, sin explicaciones adicionales ni formato
       timings.aggregation = aggregationResult.time;
       costs.aggregation = aggregationResult.cost;
 
+      // Registrar costos por modelo/operación
+      await Promise.all([
+        this.recordCost({
+          operation: "tavily_scrape",
+          cost: costs.tavily,
+          model: "tavily",
+          success: true,
+          url,
+        }),
+        this.recordCost({
+          operation: "bio_generation",
+          cost: costs.bioGeneration,
+          model: "gemini-2.5-flash",
+          success: true,
+          url,
+        }),
+        this.recordCost({
+          operation: "llama_analysis",
+          cost: costs.llamaAnalysis,
+          model: "llama-3.1-8b-instant",
+          success: true,
+          url,
+        }),
+        this.recordCost({
+          operation: "gemini_analysis",
+          cost: costs.geminiAnalysis,
+          model: "gemini-2.5-flash",
+          success: true,
+          url,
+        }),
+        this.recordCost({
+          operation: "aggregation",
+          cost: costs.aggregation,
+          model: "gemini-2.5-flash",
+          success: true,
+          url,
+        }),
+      ]);
+
       // Calcular totales
       const totalTime = Date.now() - totalStartTime;
       const totalCost =
@@ -932,6 +1011,14 @@ Retorna SOLO el texto de la biografía, sin explicaciones adicionales ni formato
       console.error(`💰 Cost before failure: $${totalCost.toFixed(6)}`);
       console.error(`❌ Error:`, error);
       console.error("=".repeat(60) + "\n");
+
+      await this.recordCost({
+        operation: "pipeline_failure",
+        cost: totalCost,
+        model: "agent-audience",
+        success: false,
+        url,
+      });
 
       throw new Error("Failed to analyze profile");
     }
