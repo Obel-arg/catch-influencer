@@ -8,6 +8,33 @@ import { tavily } from "@tavily/core";
 import * as dotenv from "dotenv";
 import * as fs from "fs/promises";
 import * as path from "path";
+import { createClient } from "@supabase/supabase-js";
+import { config } from "../../config/environment";
+import {
+  CostEntry,
+  AgenticAudienceInferenceDB,
+  SearchContext,
+  InferenceOptions,
+  AudienceDemographicsExtended,
+  InferenceResult,
+} from "../../models/audience/openai-audience-inference.model";
+
+/**
+ * Agent Audience Analysis Result
+ * Extends the basic demographics with bio and username from AudienceAnalysis
+ */
+interface AgentInferenceResult {
+  success: boolean;
+  demographics?: AudienceDemographicsExtended & {
+    bio: string;
+    username: string;
+  };
+  error?: string;
+  cached?: boolean;
+  cost?: number;
+  details?: any;
+}
+import { BaseAudienceService } from "./base-audience.service";
 
 dotenv.config();
 
@@ -277,14 +304,16 @@ Return ONLY valid JSON matching this structure:
 }}
 `;
 
-export class AgentAudienceService {
+export class AgentAudienceService extends BaseAudienceService {
   private llamaModel: ChatGroq;
   private geminiModel: ChatGoogleGenerativeAI;
   private judgeModel: ChatGoogleGenerativeAI;
   private jsonParser: JsonOutputParser<AudienceAnalysis>;
   private tavilyClient: ReturnType<typeof tavily>;
+  private supabase: ReturnType<typeof createClient>;
 
   constructor() {
+    super();
     // 1. Inicializar Modelos
     // Usando llama-3.1-8b-instruct que es más rápido que llama-4-scout-17b
     // Groq optimiza estos modelos para velocidad máxima
@@ -313,6 +342,12 @@ export class AgentAudienceService {
     this.tavilyClient = tavily({
       apiKey: process.env.TAVILY_API_KEY,
     });
+
+    // Inicializar cliente de Supabase
+    this.supabase = createClient(
+      config.supabase.url || "",
+      config.supabase.anonKey || ""
+    );
   }
 
   // --- MÉTODOS PRIVADOS ---
@@ -353,40 +388,224 @@ export class AgentAudienceService {
   }
 
   /**
-   * Obtiene la ruta del archivo de costos (similar a openai-audience.service)
+   * Get log file path (use /tmp in production for writable filesystem)
    */
-  private getCostLogFilePath(): string {
+  private getLogFilePath(): string {
     const isProduction =
       process.env.NODE_ENV === "production" || process.env.VERCEL;
+
     if (isProduction) {
+      // Use /tmp directory in serverless environments (writable)
       return "/tmp/agent-audience-costs.log";
+    } else {
+      // Use configured path in development
+      return path.join(process.cwd(), "logs", "agent-audience-costs.log");
     }
-    return path.join(process.cwd(), "logs", "agent-audience-costs.log");
   }
 
-  /**
-   * Registra costo por modelo/operación
-   */
-  private async recordCost(entry: {
-    operation: string;
-    cost: number;
-    model: string;
-    success: boolean;
-    url?: string;
-  }): Promise<void> {
+  private async recordCost(entry: CostEntry): Promise<void> {
     try {
-      const logFile = this.getCostLogFilePath();
+      const logFile = this.getLogFilePath();
       const logDir = path.dirname(logFile);
+
+      // Ensure log directory exists (ignore errors in production)
       await fs.mkdir(logDir, { recursive: true }).catch(() => {});
 
-      const line = `${new Date().toISOString()},${entry.operation},${
+      const line = `${entry.timestamp.toISOString()},${entry.operation},${
         entry.cost
       },${entry.model},${entry.success ? "success" : "failed"},${
         entry.url || ""
       }\n`;
       await fs.appendFile(logFile, line);
-    } catch (err) {
-      console.warn("[CostTracking] Failed to record cost:", err);
+    } catch (error) {
+      // Don't fail the request if cost tracking fails
+      console.warn("Cost tracking warning:", error);
+    }
+  }
+
+  /**
+   * Database cache methods
+   */
+
+  /**
+   * Check database for cached inference
+   */
+  private async checkDatabaseCache(
+    instagramUrl: string,
+    influencerId?: string,
+    searchContext?: SearchContext
+  ): Promise<AgenticAudienceInferenceDB | null> {
+    try {
+      console.log(`[Cache Check] Starting database cache check`);
+      console.log(`[Cache Check] URL: ${instagramUrl}`);
+      console.log(`[Cache Check] Influencer ID: ${influencerId || "none"}`);
+      console.log(`[Cache Check] Search Context:`, searchContext);
+
+      let query = this.supabase
+        .from("agentic_audience_inferences")
+        .select("*")
+        .eq("instagram_url", instagramUrl);
+
+      // Add influencer_id filter if provided
+      if (influencerId && this.isValidUUID(influencerId)) {
+        query = query.eq("influencer_id", influencerId);
+      }
+
+      // Add search context filters if provided
+      if (searchContext?.creator_location) {
+        query = query.eq("creator_location", searchContext.creator_location);
+      } else {
+        // Match entries with no creator_location
+        query = query.is("creator_location", null);
+      }
+
+      const { data, error } = await query
+        .order("inferred_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error) {
+        console.log(`[Cache Check] Query error:`, error.message);
+        return null;
+      }
+
+      if (!data) {
+        console.log(`[Cache Check] No data found in database`);
+        return null;
+      }
+
+      console.log(`[Cache Check] Found entry:`, {
+        instagram_url: data.instagram_url,
+        inferred_at: data.inferred_at,
+        expires_at: data.expires_at,
+        model_used: data.model_used,
+      });
+
+      // Check if expired - ensure proper date comparison
+      const expiresAt = new Date(data.expires_at as string);
+      const now = new Date();
+
+      console.log(`[Cache Check] Expiration check:`);
+      console.log(`[Cache Check]   Expires: ${expiresAt.toISOString()}`);
+      console.log(`[Cache Check]   Now:     ${now.toISOString()}`);
+      console.log(`[Cache Check]   Expired: ${expiresAt < now}`);
+
+      if (expiresAt < now) {
+        console.log(`[Cache Check] ❌ Cache EXPIRED - will re-scrape`);
+        return null;
+      }
+
+      const daysUntilExpiry = Math.ceil(
+        (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      console.log(
+        `[Cache Check] ✅ Cache HIT - valid for ${daysUntilExpiry} more days`
+      );
+
+      return {
+        ...data,
+        inferred_at: new Date(data.inferred_at as string),
+        expires_at: expiresAt,
+        created_at: new Date(data.created_at as string),
+        updated_at: new Date(data.updated_at as string),
+      } as AgenticAudienceInferenceDB;
+    } catch (error) {
+      console.error("[Cache Check] Error:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Validate if string is a valid UUID
+   */
+  private isValidUUID(str: string): boolean {
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
+  }
+
+  /**
+   * Store inference result to database
+   */
+  private async storeToDatabase(
+    instagramUrl: string,
+    username: string,
+    demographics: AudienceAnalysis,
+    influencerId?: string,
+    cost: number = 0.05,
+    profileSnapshot?: Partial<any>,
+    searchContext?: SearchContext
+  ): Promise<void> {
+    try {
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000); // 90 days
+
+      // Validate influencer_id is a valid UUID before including it
+      const validInfluencerId =
+        influencerId && this.isValidUUID(influencerId) ? influencerId : null;
+
+      const record: any = {
+        instagram_url: instagramUrl,
+        instagram_username: username,
+        audience_demographics: demographics,
+        audience_geography: demographics.geography,
+        model_used: "agent-audience", // Custom model identifier for this service
+        profile_data_snapshot: profileSnapshot || null,
+        inferred_at: now.toISOString(),
+        expires_at: expiresAt.toISOString(),
+        api_cost: cost,
+        // Store search context
+        search_context: searchContext || null,
+        creator_location: searchContext?.creator_location || null,
+        target_audience_geo: searchContext?.target_audience_geo || null,
+      };
+
+      // Only add influencer_id if it's a valid UUID
+      if (validInfluencerId) {
+        record.influencer_id = validInfluencerId;
+      }
+
+      // Check if entry exists with same URL + context
+      const existing = await this.checkDatabaseCache(
+        instagramUrl,
+        validInfluencerId || undefined,
+        searchContext
+      );
+
+      if (existing) {
+        // Update existing record
+        const { error } = await this.supabase
+          .from("agentic_audience_inferences")
+          .update(record)
+          .eq("id", existing.id);
+
+        if (error) {
+          console.error("  Error updating database:", error);
+        } else {
+          console.log(
+            `  ✅ Updated database: ${instagramUrl}${
+              validInfluencerId ? ` (influencer: ${validInfluencerId})` : ""
+            }`
+          );
+        }
+      } else {
+        // Insert new record
+        const { error } = await this.supabase
+          .from("agentic_audience_inferences")
+          .insert(record);
+
+        if (error) {
+          console.error("  Error inserting to database:", error);
+        } else {
+          console.log(
+            `  ✅ Inserted to database: ${instagramUrl}${
+              validInfluencerId ? ` (influencer: ${validInfluencerId})` : ""
+            }`
+          );
+        }
+      }
+    } catch (error) {
+      console.error("  Error storing to database:", error);
     }
   }
 
@@ -841,7 +1060,10 @@ Retorna SOLO el texto de la biografía, sin explicaciones adicionales ni formato
 
   // --- MÉTODO PÚBLICO (ENTRY POINT) ---
 
-  public async analyzeProfile(url: string): Promise<AudienceAnalysis> {
+  async inferAudience(
+    instagramUrl: string,
+    options: InferenceOptions = {}
+  ): Promise<InferenceResult> {
     const totalStartTime = Date.now();
     const costs = {
       tavily: 0, // Tavily free tier o muy bajo costo
@@ -859,12 +1081,35 @@ Retorna SOLO el texto de la biografía, sin explicaciones adicionales ni formato
     };
 
     try {
-      console.log(`\n🚀 [Service] Starting analysis for: ${url}`);
+      console.log(`\n🚀 [Service] Starting analysis for: ${instagramUrl}`);
       console.log("=".repeat(60));
+
+      // Check database cache first (unless force refresh or skip cache)
+      if (!options.forceRefresh && !options.skipCache) {
+        const dbCached = await this.checkDatabaseCache(
+          instagramUrl,
+          options.influencerId,
+          options.searchContext
+        );
+        if (dbCached) {
+          console.log(`✅ Database cache hit: ${instagramUrl}`);
+          return {
+            success: true,
+            demographics: {
+              inference_source: "agentic",
+              model_used: dbCached.model_used,
+              inferred_at: dbCached.inferred_at,
+              ...dbCached.audience_demographics,
+            },
+            cached: true,
+            cost: 0,
+          };
+        }
+      }
 
       // 1. Scrape profile data with Tavily
       const scrapingStart = Date.now();
-      const scrapedData = await this.scrapeProfile(url);
+      const scrapedData = await this.scrapeProfile(instagramUrl);
       timings.scraping = Date.now() - scrapingStart;
 
       // 2. Run ALL AI operations in parallel (bio generation + both analyses)
@@ -897,39 +1142,44 @@ Retorna SOLO el texto de la biografía, sin explicaciones adicionales ni formato
       // Registrar costos por modelo/operación
       await Promise.all([
         this.recordCost({
+          timestamp: new Date(),
           operation: "tavily_scrape",
           cost: costs.tavily,
           model: "tavily",
           success: true,
-          url,
+          url: instagramUrl,
         }),
         this.recordCost({
+          timestamp: new Date(),
           operation: "bio_generation",
           cost: costs.bioGeneration,
           model: "gemini-2.5-flash",
           success: true,
-          url,
+          url: instagramUrl,
         }),
         this.recordCost({
+          timestamp: new Date(),
           operation: "llama_analysis",
           cost: costs.llamaAnalysis,
           model: "llama-3.1-8b-instant",
           success: true,
-          url,
+          url: instagramUrl,
         }),
         this.recordCost({
+          timestamp: new Date(),
           operation: "gemini_analysis",
           cost: costs.geminiAnalysis,
           model: "gemini-2.5-flash",
           success: true,
-          url,
+          url: instagramUrl,
         }),
         this.recordCost({
+          timestamp: new Date(),
           operation: "aggregation",
           cost: costs.aggregation,
           model: "gemini-2.5-flash",
           success: true,
-          url,
+          url: instagramUrl,
         }),
       ]);
 
@@ -994,7 +1244,31 @@ Retorna SOLO el texto de la biografía, sin explicaciones adicionales ni formato
       );
       console.log("=".repeat(60) + "\n");
 
-      return aggregationResult.result;
+      // Store to database
+      if (!options.skipCache) {
+        await this.storeToDatabase(
+          instagramUrl,
+          aggregationResult.result.username || "",
+          aggregationResult.result,
+          options.influencerId,
+          totalCost,
+          undefined, // No profile snapshot needed
+          options.searchContext
+        );
+      }
+
+      return {
+        success: true,
+        demographics: {
+          inference_source: "agentic",
+          model_used: "agent-audience",
+          inferred_at: new Date(),
+          is_synthetic: false,
+          ...aggregationResult.result,
+        },
+        cached: false,
+        cost: totalCost,
+      };
     } catch (error) {
       const totalTime = Date.now() - totalStartTime;
       const totalCost =
@@ -1013,14 +1287,20 @@ Retorna SOLO el texto de la biografía, sin explicaciones adicionales ni formato
       console.error("=".repeat(60) + "\n");
 
       await this.recordCost({
+        timestamp: new Date(),
         operation: "pipeline_failure",
         cost: totalCost,
         model: "agent-audience",
         success: false,
-        url,
+        url: instagramUrl,
       });
 
-      throw new Error("Failed to analyze profile");
+      return {
+        success: false,
+        error: (error as Error).message,
+        details: error,
+        cost: totalCost,
+      };
     }
   }
 }

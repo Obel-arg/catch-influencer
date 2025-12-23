@@ -44,12 +44,12 @@ export interface InstagramPost {
  */
 export interface AudienceDemographics {
   age: {
-    '13-17': number;
-    '18-24': number;
-    '25-34': number;
-    '35-44': number;
-    '45-54': number;
-    '55+': number;
+    "13-17": number;
+    "18-24": number;
+    "25-34": number;
+    "35-44": number;
+    "45-54": number;
+    "55+": number;
   };
   gender: {
     male: number;
@@ -67,7 +67,7 @@ export interface AudienceDemographics {
  * Extended audience demographics with metadata
  */
 export interface AudienceDemographicsExtended extends AudienceDemographics {
-  inference_source: 'openai';
+  inference_source: string;
   model_used: string;
   confidence_score?: number;
   inferred_at: Date;
@@ -78,12 +78,12 @@ export interface AudienceDemographicsExtended extends AudienceDemographics {
  */
 export interface OpenAIInferenceResponse {
   age: {
-    '13-17': number;
-    '18-24': number;
-    '25-34': number;
-    '35-44': number;
-    '45-54': number;
-    '55+': number;
+    "13-17": number;
+    "18-24": number;
+    "25-34": number;
+    "35-44": number;
+    "45-54": number;
+    "55+": number;
   };
   gender: {
     male: number;
@@ -240,6 +240,31 @@ export interface OpenAIAudienceInferenceDB {
   model_used: string;
   profile_data_snapshot?: Partial<InstagramProfileData>;
   // Search context fields (added in migration 20251208)
+  search_context?: SearchContext;
+  creator_location?: string;
+  target_audience_geo?: any;
+  // Timestamps
+  inferred_at: Date;
+  expires_at: Date;
+  api_cost: number;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/**
+ * Agentic Audience Inference Database Interface
+ * Same structure as OpenAI but for agentic AI analysis
+ */
+export interface AgenticAudienceInferenceDB {
+  id: string;
+  influencer_id?: string;
+  instagram_url: string;
+  instagram_username: string;
+  audience_demographics: AudienceDemographics;
+  audience_geography: any; // Same as demographics.geography
+  model_used: string;
+  profile_data_snapshot?: Partial<InstagramProfileData>;
+  // Search context fields
   search_context?: SearchContext;
   creator_location?: string;
   target_audience_geo?: any;

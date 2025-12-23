@@ -14,7 +14,7 @@ export class AgentAudienceController {
    */
   async analyzeAudience(req: Request, res: Response) {
     try {
-      const { instagramUrl } = req.query;
+      const { instagramUrl, influencerId, forceRefresh, skipCache } = req.query;
 
       if (!instagramUrl || typeof instagramUrl !== "string") {
         return res.status(400).json({
@@ -37,17 +37,38 @@ export class AgentAudienceController {
 
       const startTime = Date.now();
 
+      // Preparar opciones para el servicio
+      const options: any = {};
+      if (influencerId && typeof influencerId === "string") {
+        options.influencerId = influencerId;
+      }
+      if (forceRefresh === "true") {
+        options.forceRefresh = true;
+      }
+      if (skipCache === "true") {
+        options.skipCache = true;
+      }
+
       // Llamar al servicio para analizar la audiencia
-      const analysis = await this.agentAudienceService.analyzeProfile(
-        instagramUrl
+      const result = await this.agentAudienceService.inferAudience(
+        instagramUrl,
+        options
       );
 
       const totalTime = Date.now() - startTime;
 
       console.log(`✅ [Controller] Analysis completed in ${totalTime}ms`);
 
+      if (!result.success) {
+        return res.status(500).json({
+          error: "Error al analizar la audiencia del perfil",
+          details: result.error,
+          cost: result.cost,
+        });
+      }
+
       // Retornar el análisis en el formato especificado
-      res.json(analysis);
+      res.json(result.demographics);
     } catch (error: any) {
       console.error("❌ [Controller] Error analyzing audience:", error);
 
