@@ -126,6 +126,7 @@ export interface CacheFile {
 export interface InferenceResult {
   success: boolean;
   demographics?: AudienceDemographicsExtended;
+  description?: string; // AI-generated description for PDF export
   error?: string;
   cached?: boolean;
   cost?: number;
@@ -268,6 +269,8 @@ export interface AgenticAudienceInferenceDB {
   search_context?: SearchContext;
   creator_location?: string;
   target_audience_geo?: any;
+  // Description for PDF export
+  description?: string;
   // Timestamps
   inferred_at: Date;
   expires_at: Date;

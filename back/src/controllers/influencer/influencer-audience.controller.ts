@@ -115,6 +115,7 @@ export class InfluencerAudienceController {
       res.json({
         success: true,
         audience: result.demographics,
+        description: result.description,
         cached: result.cached,
         cost: result.cost,
       });

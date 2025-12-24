@@ -558,6 +558,8 @@ export class AgentAudienceService extends BaseAudienceService {
         search_context: searchContext || null,
         creator_location: searchContext?.creator_location || null,
         target_audience_geo: searchContext?.target_audience_geo || null,
+        // Store bio as description for PDF export
+        description: demographics.bio || null,
       };
 
       // Only add influencer_id if it's a valid UUID
@@ -1101,6 +1103,7 @@ Retorna SOLO el texto de la biografía, sin explicaciones adicionales ni formato
               inferred_at: dbCached.inferred_at,
               ...dbCached.audience_demographics,
             },
+            description: (dbCached as any).description || undefined,
             cached: true,
             cost: 0,
           };
@@ -1266,6 +1269,7 @@ Retorna SOLO el texto de la biografía, sin explicaciones adicionales ni formato
           is_synthetic: false,
           ...aggregationResult.result,
         },
+        description: aggregationResult.result.bio,
         cached: false,
         cost: totalCost,
       };
