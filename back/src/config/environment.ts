@@ -22,6 +22,10 @@ function getFrontendUrl(): string {
  * Función helper para detectar automáticamente la URL del backend
  */
 function getBackendUrl(): string {
+  if (process.env.BACKEND_URL) {
+    return process.env.BACKEND_URL;
+  }
+
   if (process.env.NODE_ENV === "production") {
     // En producción, usar siempre la URL principal
     return "https://catch-influencer-back.vercel.app";
