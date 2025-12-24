@@ -580,9 +580,12 @@ export function InfluencerProfilePanel({
         );
         if (response.success && response.audience) {
           setAudienceData(response.audience);
-          // Update cache
+          // Update cache with description
           if (onAudienceFetched) {
-            onAudienceFetched(influencer.id, response.audience);
+            onAudienceFetched(influencer.id, {
+              ...response.audience,
+              description: response.description,
+            });
           }
         }
       } catch (error) {
