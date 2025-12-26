@@ -203,8 +203,8 @@ export function InfluencerSquadPDFTemplate({
             >
               <div
                 style={{
-                  width: "200px",
-                  height: "200px",
+                  width: "180px",
+                  height: "180px",
                   borderRadius: "50%",
                   border: `6px solid ${PDF_BRANDING.colors.primary}`,
                   overflow: "hidden",

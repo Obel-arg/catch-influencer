@@ -905,8 +905,8 @@ Requisitos:
 - Destacar el tema principal, nicho o propósito de la cuenta
 - Incluir emojis relevantes si es apropiado
 - Máximo 150 caracteres
-- Si la información es insuficiente, crear una biografía genérica pero profesional basada en el contexto disponible
-- Usar un tono natural y auténtico, como si fuera la propia biografía del influencer
+- Usar un tono natural y auténtico, sin invitar a nada.
+- No usar verbos de acción, solo describir lo que hace el influencer.
 
 Retorna SOLO el texto de la biografía, sin explicaciones adicionales ni formato.`;
 
