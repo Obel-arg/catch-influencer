@@ -18,6 +18,7 @@ import {
   AudienceDemographicsExtended,
   InferenceResult,
 } from "../../models/audience/openai-audience-inference.model";
+import { BaseAudienceService } from "./base-audience.service";
 
 /**
  * Agent Audience Analysis Result
@@ -34,7 +35,6 @@ interface AgentInferenceResult {
   cost?: number;
   details?: any;
 }
-import { BaseAudienceService } from "./base-audience.service";
 
 dotenv.config();
 
@@ -894,21 +894,22 @@ export class AgentAudienceService extends BaseAudienceService {
     const startTime = Date.now();
     console.log("✍️ [Service] Generating bio with AI...");
 
-    const bioPrompt = `Basándote en la siguiente información sobre un perfil de Instagram, genera una biografía profesional y concisa para Instagram (máximo 2-3 oraciones).
+    const bioPrompt = `Basándote en la siguiente información sobre un perfil de Instagram, genera una breve presentación profesional para marcas (máximo 2-3 oraciones).
 
 Información:
 {scraped_data}
 
 Requisitos:
 - ESCRIBIR EN ESPAÑOL (español de Argentina/México/España según el contexto)
-- Ser profesional y atractiva
-- Destacar el tema principal, nicho o propósito de la cuenta
+- Ser una presentación atractiva para marcas
+- Destacar el nicho, audiencia y valor que ofrece como creator
+- Enfocarse en qué puede aportar a colaboraciones con marcas
 - Incluir emojis relevantes si es apropiado
 - Máximo 150 caracteres
-- Usar un tono natural y auténtico, sin invitar a nada.
-- No usar verbos de acción, solo describir lo que hace el influencer.
+- Usar un tono profesional y confiado
+- Destacar expertise, alcance o especialización
 
-Retorna SOLO el texto de la biografía, sin explicaciones adicionales ni formato.`;
+Retorna SOLO el texto de la presentación, sin explicaciones adicionales ni formato.`;
 
     try {
       const chain = RunnableSequence.from([
