@@ -14,11 +14,19 @@ export class InfluencerAudienceController {
   /**
    * GET /api/influencers/:id/audience/synthetic
    * Generate audience demographics using Agent inference
+   *
+   * Query params:
+   * - check_only: If true, only check cache without generating (fast path)
+   * - username: Instagram username
+   * - instagram_url: Full Instagram URL
+   * - force: Force refresh cache
+   * - search_context: JSON string with search context
    */
   async getSyntheticAudience(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { username, instagram_url, force, search_context } = req.query;
+      const { username, instagram_url, force, search_context, check_only } =
+        req.query;
 
       // Parse search context if provided
       let parsedSearchContext = undefined;
@@ -96,7 +104,41 @@ export class InfluencerAudienceController {
         );
       }
 
-      // Call Agent inference service
+      // If check_only=true, only check cache without generating
+      if (check_only === "true") {
+        console.log("[InfluencerAudience] Check-only mode - checking cache...");
+        const cachedResult = await this.agentService.inferAudience(
+          instagramUrl,
+          {
+            influencerId: influencerId,
+            forceRefresh: false,
+            searchContext: parsedSearchContext,
+            skipGeneration: true, // New option to skip generation
+          }
+        );
+
+        if (cachedResult.cached) {
+          // Data found in cache
+          return res.json({
+            success: true,
+            audience: cachedResult.demographics,
+            description: cachedResult.description,
+            cached: true,
+            generation_required: false,
+            cost: 0,
+          });
+        } else {
+          // No cache found, generation required
+          return res.json({
+            success: true,
+            cached: false,
+            generation_required: true,
+            message: "Audience data not found in cache. Generation required.",
+          });
+        }
+      }
+
+      // Call Agent inference service (full generation)
       console.log("[InfluencerAudience] Calling Agent inference...");
       const result = await this.agentService.inferAudience(instagramUrl, {
         influencerId: influencerId,

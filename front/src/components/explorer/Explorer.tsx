@@ -2878,6 +2878,10 @@ export default function Explorer() {
                 ? audienceGeo
                 : undefined,
           }}
+          onRequestOpen={(influencer) => {
+            setSelectedInfluencer(influencer);
+            setIsPanelOpen(true);
+          }}
         />
       )}
 

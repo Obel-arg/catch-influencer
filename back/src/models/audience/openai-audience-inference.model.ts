@@ -184,6 +184,7 @@ export interface InferenceOptions {
   timeout?: number; // Timeout in milliseconds
   influencerId?: string; // Influencer ID for database caching
   searchContext?: SearchContext; // Search context from Explorer UI
+  skipGeneration?: boolean; // Only check cache, don't generate if not found
 }
 
 /**

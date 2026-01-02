@@ -6,7 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { NumberDisplay } from "@/components/ui/NumberDisplay";
-import { influencerService } from "@/lib/services/influencer";
+import {
+  influencerService,
+  normalizeAudienceData,
+} from "@/lib/services/influencer";
 import { AudienceDemographics } from "@/types/audience";
 import { exportInfluencerSquadPDF } from "@/utils/influencer-pdf-export";
 import { getInstagramThumbnailValidated } from "@/utils/instagram";
@@ -15,6 +18,7 @@ import {
   getTikTokDefaultThumbnail,
   getTikTokThumbnailValidated,
 } from "@/utils/tiktok";
+import { useToast } from "@/hooks/common/useToast";
 import { Download, Info, Loader2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -29,7 +33,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { toast } from "sonner";
 
 interface InfluencerProfilePanelProps {
   influencer: any;
@@ -50,6 +53,8 @@ interface InfluencerProfilePanelProps {
       cities: Array<{ id: number; prc: number }>;
     };
   };
+  /** Callback when user clicks toast to re-open the panel after background generation */
+  onRequestOpen?: (influencer: any) => void;
 }
 
 // 🎯 Helper para usar iconos desde /public/icons
@@ -312,7 +317,10 @@ export function InfluencerProfilePanel({
   audienceCache,
   onAudienceFetched,
   searchContext,
+  onRequestOpen,
 }: InfluencerProfilePanelProps) {
+  const { showToast } = useToast();
+
   // 🎯 FUNCIÓN PARA DETECTAR SI TIENE DATOS EXTENDIDOS
   const hasExtendedData = useMemo(() => {
     if (!influencer) return false;
@@ -461,15 +469,24 @@ export function InfluencerProfilePanel({
   const requestedThumbnails = useRef<Record<string, boolean>>({});
   const [isExportingPDF, setIsExportingPDF] = useState(false);
 
+  // Track background generation jobs to avoid duplicates
+  const backgroundGenerationJobs = useRef<Set<string>>(new Set());
+
   // 📄 Export to PDF handler
   const handleExportPDF = async () => {
     try {
       setIsExportingPDF(true);
       await exportInfluencerSquadPDF(influencer.name);
-      toast.success("PDF exportado exitosamente");
+      showToast({
+        title: "PDF exportado exitosamente",
+        status: "success",
+      });
     } catch (error) {
       console.error("Error exporting PDF:", error);
-      toast.error("Error al exportar el PDF");
+      showToast({
+        title: "Error al exportar el PDF",
+        status: "error",
+      });
     } finally {
       setIsExportingPDF(false);
     }
@@ -524,6 +541,7 @@ export function InfluencerProfilePanel({
   }, [influencer]);
 
   // ✨ CARGAR AUDIENCIA SINTÉTICA CUANDO SE ABRA EL MODAL
+  // Uses a two-phase approach: fast cache check, then background generation if needed
   useEffect(() => {
     const loadSyntheticAudience = async () => {
       if (!isOpen || !influencer?.id) {
@@ -541,63 +559,167 @@ export function InfluencerProfilePanel({
         return;
       }
 
-      // If not in cache or expired, fetch from API
+      // Extract influencer data for API calls
+      const instagramUsername =
+        influencer.platformInfo?.instagram?.username ||
+        influencer.creatorId ||
+        influencer.id;
+
+      const influencerDataForApi = {
+        username: instagramUsername,
+        follower_count: influencer.followersCount || 50000,
+        platform: influencer.mainSocialPlatform || "instagram",
+        niche: influencer.categories?.[0] || undefined,
+        location: influencer.location || influencer.country || undefined,
+        search_context: searchContext,
+      };
+
+      // Phase 1: Fast cache check (check_only=true)
       setLoadingAudience(true);
-      // Clear old data while loading to prevent showing wrong data
       setAudienceData(null);
 
       try {
-        // Extract the correct Instagram username from platformInfo
         console.log(
-          "[InfluencerProfilePanel] Extracting Instagram username for influencer:",
-          influencer
-        );
-        const instagramUsername =
-          influencer.platformInfo?.instagram?.username ||
-          influencer.creatorId ||
-          influencer.id;
-
-        console.log(
-          "[InfluencerProfilePanel] Using Instagram username:",
-          instagramUsername,
-          "(from platformInfo.instagram.username)"
+          "[InfluencerProfilePanel] Phase 1: Checking cache for:",
+          influencer.name
         );
 
-        // Prepare influencer data for the API call
-        const influencerData = {
-          username: instagramUsername,
-          follower_count: influencer.followersCount || 50000,
-          platform: influencer.mainSocialPlatform || "instagram",
-          niche: influencer.categories?.[0] || undefined,
-          location: influencer.location || influencer.country || undefined,
-          // Pass search context for better AI inference
-          search_context: searchContext,
-        };
-
-        const response = await influencerService.getSyntheticAudience(
+        const cacheCheckResponse = await influencerService.getSyntheticAudience(
           influencer.id,
-          influencerData
+          influencerDataForApi,
+          true // checkOnly
         );
-        if (response.success && response.audience) {
-          setAudienceData(response.audience);
-          // Update cache with description
-          if (onAudienceFetched) {
-            onAudienceFetched(influencer.id, {
-              ...response.audience,
-              description: response.description,
-            });
+
+        if (
+          cacheCheckResponse.success &&
+          cacheCheckResponse.cached &&
+          cacheCheckResponse.audience
+        ) {
+          // Data found in server cache - use it immediately
+          console.log(`✅ Server cache hit for influencer ${influencer.id}`);
+          const normalizedData = normalizeAudienceData(
+            cacheCheckResponse.audience,
+            cacheCheckResponse.description
+          );
+          setAudienceData(normalizedData);
+          setLoadingAudience(false);
+
+          // Update client cache
+          if (onAudienceFetched && normalizedData) {
+            onAudienceFetched(influencer.id, normalizedData);
           }
+          return;
+        }
+
+        // Phase 2: Generation required - do it in background
+        if (cacheCheckResponse.generation_required) {
+          console.log(
+            `[InfluencerProfilePanel] Generation required for ${influencer.name}, starting background job`
+          );
+
+          // Stop showing loading in the panel - data will come later
+          setLoadingAudience(false);
+
+          // Check if we already have a background job for this influencer
+          if (backgroundGenerationJobs.current.has(influencer.id)) {
+            console.log(
+              `[InfluencerProfilePanel] Background job already in progress for ${influencer.id}`
+            );
+            return;
+          }
+
+          // Mark as generating
+          backgroundGenerationJobs.current.add(influencer.id);
+
+          // Store influencer reference for toast callback
+          const influencerRef = { ...influencer };
+
+          // Show "generating" toast - keep it visible until operation completes
+          const loadingToast = showToast({
+            title: `Obteniendo información de audiencia`,
+            description: `Generando datos de ${influencer.name}...`,
+            status: "info",
+            duration: Infinity, // Keep visible until dismissed
+          });
+
+          // Start background generation (don't await, let it run in background)
+          influencerService
+            .getSyntheticAudience(
+              influencer.id,
+              influencerDataForApi,
+              false // Full generation
+            )
+            .then((response) => {
+              // Remove from active jobs
+              backgroundGenerationJobs.current.delete(influencerRef.id);
+
+              // Dismiss loading toast
+              loadingToast?.dismiss();
+
+              if (response.success && response.audience) {
+                // Normalize the data
+                const normalizedData = normalizeAudienceData(
+                  response.audience,
+                  response.description
+                );
+
+                // Update client cache
+                if (onAudienceFetched && normalizedData) {
+                  onAudienceFetched(influencerRef.id, normalizedData);
+                }
+
+                // Show success toast with action button to open panel
+                showToast({
+                  title: `Información de ${influencerRef.name} obtenida`,
+                  description: "Haz clic para ver los datos de audiencia",
+                  status: "success",
+                  duration: 10000,
+                  action: onRequestOpen
+                    ? {
+                        label: "Ver perfil",
+                        onClick: () => onRequestOpen(influencerRef),
+                      }
+                    : undefined,
+                });
+              } else {
+                showToast({
+                  title: `Error al obtener información`,
+                  description: `No se pudo obtener datos de ${influencerRef.name}`,
+                  status: "error",
+                });
+              }
+            })
+            .catch((error) => {
+              console.error("Error in background audience generation:", error);
+              backgroundGenerationJobs.current.delete(influencerRef.id);
+
+              // Dismiss loading toast
+              loadingToast?.dismiss();
+
+              showToast({
+                title: `Error al obtener información`,
+                description: `No se pudo obtener datos de ${influencerRef.name}`,
+                status: "error",
+              });
+            });
         }
       } catch (error) {
         console.error("Error loading synthetic audience:", error);
         setAudienceData(null);
-      } finally {
         setLoadingAudience(false);
       }
     };
 
     loadSyntheticAudience();
-  }, [isOpen, influencer?.id, influencer?.name]);
+  }, [
+    isOpen,
+    influencer?.id,
+    influencer?.name,
+    audienceCache,
+    onAudienceFetched,
+    onRequestOpen,
+    searchContext,
+  ]);
 
   const platformData = useMemo(() => {
     if (!influencer?.platformInfo) return null;
@@ -1054,7 +1176,7 @@ export function InfluencerProfilePanel({
                     </div>
                   ) : (
                     <div className="text-center py-8 text-gray-500">
-                      No hay datos de audiencia disponibles
+                      No hay datos de audiencia disponibles, generando...
                     </div>
                   )}
                 </div>

@@ -1123,6 +1123,18 @@ Información del creador:
         }
       }
 
+      // If skipGeneration is true and no cache found, return early
+      if (options.skipGeneration) {
+        console.log(
+          `⏭️ Skip generation mode - no cache found for: ${instagramUrl}`
+        );
+        return {
+          success: true,
+          cached: false,
+          cost: 0,
+        };
+      }
+
       // 1. Scrape profile data with Tavily
       const scrapingStart = Date.now();
       const scrapedData = await this.scrapeProfile(instagramUrl);
