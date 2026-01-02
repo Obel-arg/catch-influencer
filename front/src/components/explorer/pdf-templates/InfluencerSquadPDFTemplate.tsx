@@ -14,7 +14,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { AudienceDemographics } from "@/types/audience";
-import { PDF_BRANDING, getCurrentSpanishDate } from "@/constants/pdf-branding";
+import { PDF_BRANDING } from "@/constants/pdf-branding";
 
 interface InfluencerSquadPDFTemplateProps {
   influencer: any;
@@ -203,8 +203,8 @@ export function InfluencerSquadPDFTemplate({
             >
               <div
                 style={{
-                  width: "180px",
-                  height: "180px",
+                  width: "150px",
+                  height: "150px",
                   borderRadius: "50%",
                   border: `6px solid ${PDF_BRANDING.colors.primary}`,
                   overflow: "hidden",
@@ -270,7 +270,7 @@ export function InfluencerSquadPDFTemplate({
                 <p
                   style={{
                     fontSize: "12px",
-                    lineHeight: 1.6,
+                    lineHeight: 1.3,
                     color: PDF_BRANDING.colors.text.secondary,
                     margin: 0,
                     textAlign: "left",
@@ -370,7 +370,7 @@ export function InfluencerSquadPDFTemplate({
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
-                  gap: "12px",
+                  gap: "6px",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
                 }}
               >

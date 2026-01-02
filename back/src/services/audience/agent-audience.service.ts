@@ -894,22 +894,35 @@ export class AgentAudienceService extends BaseAudienceService {
     const startTime = Date.now();
     console.log("✍️ [Service] Generating bio with AI...");
 
-    const bioPrompt = `Basándote en la siguiente información sobre un perfil de Instagram, genera una breve presentación profesional para marcas (máximo 2-3 oraciones).
+    const bioPrompt = `
+Sos un generador de biografías breves de creadores de contenido e influencers. 
+Tu tarea es escribir una BIO corta y descriptiva del creador.
+Reglas estrictas:
+- Extensión máxima: 3 a 4 líneas.
+- Estilo: narrativo, claro y neutral.
+- Enfoque cultural y creativo, no comercial.
+- No incluir datos demográficos, métricas, audiencia ni marcas.
+- No mencionar colaboraciones, fit comercial ni llamados a la acción.
+- No usar emojis, hashtags ni bullets.
+- Evitar adjetivos exagerados o lenguaje promocional.
+- Contenido obligatorio:
+- Quién es el creador.
+- Qué lo define creativamente.
+- Por qué es relevante en la cultura actual.
+Tono:
+- Editorial.
+- Profesional.
+- Objetivo.
+Formato de salida:
+- Un único párrafo de texto plano.
+- Sin títulos.
+- Sin saltos innecesarios.
+- Frases completas, no cortar frases en medio.
+Escribí la BIO como si fuera a incluirse en una ficha descargable para evaluación general del creador.
 
-Información:
+Información del creador:
 {scraped_data}
-
-Requisitos:
-- ESCRIBIR EN ESPAÑOL (español de Argentina/México/España según el contexto)
-- Ser una presentación atractiva para marcas
-- Destacar el nicho, audiencia y valor que ofrece como creator
-- Enfocarse en qué puede aportar a colaboraciones con marcas
-- Incluir emojis relevantes si es apropiado
-- Máximo 150 caracteres
-- Usar un tono profesional y confiado
-- Destacar expertise, alcance o especialización
-
-Retorna SOLO el texto de la presentación, sin explicaciones adicionales ni formato.`;
+`;
 
     try {
       const chain = RunnableSequence.from([
@@ -957,8 +970,7 @@ Retorna SOLO el texto de la presentación, sin explicaciones adicionales ni form
       const cleanBio = bioContent
         .replace(/```/g, "")
         .replace(/^["']|["']$/g, "")
-        .trim()
-        .substring(0, 150); // Limitar a 150 caracteres
+        .trim();
 
       const elapsedTime = Date.now() - startTime;
       const estimatedInputTokens = this.estimateTokens(scrapedData);

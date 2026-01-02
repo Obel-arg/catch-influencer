@@ -98,15 +98,10 @@ export class HypeAuditorDiscoveryController {
 
       // Realizar búsqueda en HypeAuditor (suggester con query parameters)
       const suggestionResponse = await service.searchSuggestion(search, st);
-      console.log(
-        "######################## SUGGESTION DATA ########################"
-      );
-      console.log("discoveryResponse", suggestionResponse);
 
       // Transformar respuesta al formato del Explorer
       const explorerResponse =
         service.transformHypeAuditorSuggestionToExplorer(suggestionResponse);
-      console.log("explorerResponse", explorerResponse);
 
       res.json(explorerResponse);
     } catch (error: any) {
@@ -282,7 +277,11 @@ export class HypeAuditorDiscoveryController {
       }
 
       const service = HypeAuditorDiscoveryController.getDiscoveryService();
-      const contentIdsArray = (Array.isArray(contentIds) ? contentIds : (contentIds as string).split(',')).map(String);
+      const contentIdsArray = (
+        Array.isArray(contentIds)
+          ? contentIds
+          : (contentIds as string).split(",")
+      ).map(String);
       const posts = await service.searchKeywordsPosts(
         socialNetwork as string,
         contentIdsArray
@@ -310,12 +309,12 @@ export class HypeAuditorDiscoveryController {
       const service = HypeAuditorDiscoveryController.getDiscoveryService();
 
       // Test actual API connection
-      let apiTest = { working: false, error: null as any };
+      const apiTest = { working: false, error: null as any };
       try {
         const testResult = await service.searchDiscovery({
-          social_network: 'instagram',
+          social_network: "instagram",
           page: 1,
-          subscribers_count: { from: 10000, to: 50000 }
+          subscribers_count: { from: 10000, to: 50000 },
         });
         apiTest.working = !!testResult;
       } catch (error: any) {
@@ -324,16 +323,16 @@ export class HypeAuditorDiscoveryController {
 
       res.json({
         success: true,
-        status: 'ok',
-        message: 'HypeAuditor Discovery service is running',
+        status: "ok",
+        message: "HypeAuditor Discovery service is running",
         provider: "HypeAuditor Discovery",
         timestamp: new Date().toISOString(),
         apiTest,
         env: {
           hasClientId: !!process.env.HYPEAUDITOR_CLIENT_ID,
           hasToken: !!process.env.HYPEAUDITOR_API_TOKEN,
-          nodeEnv: process.env.NODE_ENV
-        }
+          nodeEnv: process.env.NODE_ENV,
+        },
       });
     } catch (error: any) {
       res.status(500).json({
@@ -352,11 +351,11 @@ export class HypeAuditorDiscoveryController {
       res.json({
         success: true,
         data: {
-          status: 'operational',
-          message: 'Usage stats not available'
+          status: "operational",
+          message: "Usage stats not available",
         },
         provider: "HypeAuditor Discovery",
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     } catch (error: any) {
       res.status(400).json({
