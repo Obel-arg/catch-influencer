@@ -699,8 +699,9 @@ export default function Explorer() {
           // 🎯 Metadatos adicionales para debugging
           searchMeta: inf.searchMeta || null,
           followerBreakdown: inf.followerBreakdown || null,
-          // Audience data cache status
-          hasAudienceData: inf.hasAudienceData || false,
+          // Audience data cache status - check both backend data and local cache
+          hasAudienceData:
+            inf.hasAudienceData || !!audienceCache[inf.creatorId],
         };
 
         return adaptedInfluencer;
@@ -716,7 +717,7 @@ export default function Explorer() {
     ).length;
 
     return adapted;
-  }, [influencers, platform]);
+  }, [influencers, platform, audienceCache]);
 
   const filteredInfluencers = useMemo(() => {
     return adaptedInfluencers.filter((influencer) => {

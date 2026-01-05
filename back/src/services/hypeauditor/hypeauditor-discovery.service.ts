@@ -906,11 +906,20 @@ export class HypeAuditorDiscoveryService {
     return hypeAuditorRequest;
   }
 
-  transformHypeAuditorSuggestionToExplorer(
+  async transformHypeAuditorSuggestionToExplorer(
     response: any
-  ): ExplorerSearchResponse {
+  ): Promise<ExplorerSearchResponse> {
     // Mapear los datos del suggester (que usa 'list' en lugar de 'search_results')
     // y tienen una estructura diferente en la raíz del elemento
+
+    // Extract usernames for cache checking
+    const usernames = (response.result?.list || [])
+      .map((item: any) => item.username)
+      .filter((username: any): username is string => !!username);
+
+    // Check which influencers have cached audience data
+    const audienceCacheMap = await this.checkAudienceDataCached(usernames);
+
     const items: ExplorerResult[] = (response.result?.list || []).map(
       (item: any, index: number) => {
         // Mapear redes sociales desde social_networks
@@ -1021,6 +1030,8 @@ export class HypeAuditorDiscoveryService {
           },
           // Datos adicionales
           audienceData: undefined,
+          // Audience cache status
+          hasAudienceData: audienceCacheMap[item.username || ""] || false,
         };
       }
     );
@@ -1055,16 +1066,17 @@ export class HypeAuditorDiscoveryService {
   private async checkAudienceDataCached(
     usernames: string[]
   ): Promise<Record<string, boolean>> {
-    if (usernames.length === 0) return {};
-
-    console.log("Checking audience data cached for usernames:", usernames);
+    if (usernames.length === 0) {
+      return {};
+    }
 
     try {
+      const currentTime = new Date().toISOString();
       const { data, error } = await supabase
         .from("agentic_audience_inferences")
-        .select("instagram_username")
+        .select("instagram_username, expires_at")
         .in("instagram_username", usernames)
-        .not("expires_at", "lt", new Date().toISOString());
+        .not("expires_at", "lt", currentTime);
 
       if (error) {
         console.warn(

@@ -101,7 +101,9 @@ export class HypeAuditorDiscoveryController {
 
       // Transformar respuesta al formato del Explorer
       const explorerResponse =
-        service.transformHypeAuditorSuggestionToExplorer(suggestionResponse);
+        await service.transformHypeAuditorSuggestionToExplorer(
+          suggestionResponse
+        );
 
       res.json(explorerResponse);
     } catch (error: any) {
