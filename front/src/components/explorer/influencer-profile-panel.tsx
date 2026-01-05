@@ -713,12 +713,14 @@ export function InfluencerProfilePanel({
     loadSyntheticAudience();
   }, [
     isOpen,
-    influencer?.id,
-    influencer?.name,
+    influencer.id,
+    influencer.name,
     audienceCache,
     onAudienceFetched,
     onRequestOpen,
     searchContext,
+    influencer,
+    showToast,
   ]);
 
   const platformData = useMemo(() => {
