@@ -518,6 +518,34 @@ export default function Explorer() {
   // - Paginación interna con datos cargados
   // - Sin cache complejo ni múltiples proveedores
 
+  // Memoize searchContext to prevent infinite loops in InfluencerProfilePanel
+  const memoizedSearchContext = useMemo(
+    () => ({
+      location: location !== "all" ? location : undefined,
+      audienceGeo:
+        audienceGeo.countries.length > 0 || audienceGeo.cities.length > 0
+          ? audienceGeo
+          : undefined,
+    }),
+    [location, audienceGeo]
+  );
+
+  // Memoize callbacks for InfluencerProfilePanel to prevent infinite loops
+  const handleAudienceFetched = useCallback((id: string, data: unknown) => {
+    setAudienceCache((prev) => ({
+      ...prev,
+      [id]: { data, timestamp: Date.now() },
+    }));
+  }, []);
+
+  const handleRequestOpen = useCallback(
+    (influencer: (typeof adaptedInfluencers)[number]) => {
+      setSelectedInfluencer(influencer);
+      setIsPanelOpen(true);
+    },
+    []
+  );
+
   const adaptedInfluencers = useMemo(() => {
     if (influencers.length === 0) {
       return [];
@@ -2865,23 +2893,9 @@ export default function Explorer() {
           onClose={() => setIsPanelOpen(false)}
           isLoading={loadingPanel}
           audienceCache={audienceCache}
-          onAudienceFetched={(id, data) => {
-            setAudienceCache((prev) => ({
-              ...prev,
-              [id]: { data, timestamp: Date.now() },
-            }));
-          }}
-          searchContext={{
-            location: location !== "all" ? location : undefined,
-            audienceGeo:
-              audienceGeo.countries.length > 0 || audienceGeo.cities.length > 0
-                ? audienceGeo
-                : undefined,
-          }}
-          onRequestOpen={(influencer) => {
-            setSelectedInfluencer(influencer);
-            setIsPanelOpen(true);
-          }}
+          onAudienceFetched={handleAudienceFetched}
+          searchContext={memoizedSearchContext}
+          onRequestOpen={handleRequestOpen}
           platformFilter={platform}
         />
       )}

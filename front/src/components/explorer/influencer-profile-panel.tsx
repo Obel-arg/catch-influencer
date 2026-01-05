@@ -714,17 +714,11 @@ export function InfluencerProfilePanel({
     };
 
     loadSyntheticAudience();
-  }, [
-    isOpen,
-    influencer.id,
-    influencer.name,
-    audienceCache,
-    onAudienceFetched,
-    onRequestOpen,
-    searchContext,
-    influencer,
-    showToast,
-  ]);
+    // NOTE: We intentionally only depend on influencer.id to prevent infinite loops.
+    // The effect accesses other influencer properties via closure, but we only want
+    // to re-run when the influencer ID changes (meaning a different influencer is selected).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, influencer.id, audienceCache, onAudienceFetched, searchContext]);
 
   const platformData = useMemo(() => {
     if (!influencer?.platformInfo) return null;
