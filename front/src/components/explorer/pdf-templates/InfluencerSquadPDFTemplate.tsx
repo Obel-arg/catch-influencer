@@ -158,13 +158,13 @@ export function InfluencerSquadPDFTemplate({
         {/* Header */}
         <div
           style={{
-            height: "50px",
+            height: "40px",
             background: `linear-gradient(135deg, ${PDF_BRANDING.colors.primary} 0%, ${PDF_BRANDING.colors.secondary} 100%)`,
             borderRadius: "24px 24px 0 0",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            padding: "20px",
+            padding: "0 20px",
           }}
         >
           <div style={{ color: "white", fontSize: "13px", fontWeight: 600 }}>
@@ -181,10 +181,10 @@ export function InfluencerSquadPDFTemplate({
         {/* Main Content Area - Grid Layout */}
         <div
           style={{
-            padding: "30px 40px 50px 40px",
+            padding: "20px 30px",
             display: "grid",
-            gridTemplateColumns: "280px 1fr",
-            gap: "24px",
+            gridTemplateColumns: "260px 1fr",
+            gap: "16px",
             flex: 1,
             alignItems: "start",
           }}
@@ -197,8 +197,8 @@ export function InfluencerSquadPDFTemplate({
                 display: "flex",
                 justifyContent: "center",
                 alignItems: "center",
-                padding: "10px",
-                paddingBottom: "4px",
+                padding: "5px",
+                paddingBottom: "2px",
               }}
             >
               <div
@@ -243,11 +243,11 @@ export function InfluencerSquadPDFTemplate({
               style={{
                 backgroundColor: "white",
                 borderRadius: "16px",
-                padding: "20px",
-                paddingTop: "12px",
+                padding: "15px",
+                paddingTop: "10px",
                 display: "flex",
                 flexDirection: "column",
-                gap: "14px",
+                gap: "10px",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
               }}
             >
@@ -366,7 +366,7 @@ export function InfluencerSquadPDFTemplate({
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: "8px",
+              gap: "12px",
               width: "100%",
             }}
           >
@@ -376,7 +376,7 @@ export function InfluencerSquadPDFTemplate({
                 style={{
                   backgroundColor: "white",
                   borderRadius: "16px",
-                  padding: "16px 20px",
+                  padding: "10px 15px",
                   display: "flex",
                   flexDirection: "column",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
@@ -388,17 +388,17 @@ export function InfluencerSquadPDFTemplate({
                     fontWeight: 700,
                     color: PDF_BRANDING.colors.text.primary,
                     marginTop: 0,
-                    marginBottom: "8px",
+                    marginBottom: "4px",
                   }}
                 >
                   DISTRIBUCIÓN POR EDAD
                 </h3>
 
-                <div style={{ width: "100%", height: "160px" }}>
+                <div style={{ width: "100%", height: "180px" }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={ageData}
-                      margin={{ top: 5, right: 20, bottom: 15, left: 0 }}
+                      margin={{ top: 5, right: 10, bottom: 0, left: -20 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                       <XAxis
@@ -433,7 +433,7 @@ export function InfluencerSquadPDFTemplate({
                 style={{
                   backgroundColor: "white",
                   borderRadius: "16px",
-                  padding: "16px 20px",
+                  padding: "10px 12px",
                   display: "flex",
                   flexDirection: "column",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
@@ -445,18 +445,18 @@ export function InfluencerSquadPDFTemplate({
                     fontWeight: 700,
                     color: PDF_BRANDING.colors.text.primary,
                     marginTop: 0,
-                    marginBottom: "4px",
+                    marginBottom: "2px",
                   }}
                 >
                   DISTRIBUCIÓN GEOGRÁFICA
                 </h3>
 
-                <div style={{ width: "100%", height: "200px" }}>
+                <div style={{ width: "100%", height: "225px" }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={geographyData}
                       layout="vertical"
-                      margin={{ top: 5, right: 30, bottom: 5, left: 10 }}
+                      margin={{ top: 5, right: 35, bottom: 5, left: -10 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                       <XAxis
@@ -500,7 +500,7 @@ export function InfluencerSquadPDFTemplate({
                 style={{
                   backgroundColor: "white",
                   borderRadius: "16px",
-                  padding: "16px 20px",
+                  padding: "10px 15px",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
                 }}
               >
@@ -510,7 +510,7 @@ export function InfluencerSquadPDFTemplate({
                     fontSize: "13px",
                     fontWeight: 700,
                     color: PDF_BRANDING.colors.text.primary,
-                    margin: "0 0 12px 0",
+                    margin: "0 0 6px 0",
                   }}
                 >
                   DISTRIBUCIÓN POR GÉNERO
@@ -522,14 +522,14 @@ export function InfluencerSquadPDFTemplate({
                     display: "flex",
                     flexDirection: "row",
                     alignItems: "center",
-                    gap: "20px",
+                    gap: "10px",
                   }}
                 >
                   {/* Compact Donut Chart */}
                   <div
                     style={{
-                      width: "100px",
-                      height: "100px",
+                      width: "80px",
+                      height: "80px",
                       flexShrink: 0,
                     }}
                   >
@@ -560,78 +560,84 @@ export function InfluencerSquadPDFTemplate({
                     </ResponsiveContainer>
                   </div>
 
-                  {/* Gender labels */}
-                  <div style={{ display: "flex", gap: "24px" }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                      }}
-                    >
-                      <svg width="10" height="10" style={{ flexShrink: 0 }}>
-                        <circle
-                          cx="5"
-                          cy="5"
-                          r="5"
+                  {/* Gender labels as SVG badges */}
+                  <div style={{ display: "flex", gap: "16px" }}>
+                    <div style={{ whiteSpace: "nowrap", lineHeight: "24px" }}>
+                      <svg
+                        width="60"
+                        height="24"
+                        style={{
+                          display: "inline-block",
+                          verticalAlign: "middle",
+                          marginRight: "8px",
+                        }}
+                      >
+                        <rect
+                          width="60"
+                          height="24"
+                          rx="6"
                           fill={PDF_BRANDING.colors.primary}
                         />
+                        <text
+                          x="30"
+                          y="12"
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          fill="white"
+                          fontSize="13"
+                          fontWeight="700"
+                          fontFamily="system-ui, -apple-system, sans-serif"
+                        >
+                          {genderData[0]?.value}%
+                        </text>
                       </svg>
                       <span
                         style={{
-                          fontSize: "14px",
-                          fontWeight: 700,
-                          color: PDF_BRANDING.colors.text.primary,
-                          position: "relative",
-                          top: "-1px",
-                        }}
-                      >
-                        {genderData[0]?.value}%
-                      </span>
-                      <span
-                        style={{
+                          display: "inline-block",
                           fontSize: "14px",
                           color: PDF_BRANDING.colors.text.secondary,
-                          position: "relative",
-                          top: "-1px",
+                          verticalAlign: "middle",
                         }}
                       >
                         Mujeres
                       </span>
                     </div>
 
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                      }}
-                    >
-                      <svg width="10" height="10" style={{ flexShrink: 0 }}>
-                        <circle
-                          cx="5"
-                          cy="5"
-                          r="5"
+                    <div style={{ whiteSpace: "nowrap", lineHeight: "24px" }}>
+                      <svg
+                        width="60"
+                        height="24"
+                        style={{
+                          display: "inline-block",
+                          verticalAlign: "middle",
+                          marginRight: "8px",
+                        }}
+                      >
+                        <rect
+                          width="60"
+                          height="24"
+                          rx="6"
                           fill={PDF_BRANDING.colors.cyan}
                         />
+                        <text
+                          x="30"
+                          y="12"
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          fill="white"
+                          fontSize="13"
+                          fontWeight="700"
+                          fontFamily="system-ui, -apple-system, sans-serif"
+                        >
+                          {genderData[1]?.value}%
+                        </text>
                       </svg>
                       <span
                         style={{
-                          fontSize: "14px",
-                          fontWeight: 700,
-                          color: PDF_BRANDING.colors.text.primary,
-                          position: "relative",
-                          top: "-1px",
-                        }}
-                      >
-                        {genderData[1]?.value}%
-                      </span>
-                      <span
-                        style={{
+                          display: "inline-block",
                           fontSize: "14px",
                           color: PDF_BRANDING.colors.text.secondary,
-                          position: "relative",
-                          top: "-1px",
+                          verticalAlign: "middle",
                         }}
                       >
                         Hombres
