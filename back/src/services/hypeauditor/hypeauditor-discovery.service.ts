@@ -1,9 +1,9 @@
-import * as https from 'https';
-import { promisify } from 'util';
+import * as https from "https";
+import { supabase } from "../../lib/supabase";
 
 // Interfaces específicas para Discovery
 export interface DiscoverySearchRequest {
-  social_network: 'instagram' | 'youtube' | 'tiktok' | 'twitter' | 'twitch';
+  social_network: "instagram" | "youtube" | "tiktok" | "twitter" | "twitch";
   page?: number;
   search?: string[];
   search_content?: string[];
@@ -11,10 +11,10 @@ export interface DiscoverySearchRequest {
   search_description?: string[];
   category?: { include?: number[]; exclude?: number[] };
   account_geo?: { country: string[] };
-  account_gender?: 'male' | 'female';
+  account_gender?: "male" | "female";
   account_age?: { min: number; max: number };
   account_languages?: string[];
-  account_type?: 'brand' | 'human';
+  account_type?: "brand" | "human";
   account_has_contacts?: boolean;
   account_has_launched_advertising?: boolean;
   account_mentions?: { include?: string[]; exclude?: string[] };
@@ -48,9 +48,9 @@ export interface DiscoverySearchRequest {
   twitter_replies?: { min: number; max: number };
   twitter_retweet?: { min: number; max: number };
   twitter_tweet?: { min: number; max: number };
-  sort?: { field: string; order: 'asc' | 'desc' };
+  sort?: { field: string; order: "asc" | "desc" };
   audience_age?: { groups: string[]; prc: number };
-  audience_gender?: { gender: 'male' | 'female'; prc: number };
+  audience_gender?: { gender: "male" | "female"; prc: number };
   audience_geo?: {
     countries?: Array<{ id: string; prc: number }>;
     cities?: Array<{ id: number; prc: number }>;
@@ -173,14 +173,14 @@ export interface ExplorerFilters {
 
   // Ordenamiento
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 
   // Paginación
   page?: number;
   size?: number;
 
   // Filtros adicionales
-  accountType?: 'brand' | 'human';
+  accountType?: "brand" | "human";
   verified?: boolean;
   hasContacts?: boolean;
   hasLaunchedAdvertising?: boolean;
@@ -191,7 +191,7 @@ export interface ExplorerFilters {
 
   // Filtros de audiencia (formato del frontend)
   audienceAge?: { minAge: number; maxAge: number; percentage: number };
-  audienceGender?: { gender: 'male' | 'female' | 'any'; percentage: number };
+  audienceGender?: { gender: "male" | "female" | "any"; percentage: number };
   audienceGeo?: {
     countries: { [key: string]: number };
     cities: { [key: string]: number };
@@ -234,7 +234,7 @@ export interface ExplorerFilters {
 
   // Filtros de Instagram
   accountAge?: { min: number; max: number };
-  accountGender?: 'male' | 'female';
+  accountGender?: "male" | "female";
   accountLanguages?: string[];
   accountMentions?: {
     include?: string[];
@@ -292,6 +292,7 @@ export interface ExplorerResult {
       prc: number;
     }>;
   };
+  hasAudienceData?: boolean;
 }
 
 export interface ExplorerSearchResponse {
@@ -314,73 +315,97 @@ export interface ExplorerSearchResponse {
 
 export class HypeAuditorDiscoveryService {
   private static instance: HypeAuditorDiscoveryService;
-  private readonly baseUrl = 'https://hypeauditor.com';
+  private readonly baseUrl = "https://hypeauditor.com";
 
   // Credenciales de HypeAuditor (usar env vars o fallback)
-  private readonly CLIENT_ID = process.env.HYPEAUDITOR_CLIENT_ID || '2694138';
-  private readonly API_TOKEN = process.env.HYPEAUDITOR_API_TOKEN || '$2y$04$27ZuGEARpPSjtwdBhJnf6OYuZKqTxKFkGi723IpY4MxJefff3Lgsa';
+  private readonly CLIENT_ID = process.env.HYPEAUDITOR_CLIENT_ID || "2694138";
+  private readonly API_TOKEN =
+    process.env.HYPEAUDITOR_API_TOKEN ||
+    "$2y$04$27ZuGEARpPSjtwdBhJnf6OYuZKqTxKFkGi723IpY4MxJefff3Lgsa";
 
   private constructor() {
-    console.log('[HypeAuditor Discovery] Initialized with:', {
+    console.log("[HypeAuditor Discovery] Initialized with:", {
       clientId: this.CLIENT_ID,
       hasToken: !!this.API_TOKEN,
-      tokenPreview: this.API_TOKEN?.substring(0, 20) + '...'
+      tokenPreview: this.API_TOKEN?.substring(0, 20) + "...",
     });
   }
 
   // Función helper para hacer peticiones HTTPS
   private async makeHttpsRequest(endpoint: string, data?: any): Promise<any> {
     return new Promise((resolve, reject) => {
-      const postData = data ? JSON.stringify(data) : '';
+      const postData = data ? JSON.stringify(data) : "";
 
       const options = {
-        hostname: 'hypeauditor.com',
+        hostname: "hypeauditor.com",
         port: 443,
         path: endpoint,
-        method: data ? 'POST' : 'GET',
+        method: data ? "POST" : "GET",
         headers: {
-          'Content-Type': 'application/json',
-          'X-Auth-Id': this.CLIENT_ID,
-          'X-Auth-Token': this.API_TOKEN,
-          ...(data && { 'Content-Length': Buffer.byteLength(postData) }),
+          "Content-Type": "application/json",
+          "X-Auth-Id": this.CLIENT_ID,
+          "X-Auth-Token": this.API_TOKEN,
+          ...(data && { "Content-Length": Buffer.byteLength(postData) }),
         },
       };
 
-      console.log(`[HypeAuditor] Making request to: ${options.method} https://${options.hostname}${options.path}`);
-      console.log(`[HypeAuditor] Auth headers: X-Auth-Id=${this.CLIENT_ID}, X-Auth-Token=${this.API_TOKEN.substring(0, 20)}...`);
+      console.log(
+        `[HypeAuditor] Making request to: ${options.method} https://${options.hostname}${options.path}`
+      );
+      console.log(
+        `[HypeAuditor] Auth headers: X-Auth-Id=${
+          this.CLIENT_ID
+        }, X-Auth-Token=${this.API_TOKEN.substring(0, 20)}...`
+      );
       if (data) {
-        console.log(`[HypeAuditor] Request body:`, JSON.stringify(data, null, 2).substring(0, 500));
+        console.log(
+          `[HypeAuditor] Request body:`,
+          JSON.stringify(data, null, 2).substring(0, 500)
+        );
       }
 
       const req = https.request(options, (res) => {
-        let responseData = '';
-        res.on('data', (chunk) => {
+        let responseData = "";
+        res.on("data", (chunk) => {
           responseData += chunk;
         });
 
-        res.on('end', () => {
+        res.on("end", () => {
           try {
             // Log the response status and first 500 chars for debugging
             console.log(`[HypeAuditor] Response status: ${res.statusCode}`);
             console.log(`[HypeAuditor] Response headers:`, res.headers);
-            console.log(`[HypeAuditor] Response preview:`, responseData.substring(0, 500));
+            console.log(
+              `[HypeAuditor] Response preview:`,
+              responseData.substring(0, 500)
+            );
 
             // Check if response is HTML (error page)
-            if (responseData.trim().startsWith('<!DOCTYPE') || responseData.trim().startsWith('<html')) {
-              reject(new Error(`HypeAuditor API returned HTML error page instead of JSON. Status: ${res.statusCode}. This usually means authentication failed or the API endpoint is incorrect.`));
+            if (
+              responseData.trim().startsWith("<!DOCTYPE") ||
+              responseData.trim().startsWith("<html")
+            ) {
+              reject(
+                new Error(
+                  `HypeAuditor API returned HTML error page instead of JSON. Status: ${res.statusCode}. This usually means authentication failed or the API endpoint is incorrect.`
+                )
+              );
               return;
             }
 
             const response = JSON.parse(responseData);
             resolve(response);
           } catch (error: any) {
-            console.error(`[HypeAuditor] Failed to parse response. Raw response:`, responseData.substring(0, 1000));
+            console.error(
+              `[HypeAuditor] Failed to parse response. Raw response:`,
+              responseData.substring(0, 1000)
+            );
             reject(new Error(`Error parsing response: ${error.message}`));
           }
         });
       });
 
-      req.on('error', (error) => {
+      req.on("error", (error) => {
         reject(new Error(`Request failed: ${error.message}`));
       });
 
@@ -402,20 +427,20 @@ export class HypeAuditorDiscoveryService {
    * Realiza una búsqueda de discovery (producción)
    */
   async searchDiscovery(
-    request: DiscoverySearchRequest,
+    request: DiscoverySearchRequest
   ): Promise<DiscoveryResponse> {
     try {
       const response = await this.makeHttpsRequest(
-        '/api/method/auditor.search',
-        request,
+        "/api/method/auditor.search",
+        request
       );
-
-      // 🔍 LOG: Complete response structure for username debugging
-      console.log('🔍 [HypeAuditor Discovery] FULL RESPONSE:', JSON.stringify(response, null, 2));
 
       // Log first result to see structure clearly
       if (response?.result?.items && response.result.items.length > 0) {
-        console.log('🔍 [HypeAuditor Discovery] FIRST ITEM STRUCTURE:', JSON.stringify(response.result.items[0], null, 2));
+        console.log(
+          "🔍 [HypeAuditor Discovery] FIRST ITEM STRUCTURE:",
+          JSON.stringify(response.result.items[0], null, 2)
+        );
       }
 
       return response;
@@ -424,10 +449,7 @@ export class HypeAuditorDiscoveryService {
     }
   }
 
-  async searchSuggestion(
-    search: string | string[],
-    st?: string,
-  ): Promise<any> {
+  async searchSuggestion(search: string | string[], st?: string): Promise<any> {
     try {
       // Build query parameters
       const searchParam = Array.isArray(search) ? search[0] : search;
@@ -449,10 +471,10 @@ export class HypeAuditorDiscoveryService {
    * Transforma los filtros del Explorer al formato de HypeAuditor
    */
   transformExplorerFiltersToHypeAuditor(
-    filters: ExplorerFilters,
+    filters: ExplorerFilters
   ): DiscoverySearchRequest {
     const hypeAuditorRequest: DiscoverySearchRequest = {
-      social_network: this.mapPlatformToHypeAuditor(filters.platform || 'all'),
+      social_network: this.mapPlatformToHypeAuditor(filters.platform || "all"),
       page: filters.page || 1,
     };
 
@@ -505,8 +527,8 @@ export class HypeAuditorDiscoveryService {
       const nicheNames = filters.selectedCategories.filter(
         (cat) =>
           isNaN(parseInt(cat as any, 10)) &&
-          typeof cat === 'string' &&
-          cat.trim().length > 0,
+          typeof cat === "string" &&
+          cat.trim().length > 0
       );
 
       if (numericIds.length > 0) {
@@ -519,7 +541,7 @@ export class HypeAuditorDiscoveryService {
     }
 
     // Ubicación de la cuenta
-    if (filters.location && filters.location !== 'all') {
+    if (filters.location && filters.location !== "all") {
       hypeAuditorRequest.account_geo = {
         country: [filters.location],
       };
@@ -583,7 +605,7 @@ export class HypeAuditorDiscoveryService {
     }
 
     // CQS (Channel Quality Score) - solo YouTube
-    if (filters.cqs && hypeAuditorRequest.social_network === 'youtube') {
+    if (filters.cqs && hypeAuditorRequest.social_network === "youtube") {
       hypeAuditorRequest.cqs = filters.cqs;
     }
 
@@ -622,7 +644,7 @@ export class HypeAuditorDiscoveryService {
     // Crecimiento
     if (filters.selectedGrowthRate) {
       hypeAuditorRequest.growth = {
-        period: filters.selectedGrowthRate.period || '30d',
+        period: filters.selectedGrowthRate.period || "30d",
         from: filters.selectedGrowthRate.min,
         to: filters.selectedGrowthRate.max,
       };
@@ -631,10 +653,10 @@ export class HypeAuditorDiscoveryService {
     // Crecimiento de likes (solo TikTok)
     if (
       filters.likesGrowthPrc &&
-      hypeAuditorRequest.social_network === 'tiktok'
+      hypeAuditorRequest.social_network === "tiktok"
     ) {
       hypeAuditorRequest.likes_growth_prc = {
-        period: filters.likesGrowthPrc.period || '30d',
+        period: filters.likesGrowthPrc.period || "30d",
         from: filters.likesGrowthPrc.min,
         to: filters.likesGrowthPrc.max,
       };
@@ -647,20 +669,20 @@ export class HypeAuditorDiscoveryService {
 
     // Precios de blogger
     if (filters.bloggerPrices) {
-      hypeAuditorRequest['blogger_prices'] = {
+      hypeAuditorRequest["blogger_prices"] = {
         post_price: filters.bloggerPrices,
       };
     }
 
     // Ingresos (solo Instagram)
-    if (filters.income && hypeAuditorRequest.social_network === 'instagram') {
+    if (filters.income && hypeAuditorRequest.social_network === "instagram") {
       hypeAuditorRequest.income = filters.income;
     }
 
     // Etnicidad (solo Instagram)
     if (
       filters.ethnicity &&
-      hypeAuditorRequest.social_network === 'instagram'
+      hypeAuditorRequest.social_network === "instagram"
     ) {
       hypeAuditorRequest.ethnicity = filters.ethnicity;
     }
@@ -668,7 +690,7 @@ export class HypeAuditorDiscoveryService {
     // Intereses (solo Instagram)
     if (
       filters.interests &&
-      hypeAuditorRequest.social_network === 'instagram'
+      hypeAuditorRequest.social_network === "instagram"
     ) {
       hypeAuditorRequest.interests = filters.interests;
     }
@@ -686,7 +708,7 @@ export class HypeAuditorDiscoveryService {
     // Filtros específicos de Instagram
     if (
       filters.reelsVideoViewsAvg &&
-      hypeAuditorRequest.social_network === 'instagram'
+      hypeAuditorRequest.social_network === "instagram"
     ) {
       hypeAuditorRequest.reels_video_views_avg = filters.reelsVideoViewsAvg;
     }
@@ -694,7 +716,7 @@ export class HypeAuditorDiscoveryService {
     // Filtros específicos de YouTube
     if (
       filters.shortsVideoViewsAvg &&
-      hypeAuditorRequest.social_network === 'youtube'
+      hypeAuditorRequest.social_network === "youtube"
     ) {
       hypeAuditorRequest.shorts_video_views_avg = filters.shortsVideoViewsAvg;
     }
@@ -702,7 +724,7 @@ export class HypeAuditorDiscoveryService {
     // Filtros específicos de Twitch
     if (
       filters.twitchActiveDaysPerWeek &&
-      hypeAuditorRequest.social_network === 'twitch'
+      hypeAuditorRequest.social_network === "twitch"
     ) {
       hypeAuditorRequest.twitch_active_days_per_week =
         filters.twitchActiveDaysPerWeek;
@@ -710,47 +732,47 @@ export class HypeAuditorDiscoveryService {
 
     if (
       filters.twitchHoursStreamed &&
-      hypeAuditorRequest.social_network === 'twitch'
+      hypeAuditorRequest.social_network === "twitch"
     ) {
       hypeAuditorRequest.twitch_hours_streamed = filters.twitchHoursStreamed;
     }
 
     if (
       filters.twitchLiveViewersAvg &&
-      hypeAuditorRequest.social_network === 'twitch'
+      hypeAuditorRequest.social_network === "twitch"
     ) {
       hypeAuditorRequest.twitch_live_viewers_avg = filters.twitchLiveViewersAvg;
     }
 
-    if (filters.twitchGames && hypeAuditorRequest.social_network === 'twitch') {
+    if (filters.twitchGames && hypeAuditorRequest.social_network === "twitch") {
       hypeAuditorRequest.twitch_games = filters.twitchGames;
     }
 
     // Filtros específicos de Twitter
     if (
       filters.twitterLikes &&
-      hypeAuditorRequest.social_network === 'twitter'
+      hypeAuditorRequest.social_network === "twitter"
     ) {
       hypeAuditorRequest.twitter_likes = filters.twitterLikes;
     }
 
     if (
       filters.twitterReplies &&
-      hypeAuditorRequest.social_network === 'twitter'
+      hypeAuditorRequest.social_network === "twitter"
     ) {
       hypeAuditorRequest.twitter_replies = filters.twitterReplies;
     }
 
     if (
       filters.twitterRetweet &&
-      hypeAuditorRequest.social_network === 'twitter'
+      hypeAuditorRequest.social_network === "twitter"
     ) {
       hypeAuditorRequest.twitter_retweet = filters.twitterRetweet;
     }
 
     if (
       filters.twitterTweet &&
-      hypeAuditorRequest.social_network === 'twitter'
+      hypeAuditorRequest.social_network === "twitter"
     ) {
       hypeAuditorRequest.twitter_tweet = filters.twitterTweet;
     }
@@ -759,14 +781,18 @@ export class HypeAuditorDiscoveryService {
     if (filters.sortBy) {
       hypeAuditorRequest.sort = {
         field: this.mapSortField(filters.sortBy),
-        order: filters.sortOrder || 'desc',
+        order: filters.sortOrder || "desc",
       };
     }
 
     // Filtros de audiencia - Mapear al formato HypeAuditor
     // Si viene ya formateado como {groups: string[], prc: number}, enviarlo directamente
     if ((filters as any).audience_age) {
-      if (typeof (filters as any).audience_age === 'object' && !Array.isArray((filters as any).audience_age) && (filters as any).audience_age.groups) {
+      if (
+        typeof (filters as any).audience_age === "object" &&
+        !Array.isArray((filters as any).audience_age) &&
+        (filters as any).audience_age.groups
+      ) {
         // Ya viene en formato {groups: string[], prc: number}
         hypeAuditorRequest.audience_age = (filters as any).audience_age;
       } else if (Array.isArray((filters as any).audience_age)) {
@@ -777,7 +803,7 @@ export class HypeAuditorDiscoveryService {
       // Formato legacy con minAge, maxAge, percentage - convertir a grupos
       const ageGroups = this.mapAgeRangeToGroups(
         filters.audienceAge.minAge,
-        filters.audienceAge.maxAge,
+        filters.audienceAge.maxAge
       );
       hypeAuditorRequest.audience_age = {
         groups: ageGroups,
@@ -786,53 +812,64 @@ export class HypeAuditorDiscoveryService {
     }
 
     // Mapear audience_geo - Si viene ya formateado, enviarlo directamente
-    if ((filters as any).audience_geo && typeof (filters as any).audience_geo === 'object') {
+    if (
+      (filters as any).audience_geo &&
+      typeof (filters as any).audience_geo === "object"
+    ) {
       // Ya viene en formato {countries: Array<{id, prc}>, cities: Array<{id, prc}>}
       hypeAuditorRequest.audience_geo = (filters as any).audience_geo;
     } else if ((filters as any).audience_location) {
       // Mapear audience_location -> audience_geo (similar a account_geo)
-      const locs = (filters as any).audience_location as Array<{ id: any; type?: number; prc?: number }>;
+      const locs = (filters as any).audience_location as Array<{
+        id: any;
+        type?: number;
+        prc?: number;
+      }>;
       const audienceGeo: any = {};
       const countries: Array<{ id: string; prc: number }> = [];
       const cities: Array<{ id: number; prc: number }> = [];
-      
+
       for (const loc of locs) {
-        const prc = typeof loc.prc === 'number' ? loc.prc : 0;
-        
+        const prc = typeof loc.prc === "number" ? loc.prc : 0;
+
         if (loc.type === 0) {
           // type 0 = city (solo disponible para Instagram)
-          if (hypeAuditorRequest.social_network === 'instagram') {
-            const cityId = typeof loc.id === 'string' ? parseInt(loc.id, 10) : Number(loc.id);
+          if (hypeAuditorRequest.social_network === "instagram") {
+            const cityId =
+              typeof loc.id === "string"
+                ? parseInt(loc.id, 10)
+                : Number(loc.id);
             if (!isNaN(cityId)) {
               cities.push({ id: cityId, prc });
             }
           }
         } else {
           // type != 0 = country (ISO 3166 two-letter code)
-          const countryId = typeof loc.id === 'string' ? loc.id : String(loc.id || '');
+          const countryId =
+            typeof loc.id === "string" ? loc.id : String(loc.id || "");
           // Validar que sea código de 2 letras (opcional, pero mejor validar)
           if (countryId && countryId.length === 2) {
             countries.push({ id: countryId.toUpperCase(), prc });
           }
         }
       }
-      
+
       if (countries.length > 0) {
         audienceGeo.countries = countries;
       }
       if (cities.length > 0) {
         audienceGeo.cities = cities;
       }
-      
+
       if (countries.length > 0 || cities.length > 0) {
         hypeAuditorRequest.audience_geo = audienceGeo;
       }
     }
 
-    if (filters.audienceGender && filters.audienceGender.gender !== 'any') {
+    if (filters.audienceGender && filters.audienceGender.gender !== "any") {
       // Mapear gender con porcentaje correcto
       hypeAuditorRequest.audience_gender = {
-        gender: filters.audienceGender.gender as 'male' | 'female',
+        gender: filters.audienceGender.gender as "male" | "female",
         prc: filters.audienceGender.percentage,
       };
     }
@@ -844,7 +881,7 @@ export class HypeAuditorDiscoveryService {
 
       if (Object.keys(filters.audienceGeo.countries).length > 0) {
         audienceGeo.countries = Object.entries(
-          filters.audienceGeo.countries,
+          filters.audienceGeo.countries
         ).map(([countryCode, percentage]) => ({
           id: countryCode,
           prc: percentage,
@@ -856,7 +893,7 @@ export class HypeAuditorDiscoveryService {
           ([cityId, percentage]) => ({
             id: parseInt(cityId),
             prc: percentage,
-          }),
+          })
         );
       }
 
@@ -865,12 +902,12 @@ export class HypeAuditorDiscoveryService {
       }
     }
 
-    console.log('Request sent to HypeAuditor', hypeAuditorRequest);
+    console.log("Request sent to HypeAuditor", hypeAuditorRequest);
     return hypeAuditorRequest;
   }
 
   transformHypeAuditorSuggestionToExplorer(
-    response: any,
+    response: any
   ): ExplorerSearchResponse {
     // Mapear los datos del suggester (que usa 'list' en lugar de 'search_results')
     // y tienen una estructura diferente en la raíz del elemento
@@ -881,14 +918,14 @@ export class HypeAuditorDiscoveryService {
         const mappedNetworks = rawNetworks
           .filter((n: any) => {
             // Filter to only include Instagram, TikTok, and YouTube
-            const platformType = (n.type || '').toLowerCase();
-            return ['instagram', 'tiktok', 'youtube'].includes(platformType);
+            const platformType = (n.type || "").toLowerCase();
+            return ["instagram", "tiktok", "youtube"].includes(platformType);
           })
           .map((n: any) => ({
-            platform: (n.type || '').toLowerCase(),
-            username: n.username || '',
+            platform: (n.type || "").toLowerCase(),
+            username: n.username || "",
             followers: n.subscribers_count || 0,
-            engagement: typeof n.er === 'number' ? n.er : 0,
+            engagement: typeof n.er === "number" ? n.er : 0,
             _raw: {
               socialId: n.social_id,
               title: n.title,
@@ -899,7 +936,7 @@ export class HypeAuditorDiscoveryService {
 
         // Elegir plataforma principal por mayor cantidad de seguidores
         const sortedByFollowers = [...mappedNetworks].sort(
-          (a, b) => (b.followers || 0) - (a.followers || 0),
+          (a, b) => (b.followers || 0) - (a.followers || 0)
         );
         const mainNetwork = sortedByFollowers[0];
 
@@ -909,17 +946,19 @@ export class HypeAuditorDiscoveryService {
         // Calcular engagement rate promedio de todas las plataformas sociales
         const validEngagementRates = mappedNetworks
           .map((n: { engagement: number }) => n.engagement)
-          .filter((eng: number) => typeof eng === 'number' && eng > 0);
-        const averageEngagement = validEngagementRates.length > 0
-          ? validEngagementRates.reduce((a: number, b: number) => a + b, 0) / validEngagementRates.length
-          : 0;
+          .filter((eng: number) => typeof eng === "number" && eng > 0);
+        const averageEngagement =
+          validEngagementRates.length > 0
+            ? validEngagementRates.reduce((a: number, b: number) => a + b, 0) /
+              validEngagementRates.length
+            : 0;
 
         // Determinar plataforma principal dinámicamente
         const platform =
           mainNetwork?.platform ||
           rawNetworks[0]?.type?.toLowerCase() ||
           item.type?.toLowerCase() ||
-          'instagram';
+          "instagram";
 
         // Extraer ubicación/país (suggestion response may not have account_geo)
         const country = (item as any).account_geo?.country || undefined;
@@ -929,8 +968,8 @@ export class HypeAuditorDiscoveryService {
           // IDs y básicos
           id: item.username || `user_${index}`,
           creatorId: item.username || item.user_id || `user_${index}`,
-          name: item.title || item.username || 'Sin nombre',
-          avatar: item.avatar_url || '',
+          name: item.title || item.username || "Sin nombre",
+          avatar: item.avatar_url || "",
           isVerified: item.is_verified || false,
 
           // Campos que usa directamente la tabla
@@ -951,15 +990,15 @@ export class HypeAuditorDiscoveryService {
               ? mappedNetworks
                   .sort(
                     (a: { followers: any }, b: { followers: any }) =>
-                      (b.followers || 0) - (a.followers || 0),
+                      (b.followers || 0) - (a.followers || 0)
                   )
                   .map((n: { platform: any; username: any }) => ({
                     platform: n.platform,
                     username: n.username,
                   }))
-              : [{ platform, username: item.username || '' }],
+              : [{ platform, username: item.username || "" }],
           platformInfo: {
-            state: item.is_private ? 'private' : 'active',
+            state: item.is_private ? "private" : "active",
             socialNetworks: mappedNetworks.map(
               (n: {
                 platform: any;
@@ -973,7 +1012,7 @@ export class HypeAuditorDiscoveryService {
                 followers: n.followers,
                 engagement: n.engagement,
                 ...n._raw,
-              }),
+              })
             ),
           },
           metrics: {
@@ -983,7 +1022,7 @@ export class HypeAuditorDiscoveryService {
           // Datos adicionales
           audienceData: undefined,
         };
-      },
+      }
     );
 
     // Ordenar por cantidad de seguidores (descendente)
@@ -1000,25 +1039,76 @@ export class HypeAuditorDiscoveryService {
       currentPage: 1,
       totalPages: 1,
       queriesLeft: response.result?.queries_left || 0,
-      provider: 'HypeAuditor',
+      provider: "HypeAuditor",
       metadata: {
         searchTime: Date.now(),
         filtersApplied: [],
         cacheHit: false,
-        mode: 'suggester',
+        mode: "suggester",
       },
     };
   }
 
   /**
+   * Check if audience data is cached for multiple influencers
+   */
+  private async checkAudienceDataCached(
+    usernames: string[]
+  ): Promise<Record<string, boolean>> {
+    if (usernames.length === 0) return {};
+
+    console.log("Checking audience data cached for usernames:", usernames);
+
+    try {
+      const { data, error } = await supabase
+        .from("agentic_audience_inferences")
+        .select("instagram_username")
+        .in("instagram_username", usernames)
+        .not("expires_at", "lt", new Date().toISOString());
+
+      if (error) {
+        console.warn(
+          "[HypeAuditor Discovery] Error checking audience cache:",
+          error
+        );
+        return {};
+      }
+
+      // Create a map of username -> has_cached_data
+      const cacheMap: Record<string, boolean> = {};
+      data?.forEach((record: any) => {
+        if (record.instagram_username) {
+          cacheMap[record.instagram_username] = true;
+        }
+      });
+
+      return cacheMap;
+    } catch (error) {
+      console.warn(
+        "[HypeAuditor Discovery] Failed to check audience cache:",
+        error
+      );
+      return {};
+    }
+  }
+
+  /**
    * Transforma la respuesta de HypeAuditor al formato del Explorer
    */
-  transformHypeAuditorResponseToExplorer(
-    response: DiscoveryResponse,
-  ): ExplorerSearchResponse {
+  async transformHypeAuditorResponseToExplorer(
+    response: DiscoveryResponse
+  ): Promise<ExplorerSearchResponse> {
     // Debug: Log para ver qué datos devuelve HypeAuditor
     if (response.result.search_results.length > 0) {
     }
+
+    // Extract usernames for cache checking
+    const usernames = response.result.search_results
+      .map((item) => item.basic?.username)
+      .filter((username): username is string => !!username);
+
+    // Check which influencers have cached audience data
+    const audienceCacheMap = await this.checkAudienceDataCached(usernames);
 
     const items: ExplorerResult[] = response.result.search_results.map(
       (item, index) => {
@@ -1029,14 +1119,14 @@ export class HypeAuditorDiscoveryService {
         const mappedNetworks = rawNetworks
           .filter((n) => {
             // Filter to only include Instagram, TikTok, and YouTube
-            const platformType = (n.type || '').toLowerCase();
-            return ['instagram', 'tiktok', 'youtube'].includes(platformType);
+            const platformType = (n.type || "").toLowerCase();
+            return ["instagram", "tiktok", "youtube"].includes(platformType);
           })
           .map((n) => ({
-            platform: (n.type || '').toLowerCase(),
-            username: n.username || '',
+            platform: (n.type || "").toLowerCase(),
+            username: n.username || "",
             followers: n.subscribers_count || 0,
-            engagement: typeof n.er === 'number' ? n.er : 0,
+            engagement: typeof n.er === "number" ? n.er : 0,
             _raw: {
               socialId: n.social_id,
               title: n.title,
@@ -1047,7 +1137,7 @@ export class HypeAuditorDiscoveryService {
 
         // Elegir plataforma principal por mayor cantidad de seguidores
         const sortedByFollowers = [...mappedNetworks].sort(
-          (a, b) => (b.followers || 0) - (a.followers || 0),
+          (a, b) => (b.followers || 0) - (a.followers || 0)
         );
         const mainNetwork = sortedByFollowers[0];
 
@@ -1067,7 +1157,7 @@ export class HypeAuditorDiscoveryService {
         const platform =
           mainNetwork?.platform ||
           rawNetworks[0]?.type?.toLowerCase() ||
-          'instagram';
+          "instagram";
 
         // Extraer ubicación/país desde account_geo
         const accountGeo = item.features?.account_geo;
@@ -1078,8 +1168,8 @@ export class HypeAuditorDiscoveryService {
           // IDs y básicos
           id: item.basic?.username || `user_${index}`,
           creatorId: item.basic?.username || `user_${index}`,
-          name: item.basic?.title || item.basic?.username || 'Sin nombre',
-          avatar: item.basic?.avatar_url || '',
+          name: item.basic?.title || item.basic?.username || "Sin nombre",
+          avatar: item.basic?.avatar_url || "",
           isVerified: false,
 
           // Campos que usa directamente la tabla
@@ -1100,9 +1190,9 @@ export class HypeAuditorDiscoveryService {
               ? mappedNetworks
                   .sort((a, b) => (b.followers || 0) - (a.followers || 0))
                   .map((n) => ({ platform: n.platform, username: n.username }))
-              : [{ platform, username: item.basic?.username || '' }],
+              : [{ platform, username: item.basic?.username || "" }],
           platformInfo: {
-            state: 'active',
+            state: "active",
             aqs: item.features?.aqs?.data?.mark,
             socialNetworks: mappedNetworks.map((n) => ({
               platform: n.platform,
@@ -1120,8 +1210,11 @@ export class HypeAuditorDiscoveryService {
           },
           // Datos adicionales
           audienceData: undefined,
+          // Audience cache status
+          hasAudienceData:
+            audienceCacheMap[item.basic?.username || ""] || false,
         };
-      },
+      }
     );
 
     // Ordenar por cantidad de seguidores (descendente)
@@ -1138,7 +1231,7 @@ export class HypeAuditorDiscoveryService {
       currentPage: response.result.current_page,
       totalPages: response.result.total_pages,
       queriesLeft: response.result.queries_left,
-      provider: 'HypeAuditor',
+      provider: "HypeAuditor",
       metadata: {
         searchTime: Date.now(),
         filtersApplied: [],
@@ -1151,25 +1244,25 @@ export class HypeAuditorDiscoveryService {
    * Mapea la plataforma del Explorer a la plataforma de HypeAuditor
    */
   private mapPlatformToHypeAuditor(
-    platform: string,
-  ): 'instagram' | 'youtube' | 'tiktok' | 'twitter' | 'twitch' {
+    platform: string
+  ): "instagram" | "youtube" | "tiktok" | "twitter" | "twitch" {
     switch (platform.toLowerCase()) {
-      case 'instagram':
-      case 'ig':
-        return 'instagram';
-      case 'youtube':
-      case 'yt':
-        return 'youtube';
-      case 'tiktok':
-      case 'tt':
-        return 'tiktok';
-      case 'twitter':
-      case 'x':
-        return 'twitter';
-      case 'twitch':
-        return 'twitch';
+      case "instagram":
+      case "ig":
+        return "instagram";
+      case "youtube":
+      case "yt":
+        return "youtube";
+      case "tiktok":
+      case "tt":
+        return "tiktok";
+      case "twitter":
+      case "x":
+        return "twitter";
+      case "twitch":
+        return "twitch";
       default:
-        return 'instagram'; // Por defecto Instagram
+        return "instagram"; // Por defecto Instagram
     }
   }
 
@@ -1178,14 +1271,14 @@ export class HypeAuditorDiscoveryService {
    */
   private mapSortField(sortBy: string): string {
     switch (sortBy) {
-      case 'followers':
-        return 'subscribers_count';
-      case 'engagement':
-        return 'er';
-      case 'username':
-        return 'username';
+      case "followers":
+        return "subscribers_count";
+      case "engagement":
+        return "er";
+      case "username":
+        return "username";
       default:
-        return 'subscribers_count';
+        return "subscribers_count";
     }
   }
 
@@ -1194,21 +1287,21 @@ export class HypeAuditorDiscoveryService {
    */
   private mapAgeRangeToGroups(minAge: number, maxAge: number): string[] {
     const availableGroups = [
-      '13-17',
-      '18-24',
-      '25-34',
-      '35-44',
-      '45-54',
-      '55-64',
-      '65+',
+      "13-17",
+      "18-24",
+      "25-34",
+      "35-44",
+      "45-54",
+      "55-64",
+      "65+",
     ];
 
     const selectedGroups: string[] = [];
 
     for (const group of availableGroups) {
-      const [groupMin, groupMax] = group.includes('+')
-        ? [parseInt(group.replace('+', '')), 100]
-        : group.split('-').map(Number);
+      const [groupMin, groupMax] = group.includes("+")
+        ? [parseInt(group.replace("+", "")), 100]
+        : group.split("-").map(Number);
 
       // Si hay intersección entre el rango solicitado y el grupo
       if (minAge <= groupMax && maxAge >= groupMin) {
@@ -1216,7 +1309,7 @@ export class HypeAuditorDiscoveryService {
       }
     }
 
-    return selectedGroups.length > 0 ? selectedGroups : ['18-24']; // Default group si no hay intersección
+    return selectedGroups.length > 0 ? selectedGroups : ["18-24"]; // Default group si no hay intersección
   }
 
   /**
@@ -1225,7 +1318,7 @@ export class HypeAuditorDiscoveryService {
   async getTaxonomy(): Promise<any> {
     try {
       const response = await this.makeHttpsRequest(
-        '/api/method/auditor.taxonomy',
+        "/api/method/auditor.taxonomy"
       );
 
       return response;
@@ -1239,10 +1332,10 @@ export class HypeAuditorDiscoveryService {
    */
   async searchKeywordsPosts(
     socialNetwork: string,
-    contentIds: string[],
+    contentIds: string[]
   ): Promise<any> {
     try {
-      const contentIdsString = contentIds.join(',');
+      const contentIdsString = contentIds.join(",");
       const endpoint = `/api/method/auditor.searchKeywordsPosts/?socialNetwork=${socialNetwork}&contentIds=${contentIdsString}`;
 
       const response = await this.makeHttpsRequest(endpoint);

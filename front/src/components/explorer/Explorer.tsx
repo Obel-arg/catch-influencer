@@ -699,6 +699,8 @@ export default function Explorer() {
           // 🎯 Metadatos adicionales para debugging
           searchMeta: inf.searchMeta || null,
           followerBreakdown: inf.followerBreakdown || null,
+          // Audience data cache status
+          hasAudienceData: inf.hasAudienceData || false,
         };
 
         return adaptedInfluencer;
@@ -2786,13 +2788,13 @@ export default function Explorer() {
                               <div className="flex justify-center gap-2">
                                 <Button
                                   variant={
-                                    audienceCache[influencer.id]
+                                    influencer.hasAudienceData
                                       ? "default"
                                       : "outline"
                                   }
                                   size="sm"
                                   className={`h-8 w-8 p-0 ${
-                                    audienceCache[influencer.id]
+                                    influencer.hasAudienceData
                                       ? "hover:bg-blue-600"
                                       : "hover:bg-gray-100"
                                   }`}
@@ -2802,7 +2804,7 @@ export default function Explorer() {
                                 >
                                   <ExternalLink
                                     className={
-                                      audienceCache[influencer.id]
+                                      influencer.hasAudienceData
                                         ? "h-4 w-4 text-white"
                                         : "h-4 w-4"
                                     }

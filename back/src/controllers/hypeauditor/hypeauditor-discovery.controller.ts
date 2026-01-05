@@ -49,7 +49,7 @@ export class HypeAuditorDiscoveryController {
 
       // Transformar respuesta al formato del Explorer
       const explorerResponse =
-        service.transformHypeAuditorResponseToExplorer(discoveryResponse);
+        await service.transformHypeAuditorResponseToExplorer(discoveryResponse);
 
       const endTime = Date.now();
       const searchTime = endTime - startTime;
@@ -207,7 +207,7 @@ export class HypeAuditorDiscoveryController {
 
       // Transformar respuesta al formato del Explorer
       const explorerResponse =
-        service.transformHypeAuditorResponseToExplorer(discoveryResponse);
+        await service.transformHypeAuditorResponseToExplorer(discoveryResponse);
 
       const endTime = Date.now();
       const searchTime = endTime - startTime;
