@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { AgentAudienceService } from "../../services/audience/agent-audience.service";
+import { InferenceOptions } from "../../models/audience/openai-audience-inference.model";
 
 export class AgentAudienceController {
   private agentAudienceService: AgentAudienceService;
@@ -10,11 +11,24 @@ export class AgentAudienceController {
 
   /**
    * Endpoint para analizar la audiencia de un perfil de Instagram usando agentes AI
-   * GET /agent-audience?instagramUrl=<<url>>
+   * GET /agent-audience?instagramUrl=<<url>>&searchContext=<<json>>
+   *
+   * Query parameters:
+   * - instagramUrl: Instagram profile URL (required)
+   * - influencerId: UUID of the influencer (optional)
+   * - searchContext: JSON string with search context from frontend (optional)
+   * - forceRefresh: "true" to bypass cache (optional)
+   * - skipCache: "true" to skip both reading and writing cache (optional)
    */
   async analyzeAudience(req: Request, res: Response) {
     try {
-      const { instagramUrl, influencerId, forceRefresh, skipCache } = req.query;
+      const {
+        instagramUrl,
+        influencerId,
+        forceRefresh,
+        skipCache,
+        searchContext,
+      } = req.query;
 
       if (!instagramUrl || typeof instagramUrl !== "string") {
         return res.status(400).json({
@@ -38,7 +52,7 @@ export class AgentAudienceController {
       const startTime = Date.now();
 
       // Preparar opciones para el servicio
-      const options: any = {};
+      const options: InferenceOptions = {};
       if (influencerId && typeof influencerId === "string") {
         options.influencerId = influencerId;
       }
@@ -47,6 +61,22 @@ export class AgentAudienceController {
       }
       if (skipCache === "true") {
         options.skipCache = true;
+      }
+
+      // Parse search context if provided
+      if (searchContext && typeof searchContext === "string") {
+        try {
+          options.searchContext = JSON.parse(searchContext);
+          console.log(
+            `🔍 [Controller] Search context received:`,
+            options.searchContext
+          );
+        } catch (e) {
+          console.warn(
+            `⚠️ [Controller] Invalid searchContext JSON, ignoring:`,
+            searchContext
+          );
+        }
       }
 
       // Llamar al servicio para analizar la audiencia

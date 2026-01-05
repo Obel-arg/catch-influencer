@@ -685,7 +685,8 @@ export class AgentAudienceService extends BaseAudienceService {
   }
 
   private async analyzeWithLlama(
-    scrapedData: string
+    scrapedData: string,
+    searchContext?: SearchContext
   ): Promise<{ result: AudienceAnalysis | null; time: number; cost: number }> {
     const startTime = Date.now();
     console.log("🦙 [Service] LLaMA Running...");
@@ -696,9 +697,33 @@ export class AgentAudienceService extends BaseAudienceService {
     ]);
 
     try {
+      // Enhance scraped data with search context
+      let enhancedContext = scrapedData;
+      if (searchContext) {
+        enhancedContext += "\n\n## Search Context Information\n";
+        if (searchContext.creator_location) {
+          enhancedContext += `Creator Location: ${searchContext.creator_location}\n`;
+        }
+        if (searchContext.target_audience_geo) {
+          enhancedContext += "Target Audience Geography Preferences:\n";
+          if (searchContext.target_audience_geo.countries?.length) {
+            enhancedContext += `Countries: ${searchContext.target_audience_geo.countries
+              .map((c) => `${c.id}(${c.prc}%)`)
+              .join(", ")}\n`;
+          }
+          if (searchContext.target_audience_geo.cities?.length) {
+            enhancedContext += `Cities: ${searchContext.target_audience_geo.cities
+              .map((c) => `${c.id}(${c.prc}%)`)
+              .join(", ")}\n`;
+          }
+        }
+        enhancedContext +=
+          "\nUse this search context to inform your demographic analysis.\n";
+      }
+
       const promptText = ANALYSIS_PROMPT.replace(
         "{context}",
-        scrapedData
+        enhancedContext
       ).replace(
         "{format_instructions}",
         this.jsonParser.getFormatInstructions()
@@ -707,7 +732,7 @@ export class AgentAudienceService extends BaseAudienceService {
       const estimatedOutputTokens = 500; // Estimación para respuesta JSON
 
       const res = await chain.invoke({
-        context: scrapedData,
+        context: enhancedContext,
         format_instructions: this.jsonParser.getFormatInstructions(),
       });
 
@@ -736,7 +761,8 @@ export class AgentAudienceService extends BaseAudienceService {
   }
 
   private async analyzeWithGemini(
-    scrapedData: string
+    scrapedData: string,
+    searchContext?: SearchContext
   ): Promise<{ result: AudienceAnalysis | null; time: number; cost: number }> {
     const startTime = Date.now();
     console.log("💎 [Service] Gemini Running...");
@@ -747,9 +773,33 @@ export class AgentAudienceService extends BaseAudienceService {
     ]);
 
     try {
+      // Enhance scraped data with search context
+      let enhancedContext = scrapedData;
+      if (searchContext) {
+        enhancedContext += "\n\n## Search Context Information\n";
+        if (searchContext.creator_location) {
+          enhancedContext += `Creator Location: ${searchContext.creator_location}\n`;
+        }
+        if (searchContext.target_audience_geo) {
+          enhancedContext += "Target Audience Geography Preferences:\n";
+          if (searchContext.target_audience_geo.countries?.length) {
+            enhancedContext += `Countries: ${searchContext.target_audience_geo.countries
+              .map((c) => `${c.id}(${c.prc}%)`)
+              .join(", ")}\n`;
+          }
+          if (searchContext.target_audience_geo.cities?.length) {
+            enhancedContext += `Cities: ${searchContext.target_audience_geo.cities
+              .map((c) => `${c.id}(${c.prc}%)`)
+              .join(", ")}\n`;
+          }
+        }
+        enhancedContext +=
+          "\nUse this search context to inform your demographic analysis.\n";
+      }
+
       const promptText = ANALYSIS_PROMPT.replace(
         "{context}",
-        scrapedData
+        enhancedContext
       ).replace(
         "{format_instructions}",
         this.jsonParser.getFormatInstructions()
@@ -758,7 +808,7 @@ export class AgentAudienceService extends BaseAudienceService {
       const estimatedOutputTokens = 500; // Estimación para respuesta JSON
 
       const res = await chain.invoke({
-        context: scrapedData,
+        context: enhancedContext,
         format_instructions: this.jsonParser.getFormatInstructions(),
       });
 
@@ -1145,8 +1195,8 @@ Información del creador:
       console.log("🚀 [Service] Starting parallel AI operations...");
       const [bioResult, llamaAnalysis, geminiAnalysis] = await Promise.all([
         this.generateBio(scrapedData),
-        this.analyzeWithLlama(scrapedData),
-        this.analyzeWithGemini(scrapedData),
+        this.analyzeWithLlama(scrapedData, options.searchContext),
+        this.analyzeWithGemini(scrapedData, options.searchContext),
       ]);
 
       timings.bioGeneration = bioResult.time;

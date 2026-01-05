@@ -4,7 +4,7 @@ import { AgentAudienceController } from "../../controllers/audience/agent-audien
 const router = Router();
 const agentAudienceController = new AgentAudienceController();
 
-// GET /agent-audience?instagramUrl=<<url>>
+// GET /agent-audience?instagramUrl=<<url>>&searchContext=<<json>>
 router.get(
   "/agent-audience",
   agentAudienceController.analyzeAudience.bind(agentAudienceController)
