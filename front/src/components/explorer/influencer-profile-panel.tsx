@@ -55,6 +55,8 @@ interface InfluencerProfilePanelProps {
   };
   /** Callback when user clicks toast to re-open the panel after background generation */
   onRequestOpen?: (influencer: any) => void;
+  /** Platform filter from explorer view (e.g., "Instagram", "TikTok", "all") */
+  platformFilter?: string;
 }
 
 // 🎯 Helper para usar iconos desde /public/icons
@@ -318,6 +320,7 @@ export function InfluencerProfilePanel({
   onAudienceFetched,
   searchContext,
   onRequestOpen,
+  platformFilter,
 }: InfluencerProfilePanelProps) {
   const { showToast } = useToast();
 
@@ -824,6 +827,7 @@ export function InfluencerProfilePanel({
           <InfluencerSquadPDFTemplate
             influencer={influencer}
             audienceData={audienceData}
+            platformFilter={platformFilter}
           />
         </div>
       )}

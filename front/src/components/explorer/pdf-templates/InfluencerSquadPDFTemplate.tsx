@@ -19,6 +19,7 @@ import { PDF_BRANDING } from "@/constants/pdf-branding";
 interface InfluencerSquadPDFTemplateProps {
   influencer: any;
   audienceData: AudienceDemographics | null;
+  platformFilter?: string; // Platform filter from explorer (e.g., "Instagram", "TikTok", "all")
 }
 
 // Helper to format numbers
@@ -43,7 +44,11 @@ const getPlatformIcon = (platform: string) => {
 export function InfluencerSquadPDFTemplate({
   influencer,
   audienceData,
+  platformFilter,
 }: InfluencerSquadPDFTemplateProps) {
+  // Ensure platformFilter has a default value
+  const platformFilterValue = platformFilter || undefined;
+  
   console.log(
     "🎨 Rendering Squad PDF Template with audienceData:",
     audienceData
@@ -116,18 +121,75 @@ export function InfluencerSquadPDFTemplate({
       return 0;
     }
 
-    // Get engagement from the first available social network
-    for (const sn of socialNetworks) {
-      if (typeof sn.engagement === "number" && sn.engagement > 0) {
-        return sn.engagement;
+    // If platform filter is provided and not "all", get engagement from that platform
+    if (platformFilter && platformFilter !== "all") {
+      const filterPlatformKey = platformFilter.toLowerCase();
+      for (const sn of socialNetworks) {
+        const snPlatformKey = String(sn.platform || "").toLowerCase();
+        if (snPlatformKey === filterPlatformKey && typeof sn.engagement === "number" && sn.engagement > 0) {
+          return sn.engagement;
+        }
       }
     }
 
-    return 0;
-  }, [influencer]);
+    // Otherwise, get engagement from the platform with most followers
+    let maxFollowers = 0;
+    let engagementFromMaxPlatform = 0;
+    for (const sn of socialNetworks) {
+      const followers = Number(sn.followers || sn.followersCount || 0);
+      if (followers > maxFollowers) {
+        maxFollowers = followers;
+        if (typeof sn.engagement === "number" && sn.engagement > 0) {
+          engagementFromMaxPlatform = sn.engagement;
+        }
+      }
+    }
 
-  // Get primary platform
-  const primaryPlatform = influencer?.platform || "Instagram";
+    return engagementFromMaxPlatform;
+  }, [influencer, platformFilter]);
+
+  // Get primary platform: use filter if provided and not "all", otherwise find platform with most followers
+  const primaryPlatform = useMemo(() => {
+    // If platform filter is provided and not "all", use it
+    if (platformFilter && platformFilter !== "all") {
+      // Capitalize first letter to match expected format
+      return platformFilter.charAt(0).toUpperCase() + platformFilter.slice(1).toLowerCase();
+    }
+
+    // Otherwise, find the platform with the most followers
+    const socialNetworks = influencer?.platformInfo?.socialNetworks;
+    if (socialNetworks && Array.isArray(socialNetworks) && socialNetworks.length > 0) {
+      // Find the platform with the most followers
+      let maxFollowers = 0;
+      let platformWithMostFollowers = "Instagram"; // Default fallback
+
+      for (const sn of socialNetworks) {
+        const followers = Number(sn.followers || sn.followersCount || 0);
+        if (followers > maxFollowers) {
+          maxFollowers = followers;
+          const platformKey = String(sn.platform || "").toLowerCase();
+          // Map platform key to display name
+          platformWithMostFollowers =
+            platformKey === "instagram"
+              ? "Instagram"
+              : platformKey === "youtube"
+              ? "YouTube"
+              : platformKey === "tiktok"
+              ? "TikTok"
+              : platformKey === "facebook"
+              ? "Facebook"
+              : platformKey === "threads"
+              ? "Threads"
+              : sn.platform || "Instagram";
+        }
+      }
+
+      return platformWithMostFollowers;
+    }
+
+    // Fallback to influencer.platform or default
+    return influencer?.platform || "Instagram";
+  }, [platformFilter, influencer]);
 
   return (
     <div

@@ -2882,6 +2882,7 @@ export default function Explorer() {
             setSelectedInfluencer(influencer);
             setIsPanelOpen(true);
           }}
+          platformFilter={platform}
         />
       )}
 
