@@ -2785,14 +2785,28 @@ export default function Explorer() {
                             <td className="py-4 px-6">
                               <div className="flex justify-center gap-2">
                                 <Button
-                                  variant="outline"
+                                  variant={
+                                    audienceCache[influencer.id]
+                                      ? "default"
+                                      : "outline"
+                                  }
                                   size="sm"
-                                  className="h-8 w-8 p-0 hover:bg-gray-50"
+                                  className={`h-8 w-8 p-0 ${
+                                    audienceCache[influencer.id]
+                                      ? "hover:bg-blue-600"
+                                      : "hover:bg-gray-100"
+                                  }`}
                                   onClick={() =>
                                     openInfluencerPanel(influencer)
                                   }
                                 >
-                                  <ExternalLink className="h-4 w-4" />
+                                  <ExternalLink
+                                    className={
+                                      audienceCache[influencer.id]
+                                        ? "h-4 w-4 text-white"
+                                        : "h-4 w-4"
+                                    }
+                                  />
                                 </Button>
                               </div>
                             </td>
