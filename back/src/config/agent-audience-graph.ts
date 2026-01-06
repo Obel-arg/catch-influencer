@@ -11,6 +11,36 @@ import { SearchContext } from "../models/audience/openai-audience-inference.mode
 /**
  * Extract JSON from a string that may have trailing text or markdown
  */
+/**
+ * Sanitize JSON string by removing or escaping invalid control characters
+ */
+function sanitizeJSON(jsonStr: string): string {
+  // First pass: Fix common issues with control characters in string values
+  // This regex finds string values in JSON and fixes control characters within them
+  return jsonStr.replace(/"([^"\\]|\\.)*"/g, (match) => {
+    // Don't modify if already properly escaped
+    if (
+      match.includes("\\n") ||
+      match.includes("\\t") ||
+      match.includes("\\r")
+    ) {
+      return match;
+    }
+
+    // Replace unescaped control characters
+    return (
+      match
+        .replace(/\n/g, "\\n") // Newlines
+        .replace(/\r/g, "\\r") // Carriage returns
+        .replace(/\t/g, "\\t") // Tabs
+        .replace(/\f/g, "\\f") // Form feeds
+        .replace(/\b/g, "\\b") // Backspaces
+        // eslint-disable-next-line no-control-regex
+        .replace(/[\u0000-\u001F]/g, "")
+    ); // Remove other control characters
+  });
+}
+
 function extractJSON(text: string): string {
   // If it's already an object, return as JSON string
   if (typeof text !== "string") {
@@ -42,7 +72,10 @@ function extractJSON(text: string): string {
     throw new Error("Unclosed JSON object in response");
   }
 
-  return cleaned.substring(startIndex, endIndex + 1);
+  const extracted = cleaned.substring(startIndex, endIndex + 1);
+
+  // Sanitize the extracted JSON to fix control character issues
+  return sanitizeJSON(extracted);
 }
 
 /**
