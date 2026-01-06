@@ -34,4 +34,33 @@ export interface GraphState {
   llamaAnalysis: Partial<AudienceAnalysis> | null;
   geminiAnalysis: Partial<AudienceAnalysis> | null;
   finalResult: AudienceAnalysis | null;
+  // Debate fields
+  debateHistory: Array<{
+    round: number;
+    llamaArgument?: string;
+    geminiArgument?: string;
+  }>;
+  round: number;
+  consensus: boolean;
+  // Parallel execution fields
+  generatedBio: string | null;
+  searchContext?: any; // SearchContext type
+  // Cost tracking
+  costs: {
+    tavily: number;
+    bioGeneration: number;
+    llamaAnalysis: number;
+    geminiAnalysis: number;
+    debate: number;
+    aggregation: number;
+  };
+  // Timing tracking
+  timings: {
+    scraping: number;
+    bioGeneration: number;
+    llamaAnalysis: number;
+    geminiAnalysis: number;
+    debate: number;
+    aggregation: number;
+  };
 }
