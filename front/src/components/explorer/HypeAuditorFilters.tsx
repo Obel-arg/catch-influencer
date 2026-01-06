@@ -29,8 +29,16 @@ import {
   getCategoriesForPlatform,
   type HypeAuditorCategory,
 } from "@/constants/hypeauditor-categories";
-import { geonamesService, type GeonamesCity } from "@/lib/services/geonames.service";
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import {
+  geonamesService,
+  type GeonamesCity,
+} from "@/lib/services/geonames.service";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 
 interface HypeAuditorFiltersProps {
   // Filtros básicos
@@ -98,10 +106,7 @@ interface HypeAuditorFiltersProps {
     groups: string[];
     prc: number;
   };
-  setAudienceAge: (age: {
-    groups: string[];
-    prc: number;
-  }) => void;
+  setAudienceAge: (age: { groups: string[]; prc: number }) => void;
 
   // Callback para búsqueda
   onSearch: () => void;
@@ -156,11 +161,12 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
   const [selectedFollowerPreset, setSelectedFollowerPreset] = useState<
     string | null
   >(null);
-  
+
   // State for cities management
   const [availableCities, setAvailableCities] = useState<GeonamesCity[]>([]);
   const [loadingCities, setLoadingCities] = useState(false);
-  const [selectedCountryForCities, setSelectedCountryForCities] = useState<string>("");
+  const [selectedCountryForCities, setSelectedCountryForCities] =
+    useState<string>("");
   const [citySearchQuery, setCitySearchQuery] = useState("");
   const [citiesError, setCitiesError] = useState<string | null>(null);
 
@@ -256,14 +262,14 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
     if (countryCode === "all") return;
     const country = countries.find((c) => c.code === countryCode);
     if (!country) return;
-    
+
     const exists = audienceGeo.countries.some((c) => c.id === countryCode);
     if (!exists) {
       setAudienceGeo({
         ...audienceGeo,
         countries: [...audienceGeo.countries, { id: countryCode, prc: 50 }],
       });
-      
+
       // If Instagram platform, fetch cities for this country
       if (platform === "instagram" && !selectedCountryForCities) {
         setSelectedCountryForCities(countryCode);
@@ -281,7 +287,7 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
         return cityData?.countryCode !== countryCode;
       }),
     });
-    
+
     // If no countries left, clear cities selection
     if (audienceGeo.countries.length === 1) {
       setSelectedCountryForCities("");
@@ -293,7 +299,9 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
     setAudienceGeo({
       ...audienceGeo,
       countries: audienceGeo.countries.map((c) =>
-        c.id === countryCode ? { ...c, prc: Math.max(0, Math.min(100, prc)) } : c
+        c.id === countryCode
+          ? { ...c, prc: Math.max(0, Math.min(100, prc)) }
+          : c
       ),
     });
   };
@@ -369,7 +377,9 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
           setCitiesError(null);
           setSelectedCountryForCities(countryCode);
           try {
-            const cities = await geonamesService.getCitiesByCountry(countryCode);
+            const cities = await geonamesService.getCitiesByCountry(
+              countryCode
+            );
             setAvailableCities(cities);
             setCitiesError(null);
           } catch (error: any) {
@@ -392,7 +402,7 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
     };
 
     fetchCities();
-  }, [platform, audienceGeo.countries.map(c => c.id).join(',')]);
+  }, [platform, audienceGeo.countries.map((c) => c.id).join(",")]);
 
   const resetFilters = () => {
     setSearchQuery("");
@@ -422,9 +432,7 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
     <div className="bg-white rounded-xl shadow-xl border border-gray-200 flex flex-col sticky top-4 h-[calc(100vh-2rem)]">
       {/* Header */}
       <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-200 flex-shrink-0">
-        <h3 className="text-lg font-semibold text-gray-900">
-          Filtros
-        </h3>
+        <h3 className="text-lg font-semibold text-gray-900">Filtros</h3>
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className="text-sm text-blue-600 hover:text-blue-800 font-medium"
@@ -453,6 +461,12 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    onSearch();
+                  }
+                }}
                 placeholder="Buscar influencers..."
                 className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
               />
@@ -613,9 +627,11 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
+                      e.preventDefault();
                       const parsed = parseFollowersInput(minFollowersInput);
                       if (!Number.isNaN(parsed)) setMinFollowers(parsed);
                       (e.currentTarget as HTMLInputElement).blur();
+                      onSearch();
                     }
                   }}
                   placeholder="Mínimo (p. ej. 10K)"
@@ -637,9 +653,11 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
+                      e.preventDefault();
                       const parsed = parseFollowersInput(maxFollowersInput);
                       if (!Number.isNaN(parsed)) setMaxFollowers(parsed);
                       (e.currentTarget as HTMLInputElement).blur();
+                      onSearch();
                     }
                   }}
                   placeholder="Máximo (p. ej. 1M)"
@@ -784,6 +802,12 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
                     onChange={(e) =>
                       setAqs({ ...aqs, min: Number(e.target.value) })
                     }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        onSearch();
+                      }
+                    }}
                     placeholder="Mínimo"
                     min="0"
                     max="100"
@@ -796,6 +820,12 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
                     onChange={(e) =>
                       setAqs({ ...aqs, max: Number(e.target.value) })
                     }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        onSearch();
+                      }
+                    }}
                     placeholder="Máximo"
                     min="0"
                     max="100"
@@ -816,6 +846,12 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
                     onChange={(e) =>
                       setCqs({ ...cqs, min: Number(e.target.value) })
                     }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        onSearch();
+                      }
+                    }}
                     placeholder="Mínimo"
                     min="0"
                     max="100"
@@ -828,6 +864,12 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
                     onChange={(e) =>
                       setCqs({ ...cqs, max: Number(e.target.value) })
                     }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        onSearch();
+                      }
+                    }}
                     placeholder="Máximo"
                     min="0"
                     max="100"
@@ -844,10 +886,32 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <span className="ml-1 text-gray-400 cursor-help">
-                          <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" /><path d="M12 8v2a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2m0 4h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          <svg
+                            width="16"
+                            height="16"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                            />
+                            <path
+                              d="M12 8v2a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2m0 4h.01"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
                         </span>
                       </TooltipTrigger>
-                      <TooltipContent sideOffset={5}>Keywords to search in content</TooltipContent>
+                      <TooltipContent sideOffset={5}>
+                        Keywords to search in content
+                      </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </label>
@@ -856,9 +920,20 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
                     type="text"
                     value={contentInput}
                     onChange={(e) => setContentInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        if (
+                          contentInput.trim() &&
+                          !searchContent.includes(contentInput.trim())
+                        ) {
+                          handleAddContent();
+                        }
+                        onSearch();
+                      }
+                    }}
                     placeholder="Agregar palabra clave..."
                     className="flex-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
-                    onKeyPress={(e) => e.key === "Enter" && handleAddContent()}
                   />
                   <button
                     type="button"
@@ -896,10 +971,32 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <span className="ml-1 text-gray-400 cursor-help">
-                          <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" /><path d="M12 8v2a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2m0 4h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          <svg
+                            width="16"
+                            height="16"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                            />
+                            <path
+                              d="M12 8v2a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2m0 4h.01"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
                         </span>
                       </TooltipTrigger>
-                      <TooltipContent sideOffset={5}>Keywords to search in description</TooltipContent>
+                      <TooltipContent sideOffset={5}>
+                        Keywords to search in description
+                      </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </label>
@@ -908,11 +1005,20 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
                     type="text"
                     value={descriptionInput}
                     onChange={(e) => setDescriptionInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        if (
+                          descriptionInput.trim() &&
+                          !searchDescription.includes(descriptionInput.trim())
+                        ) {
+                          handleAddDescription();
+                        }
+                        onSearch();
+                      }
+                    }}
                     placeholder="Agregar palabra clave..."
                     className="flex-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
-                    onKeyPress={(e) =>
-                      e.key === "Enter" && handleAddDescription()
-                    }
                   />
                   <button
                     type="button"
@@ -947,7 +1053,7 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Ubicación de la audiencia
                 </label>
-                
+
                 {/* Country Selection */}
                 <div className="mb-3">
                   <Popover>
@@ -1028,6 +1134,12 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
                                 Number(e.target.value)
                               )
                             }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                onSearch();
+                              }
+                            }}
                             min="0"
                             max="100"
                             className="w-16 px-2 py-1 border border-input rounded text-sm"
@@ -1056,9 +1168,12 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
                       {citiesError && (
                         <div className="mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
                           <p className="text-xs text-yellow-800">
-                            {citiesError.includes("daily limit") || citiesError.includes("demo") ? (
+                            {citiesError.includes("daily limit") ||
+                            citiesError.includes("demo") ? (
                               <>
-                                Límite diario de Geonames excedido. Para usar esta función, necesitas configurar un usuario de Geonames.
+                                Límite diario de Geonames excedido. Para usar
+                                esta función, necesitas configurar un usuario de
+                                Geonames.
                                 <br />
                                 <a
                                   href="https://www.geonames.org/login"
@@ -1069,7 +1184,9 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
                                   Regístrate en Geonames
                                 </a>
                                 {" y configura "}
-                                <code className="text-xs bg-yellow-100 px-1 rounded">NEXT_PUBLIC_GEONAMES_USERNAME</code>
+                                <code className="text-xs bg-yellow-100 px-1 rounded">
+                                  NEXT_PUBLIC_GEONAMES_USERNAME
+                                </code>
                                 {" en tus variables de entorno."}
                               </>
                             ) : (
@@ -1097,66 +1214,73 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
                         </PopoverTrigger>
                         {!citiesError && (
                           <PopoverContent className="p-0 w-72 bg-white max-h-96">
-                          <Command className="bg-white">
-                            <CommandInput
-                              placeholder="Buscar ciudad..."
-                              value={citySearchQuery}
-                              onValueChange={setCitySearchQuery}
-                            />
-                            <CommandEmpty>
-                              {loadingCities
-                                ? "Cargando..."
-                                : availableCities.length === 0
-                                ? "No hay ciudades disponibles"
-                                : "Sin resultados."}
-                            </CommandEmpty>
-                            <CommandList>
-                              <CommandGroup>
-                                {availableCities
-                                  .filter((city) =>
-                                    citySearchQuery
-                                      ? city.name
-                                          .toLowerCase()
-                                          .includes(citySearchQuery.toLowerCase())
-                                      : true
-                                  )
-                                  .slice(0, 100)
-                                  .map((city) => {
-                                    const isSelected = audienceGeo.cities.some(
-                                      (c) => c.id === city.id
-                                    );
-                                    return (
-                                      <CommandItem
-                                        key={city.id}
-                                        value={`${city.name}${city.adminName1 ? `, ${city.adminName1}` : ""}`}
-                                        onSelect={() => {
-                                          if (isSelected) {
-                                            handleRemoveCity(city.id);
-                                          } else {
-                                            handleAddCity(city);
-                                          }
-                                        }}
-                                      >
-                                        <Check
-                                          className={
-                                            isSelected
-                                              ? "h-4 w-4 mr-2 opacity-100"
-                                              : "h-4 w-4 mr-2 opacity-0"
-                                          }
-                                        />
-                                        {city.name}
-                                        {city.adminName1 && (
-                                          <span className="text-xs text-gray-500 ml-1">
-                                            , {city.adminName1}
-                                          </span>
-                                        )}
-                                      </CommandItem>
-                                    );
-                                  })}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
+                            <Command className="bg-white">
+                              <CommandInput
+                                placeholder="Buscar ciudad..."
+                                value={citySearchQuery}
+                                onValueChange={setCitySearchQuery}
+                              />
+                              <CommandEmpty>
+                                {loadingCities
+                                  ? "Cargando..."
+                                  : availableCities.length === 0
+                                  ? "No hay ciudades disponibles"
+                                  : "Sin resultados."}
+                              </CommandEmpty>
+                              <CommandList>
+                                <CommandGroup>
+                                  {availableCities
+                                    .filter((city) =>
+                                      citySearchQuery
+                                        ? city.name
+                                            .toLowerCase()
+                                            .includes(
+                                              citySearchQuery.toLowerCase()
+                                            )
+                                        : true
+                                    )
+                                    .slice(0, 100)
+                                    .map((city) => {
+                                      const isSelected =
+                                        audienceGeo.cities.some(
+                                          (c) => c.id === city.id
+                                        );
+                                      return (
+                                        <CommandItem
+                                          key={city.id}
+                                          value={`${city.name}${
+                                            city.adminName1
+                                              ? `, ${city.adminName1}`
+                                              : ""
+                                          }`}
+                                          onSelect={() => {
+                                            if (isSelected) {
+                                              handleRemoveCity(city.id);
+                                            } else {
+                                              handleAddCity(city);
+                                            }
+                                          }}
+                                        >
+                                          <Check
+                                            className={
+                                              isSelected
+                                                ? "h-4 w-4 mr-2 opacity-100"
+                                                : "h-4 w-4 mr-2 opacity-0"
+                                            }
+                                          />
+                                          {city.name}
+                                          {city.adminName1 && (
+                                            <span className="text-xs text-gray-500 ml-1">
+                                              , {city.adminName1}
+                                            </span>
+                                          )}
+                                        </CommandItem>
+                                      );
+                                    })}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
                         )}
                       </Popover>
                     </div>
@@ -1186,8 +1310,17 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
                             type="number"
                             value={city.prc}
                             onChange={(e) =>
-                              handleUpdateCityPrc(city.id, Number(e.target.value))
+                              handleUpdateCityPrc(
+                                city.id,
+                                Number(e.target.value)
+                              )
                             }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                onSearch();
+                              }
+                            }}
                             min="0"
                             max="100"
                             className="w-16 px-2 py-1 border border-input rounded text-sm"
@@ -1214,7 +1347,9 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
                 </label>
                 <div className="space-y-2">
                   {ageGroups.map((ageGroup) => {
-                    const isSelected = audienceAge.groups.includes(ageGroup.key);
+                    const isSelected = audienceAge.groups.includes(
+                      ageGroup.key
+                    );
                     return (
                       <div
                         key={ageGroup.key}
@@ -1248,6 +1383,12 @@ const HypeAuditorFilters: React.FC<HypeAuditorFiltersProps> = ({
                       onChange={(e) =>
                         handleUpdateAgePrc(Number(e.target.value))
                       }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          onSearch();
+                        }
+                      }}
                       min="0"
                       max="100"
                       className="w-20 px-2 py-1 border border-input rounded text-sm"

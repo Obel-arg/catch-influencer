@@ -1,37 +1,25 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { useRequestMonitoring } from "@/hooks/common/useRequestMonitoring";
+import { InfluencerProfilePanel } from "@/components/explorer/influencer-profile-panel";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  BookmarkIcon,
-  ExternalLink,
-  Filter,
-  Instagram,
-  Music,
-  Search,
-  X,
-  Zap,
-} from "lucide-react";
-import { InfluencerProfilePanel } from "@/components/explorer/influencer-profile-panel";
-import { useInfluencers } from "@/hooks/influencer/useInfluencers";
-import { InfluencerExtendedService, influencerService } from "@/lib/services/influencer";
-import { HypeAuditorDiscoveryFilters } from "@/lib/services/hypeauditor-discovery.service";
-import HypeAuditorFilters from "./HypeAuditorFilters";
-import { cn } from "@/lib/utils";
-import { campaignService } from "@/lib/services/campaign";
-import ExplorerAssignModal from "./ExplorerAssignModal";
-import { useToast } from "@/hooks/common/useToast";
-import {
-  getSafeAvatarUrlForModal,
-} from "@/utils/tiktok";
 import { NumberDisplay } from "@/components/ui/NumberDisplay";
+import { useRequestMonitoring } from "@/hooks/common/useRequestMonitoring";
+import { useToast } from "@/hooks/common/useToast";
+import { useInfluencers } from "@/hooks/influencer/useInfluencers";
+import { campaignService } from "@/lib/services/campaign";
+import { HypeAuditorDiscoveryFilters } from "@/lib/services/hypeauditor-discovery.service";
+import { influencerService } from "@/lib/services/influencer";
+import { getSafeAvatarUrlForModal } from "@/utils/tiktok";
+import { ExternalLink, Filter, Search } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import ExplorerAssignModal from "./ExplorerAssignModal";
+import HypeAuditorFilters from "./HypeAuditorFilters";
 
 // 🎯 Imports para las mejoras
-import { SkeletonInfluencerTable } from "./SkeletonInfluencerRow";
 import { LazyInfluencerAvatar } from "./LazyInfluencerAvatar";
+import { SkeletonInfluencerTable } from "./SkeletonInfluencerRow";
 
 // Tipos locales para el adaptador extendido
 interface ExplorerSocialPlatform {
@@ -68,8 +56,11 @@ export default function Explorer() {
   const { toast } = useToast();
 
   // 🚀 Hook de influencers para HypeAuditor
-  const { searchHypeAuditorInfluencers, searchHypeAuditorSuggestion, loading: loadingHypeAuditor } =
-    useInfluencers();
+  const {
+    searchHypeAuditorInfluencers,
+    searchHypeAuditorSuggestion,
+    loading: loadingHypeAuditor,
+  } = useInfluencers();
 
   // 🎯 Estado para manejar información de búsqueda
   const [searchInfo, setSearchInfo] = useState<{
@@ -411,10 +402,7 @@ export default function Explorer() {
         if (audienceAge.groups.length > 0) {
           filters.audienceAge = audienceAge;
         }
-        if (
-          audienceGeo.countries.length > 0 ||
-          audienceGeo.cities.length > 0
-        ) {
+        if (audienceGeo.countries.length > 0 || audienceGeo.cities.length > 0) {
           filters.audienceGeo = audienceGeo;
         }
 
@@ -498,7 +486,9 @@ export default function Explorer() {
     // Frontend page 3-4 = Backend page 2
     const itemsPerBackendPage = 20; // HypeAuditor devuelve 20 items
     const itemsPerFrontendPage = size; // Mostramos 10 items
-    const requiredBackendPage = Math.ceil((newPage * itemsPerFrontendPage) / itemsPerBackendPage);
+    const requiredBackendPage = Math.ceil(
+      (newPage * itemsPerFrontendPage) / itemsPerBackendPage
+    );
 
     setPage(newPage);
 
@@ -527,6 +517,34 @@ export default function Explorer() {
   // - Búsqueda directa con HypeAuditor Discovery
   // - Paginación interna con datos cargados
   // - Sin cache complejo ni múltiples proveedores
+
+  // Memoize searchContext to prevent infinite loops in InfluencerProfilePanel
+  const memoizedSearchContext = useMemo(
+    () => ({
+      location: location !== "all" ? location : undefined,
+      audienceGeo:
+        audienceGeo.countries.length > 0 || audienceGeo.cities.length > 0
+          ? audienceGeo
+          : undefined,
+    }),
+    [location, audienceGeo]
+  );
+
+  // Memoize callbacks for InfluencerProfilePanel to prevent infinite loops
+  const handleAudienceFetched = useCallback((id: string, data: unknown) => {
+    setAudienceCache((prev) => ({
+      ...prev,
+      [id]: { data, timestamp: Date.now() },
+    }));
+  }, []);
+
+  const handleRequestOpen = useCallback(
+    (influencer: (typeof adaptedInfluencers)[number]) => {
+      setSelectedInfluencer(influencer);
+      setIsPanelOpen(true);
+    },
+    []
+  );
 
   const adaptedInfluencers = useMemo(() => {
     if (influencers.length === 0) {
@@ -681,6 +699,9 @@ export default function Explorer() {
           // 🎯 Metadatos adicionales para debugging
           searchMeta: inf.searchMeta || null,
           followerBreakdown: inf.followerBreakdown || null,
+          // Audience data cache status - check both backend data and local cache
+          hasAudienceData:
+            inf.hasAudienceData || !!audienceCache[inf.creatorId],
         };
 
         return adaptedInfluencer;
@@ -696,7 +717,7 @@ export default function Explorer() {
     ).length;
 
     return adapted;
-  }, [influencers, platform]);
+  }, [influencers, platform, audienceCache]);
 
   const filteredInfluencers = useMemo(() => {
     return adaptedInfluencers.filter((influencer) => {
@@ -714,18 +735,18 @@ export default function Explorer() {
   const normalizePlatformName = (platform: string): string => {
     const lowerPlatform = platform.toLowerCase();
     switch (lowerPlatform) {
-      case 'youtube':
-        return 'YouTube';
-      case 'tiktok':
-        return 'TikTok';
-      case 'instagram':
-        return 'Instagram';
-      case 'facebook':
-        return 'Facebook';
-      case 'threads':
-        return 'Threads';
-      case 'twitter':
-        return 'Twitter';
+      case "youtube":
+        return "YouTube";
+      case "tiktok":
+        return "TikTok";
+      case "instagram":
+        return "Instagram";
+      case "facebook":
+        return "Facebook";
+      case "threads":
+        return "Threads";
+      case "twitter":
+        return "Twitter";
       default:
         return platform.charAt(0).toUpperCase() + platform.slice(1);
     }
@@ -736,15 +757,18 @@ export default function Explorer() {
 
     const platforms: { name: string; followers: number }[] = [];
     const platformInfo = influencer.platformInfo || {};
-    
+
     // 🎯 OPCIÓN 1: Usar platformInfo.socialNetworks (HypeAuditor format)
-    if (platformInfo.socialNetworks && Array.isArray(platformInfo.socialNetworks)) {
+    if (
+      platformInfo.socialNetworks &&
+      Array.isArray(platformInfo.socialNetworks)
+    ) {
       // Crear un Set para trackear plataformas únicas
       const seenPlatforms = new Set<string>();
-      
+
       platformInfo.socialNetworks.forEach((network: any) => {
         const platformName = network.platform;
-        
+
         // Solo agregar si no hemos visto esta plataforma antes
         if (platformName && !seenPlatforms.has(platformName.toLowerCase())) {
           seenPlatforms.add(platformName.toLowerCase());
@@ -755,19 +779,24 @@ export default function Explorer() {
         }
       });
     }
-    
+
     // 🎯 OPCIÓN 2: Usar socialPlatforms si socialNetworks no existe
-    else if (influencer.socialPlatforms && Array.isArray(influencer.socialPlatforms)) {
+    else if (
+      influencer.socialPlatforms &&
+      Array.isArray(influencer.socialPlatforms)
+    ) {
       // Crear un Set para trackear plataformas únicas
       const seenPlatforms = new Set<string>();
-      
+
       influencer.socialPlatforms.forEach((platform: any) => {
-        const platformName = typeof platform === "string" ? platform : platform.platform;
-        
+        const platformName =
+          typeof platform === "string" ? platform : platform.platform;
+
         // Solo agregar si no hemos visto esta plataforma antes
         if (platformName && !seenPlatforms.has(platformName.toLowerCase())) {
           seenPlatforms.add(platformName.toLowerCase());
-          const followers = typeof platform === "object" ? platform.followers || 0 : 0;
+          const followers =
+            typeof platform === "object" ? platform.followers || 0 : 0;
           platforms.push({
             name: normalizePlatformName(platformName),
             followers: followers,
@@ -775,14 +804,18 @@ export default function Explorer() {
         }
       });
     }
-    
+
     // 🎯 OPCIÓN 3: Fallback al formato anterior (platformInfo con claves directas)
     else {
       // Detectar YouTube
       if (platformInfo.youtube) {
         const ytData = platformInfo.youtube;
         const hasYouTubeId =
-          ytData.youtubeName || ytData.displayId || ytData.channelId || ytData.id || ytData.youtubeId;
+          ytData.youtubeName ||
+          ytData.displayId ||
+          ytData.channelId ||
+          ytData.id ||
+          ytData.youtubeId;
         if (hasYouTubeId) {
           const subscribers = ytData.subscribers || ytData.followers || 0;
           platforms.push({ name: "YouTube", followers: subscribers });
@@ -795,9 +828,15 @@ export default function Explorer() {
         if (instagramData.basicInstagram) {
           instagramData = instagramData.basicInstagram;
         }
-        const hasInstagramId = instagramData.instagramId || instagramData.username || instagramData.id;
+        const hasInstagramId =
+          instagramData.instagramId ||
+          instagramData.username ||
+          instagramData.id;
         if (hasInstagramId) {
-          platforms.push({ name: "Instagram", followers: instagramData.followers || 0 });
+          platforms.push({
+            name: "Instagram",
+            followers: instagramData.followers || 0,
+          });
         }
       }
 
@@ -807,9 +846,13 @@ export default function Explorer() {
         if (tiktokData.basicTikTok) {
           tiktokData = tiktokData.basicTikTok;
         }
-        const hasTikTokId = tiktokData.tiktokId || tiktokData.username || tiktokData.id;
+        const hasTikTokId =
+          tiktokData.tiktokId || tiktokData.username || tiktokData.id;
         if (hasTikTokId) {
-          platforms.push({ name: "TikTok", followers: tiktokData.followers || 0 });
+          platforms.push({
+            name: "TikTok",
+            followers: tiktokData.followers || 0,
+          });
         }
       }
 
@@ -819,9 +862,13 @@ export default function Explorer() {
         if (facebookData.basicFacebook) {
           facebookData = facebookData.basicFacebook;
         }
-        const hasFacebookId = facebookData.facebookId || facebookData.username || facebookData.id;
+        const hasFacebookId =
+          facebookData.facebookId || facebookData.username || facebookData.id;
         if (hasFacebookId) {
-          platforms.push({ name: "Facebook", followers: facebookData.followers || 0 });
+          platforms.push({
+            name: "Facebook",
+            followers: facebookData.followers || 0,
+          });
         }
       }
 
@@ -831,9 +878,13 @@ export default function Explorer() {
         if (threadsData.basicThreads) {
           threadsData = threadsData.basicThreads;
         }
-        const hasThreadsId = threadsData.threadsId || threadsData.username || threadsData.id;
+        const hasThreadsId =
+          threadsData.threadsId || threadsData.username || threadsData.id;
         if (hasThreadsId) {
-          platforms.push({ name: "Threads", followers: threadsData.followers || 0 });
+          platforms.push({
+            name: "Threads",
+            followers: threadsData.followers || 0,
+          });
         }
       }
     }
@@ -841,16 +892,38 @@ export default function Explorer() {
     // 🎯 ÚLTIMO FALLBACK: Detectar por avatar URL si aún no hay plataformas
     if (platforms.length === 0) {
       const avatar = influencer.avatar || "";
-      if (avatar.includes("googleusercontent.com") || avatar.includes("ytimg.com") || avatar.includes("ggpht.com")) {
-        platforms.push({ name: "YouTube", followers: influencer.followersCount || 0 });
-      } else if (avatar.includes("fbcdn.net") || avatar.includes("cdninstagram.com") || avatar.includes("instagram")) {
-        platforms.push({ name: "Instagram", followers: influencer.followersCount || 0 });
-      } else if (avatar.includes("tiktokcdn.com") || avatar.includes("muscdn.com")) {
-        platforms.push({ name: "TikTok", followers: influencer.followersCount || 0 });
+      if (
+        avatar.includes("googleusercontent.com") ||
+        avatar.includes("ytimg.com") ||
+        avatar.includes("ggpht.com")
+      ) {
+        platforms.push({
+          name: "YouTube",
+          followers: influencer.followersCount || 0,
+        });
+      } else if (
+        avatar.includes("fbcdn.net") ||
+        avatar.includes("cdninstagram.com") ||
+        avatar.includes("instagram")
+      ) {
+        platforms.push({
+          name: "Instagram",
+          followers: influencer.followersCount || 0,
+        });
+      } else if (
+        avatar.includes("tiktokcdn.com") ||
+        avatar.includes("muscdn.com")
+      ) {
+        platforms.push({
+          name: "TikTok",
+          followers: influencer.followersCount || 0,
+        });
       } else if (influencer.mainSocialPlatform) {
         // Usar plataforma principal como último recurso
         platforms.push({
-          name: influencer.mainSocialPlatform.charAt(0).toUpperCase() + influencer.mainSocialPlatform.slice(1),
+          name:
+            influencer.mainSocialPlatform.charAt(0).toUpperCase() +
+            influencer.mainSocialPlatform.slice(1),
           followers: influencer.followersCount || 0,
         });
       }
@@ -1128,39 +1201,59 @@ export default function Explorer() {
       }
 
       // 🎯 PASO 3: Fallback a API externa (solo si no hay datos en BD)
-      // 🎯 NUEVO: Pasar TODOS los IDs disponibles para obtener datos de todas las plataformas
-      const requestId = trackRequest(
-        "/influencers/platforms/basic-data",
-        "GET",
-        `openInfluencerPanel(${influencer.name}, API-externa)`,
-        {
-          youtubeId: allPlatformIds.youtubeId,
-          instagramId: allPlatformIds.instagramId,
-          tiktokId: allPlatformIds.tiktokId,
-          source: "external-api",
-          allIds,
-        }
-      );
+      // 🎯 NUEVO: Verificar que al menos un ID de plataforma esté disponible antes de llamar API externa
+      const hasPlatformIds =
+        allPlatformIds.youtubeId ||
+        allPlatformIds.instagramId ||
+        allPlatformIds.tiktokId;
 
-      const data = await influencerService.getBasicPlatformData({
-        youtubeId: allPlatformIds.youtubeId || undefined,
-        instagramId: allPlatformIds.instagramId || undefined,
-        tiktokId: allPlatformIds.tiktokId || undefined,
-      });
-
-      if (data && Object.keys(data).length > 0) {
-        // ✅ DATOS OBTENIDOS DE API EXTERNA
-        setFullInfluencerCache((prev) => ({ ...prev, [cacheKey]: data }));
-        setSelectedInfluencer(adaptBasicPlatformDataForPanel(data, influencer));
-        completeRequest(requestId, 200, data, false);
-      } else {
-        // ❌ API EXTERNA SIN DATOS
+      if (!hasPlatformIds) {
+        console.log(
+          `ℹ️ No platform IDs available for ${influencer.name}, skipping external API call`
+        );
         completeRequest(
-          requestId,
+          "skipped-external-api",
           204,
-          { message: "No data from external API" },
+          { message: "No platform IDs available for external API call" },
           false
         );
+      } else {
+        // 🎯 NUEVO: Pasar TODOS los IDs disponibles para obtener datos de todas las plataformas
+        const requestId = trackRequest(
+          "/influencers/platforms/basic-data",
+          "GET",
+          `openInfluencerPanel(${influencer.name}, API-externa)`,
+          {
+            youtubeId: allPlatformIds.youtubeId,
+            instagramId: allPlatformIds.instagramId,
+            tiktokId: allPlatformIds.tiktokId,
+            source: "external-api",
+            allIds,
+          }
+        );
+
+        const data = await influencerService.getBasicPlatformData({
+          youtubeId: allPlatformIds.youtubeId || undefined,
+          instagramId: allPlatformIds.instagramId || undefined,
+          tiktokId: allPlatformIds.tiktokId || undefined,
+        });
+
+        if (data && Object.keys(data).length > 0) {
+          // ✅ DATOS OBTENIDOS DE API EXTERNA
+          setFullInfluencerCache((prev) => ({ ...prev, [cacheKey]: data }));
+          setSelectedInfluencer(
+            adaptBasicPlatformDataForPanel(data, influencer)
+          );
+          completeRequest(requestId, 200, data, false);
+        } else {
+          // ❌ API EXTERNA SIN DATOS
+          completeRequest(
+            requestId,
+            204,
+            { message: "No data from external API" },
+            false
+          );
+        }
       }
     } catch (error) {
       console.error(`❌ Error obteniendo datos del influencer:`, error);
@@ -1287,9 +1380,13 @@ export default function Explorer() {
     // Backend page 1 = Frontend pages 1-2
     // Backend page 2 = Frontend pages 3-4
     const firstFrontendPageForBackend = (backendPage - 1) * 2 + 1;
-    const offsetWithinBackendPage = (page - firstFrontendPageForBackend) * itemsPerFrontendPage;
+    const offsetWithinBackendPage =
+      (page - firstFrontendPageForBackend) * itemsPerFrontendPage;
 
-    return limitedInfluencers.slice(offsetWithinBackendPage, offsetWithinBackendPage + itemsPerFrontendPage);
+    return limitedInfluencers.slice(
+      offsetWithinBackendPage,
+      offsetWithinBackendPage + itemsPerFrontendPage
+    );
   };
 
   // 🎯 NUEVA: Función para seleccionar/deseleccionar todos los influencers visibles
@@ -1579,7 +1676,7 @@ export default function Explorer() {
             `Error creando/leyendo influencer ${influencerId}:`,
             err
           );
-        }   
+        }
       }
 
       const validLocalIds = Array.from(influencerDataMap.values()).map(
@@ -2176,8 +2273,16 @@ export default function Explorer() {
   return (
     <div className="flex px-4 gap-4 ">
       {/* Panel de filtros (izquierda) */}
-      <div className={`overflow-hidden transition-all duration-300 ${showFilters ? 'w-[360px] opacity-100' : 'w-0 opacity-0'} flex-shrink-0 order-2`}>
-        <div className={`${showFilters ? 'translate-x-0' : '-translate-x-2'} transition-transform duration-300`}>
+      <div
+        className={`overflow-hidden transition-all duration-300 ${
+          showFilters ? "w-[360px] opacity-100" : "w-0 opacity-0"
+        } flex-shrink-0 order-2`}
+      >
+        <div
+          className={`${
+            showFilters ? "translate-x-0" : "-translate-x-2"
+          } transition-transform duration-300`}
+        >
           <HypeAuditorFilters
             platform={platform}
             setPlatform={setPlatform}
@@ -2669,7 +2774,10 @@ export default function Explorer() {
                               </span>
                             </td>
                             <td className="py-4 px-6 text-center">
-                              <span className="font-medium" suppressHydrationWarning>
+                              <span
+                                className="font-medium"
+                                suppressHydrationWarning
+                              >
                                 {influencer.averageEngagementRate > 0
                                   ? `${(
                                       influencer.averageEngagementRate * 100
@@ -2680,14 +2788,28 @@ export default function Explorer() {
                             <td className="py-4 px-6">
                               <div className="flex justify-center gap-2">
                                 <Button
-                                  variant="outline"
+                                  variant={
+                                    influencer.hasAudienceData
+                                      ? "default"
+                                      : "outline"
+                                  }
                                   size="sm"
-                                  className="h-8 w-8 p-0 hover:bg-gray-50"
+                                  className={`h-8 w-8 p-0 ${
+                                    influencer.hasAudienceData
+                                      ? "hover:bg-blue-600"
+                                      : "hover:bg-gray-100"
+                                  }`}
                                   onClick={() =>
                                     openInfluencerPanel(influencer)
                                   }
                                 >
-                                  <ExternalLink className="h-4 w-4" />
+                                  <ExternalLink
+                                    className={
+                                      influencer.hasAudienceData
+                                        ? "h-4 w-4 text-white"
+                                        : "h-4 w-4"
+                                    }
+                                  />
                                 </Button>
                               </div>
                             </td>
@@ -2748,7 +2870,13 @@ export default function Explorer() {
                 <span className="text-sm font-medium text-gray-700">
                   {loadingInfluencers
                     ? `Cargando página ${page}...`
-                    : `Página ${page} de ${Math.min(Math.ceil(totalCount / size), 50)} • ${Math.min(totalCount, 500).toLocaleString()} resultados`}
+                    : `Página ${page} de ${Math.min(
+                        Math.ceil(totalCount / size),
+                        50
+                      )} • ${Math.min(
+                        totalCount,
+                        500
+                      ).toLocaleString()} resultados`}
                 </span>
                 <Button
                   variant="outline"
@@ -2765,7 +2893,8 @@ export default function Explorer() {
               </div>
               {page >= 50 && (
                 <p className="text-xs text-center text-gray-500 mt-2">
-                  Mostrando hasta 500 resultados. Refina tu búsqueda para ver resultados más específicos.
+                  Mostrando hasta 500 resultados. Refina tu búsqueda para ver
+                  resultados más específicos.
                 </p>
               )}
             </div>
@@ -2781,18 +2910,10 @@ export default function Explorer() {
           onClose={() => setIsPanelOpen(false)}
           isLoading={loadingPanel}
           audienceCache={audienceCache}
-          onAudienceFetched={(id, data) => {
-            setAudienceCache(prev => ({
-              ...prev,
-              [id]: { data, timestamp: Date.now() }
-            }));
-          }}
-          searchContext={{
-            location: location !== 'all' ? location : undefined,
-            audienceGeo: audienceGeo.countries.length > 0 || audienceGeo.cities.length > 0
-              ? audienceGeo
-              : undefined
-          }}
+          onAudienceFetched={handleAudienceFetched}
+          searchContext={memoizedSearchContext}
+          onRequestOpen={handleRequestOpen}
+          platformFilter={platform}
         />
       )}
 

@@ -17,6 +17,7 @@ export interface AudienceDemographics {
     percentage: number;
   }>;
   is_synthetic: boolean;
+  bio?: string;
 }
 
 export interface AudienceResponse {

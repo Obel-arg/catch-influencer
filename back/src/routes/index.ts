@@ -36,6 +36,7 @@ import hypeAuditorRoutes from './hypeauditor/hypeauditor.routes';
 import hypeAuditorDiscoveryRoutes from './hypeauditor/hypeauditor-discovery.routes';
 import hypeAuditorCollectorRoutes from './hypeauditor/report-collector.routes';
 import userBrandRoutes from './user-brand';
+import agentAudienceRoutes from './audience/agent-audience.routes';
 // import explorerRoutes from './explorer/explorer.routes';
 
 
@@ -119,6 +120,7 @@ router.use('/hypeauditor', hypeAuditorRoutes);
 router.use('/hypeauditor/discovery', hypeAuditorDiscoveryRoutes);
 router.use('/hypeauditor/collector', hypeAuditorCollectorRoutes);
 router.use('/user-brands', userBrandRoutes);
+router.use('/', agentAudienceRoutes);
 // router.use('/explorer', explorerRoutes);
 
 

@@ -1,24 +1,32 @@
-import { Request, Response } from 'express';
-import { OpenAIAudienceService } from '../../services/audience/openai-audience.service';
-import { InfluencerService } from '../../services/influencer/influencer.service';
+import { Request, Response } from "express";
+import { AgentAudienceService } from "../../services/audience/agent-audience.service";
+import { InfluencerService } from "../../services/influencer/influencer.service";
 
 export class InfluencerAudienceController {
-  private openaiService: OpenAIAudienceService;
+  private agentService: AgentAudienceService;
   private influencerService: InfluencerService;
 
   constructor() {
-    this.openaiService = new OpenAIAudienceService();
+    this.agentService = new AgentAudienceService();
     this.influencerService = new InfluencerService();
   }
 
   /**
    * GET /api/influencers/:id/audience/synthetic
-   * Generate audience demographics using OpenAI inference
+   * Generate audience demographics using Agent inference
+   *
+   * Query params:
+   * - check_only: If true, only check cache without generating (fast path)
+   * - username: Instagram username
+   * - instagram_url: Full Instagram URL
+   * - force: Force refresh cache
+   * - search_context: JSON string with search context
    */
   async getSyntheticAudience(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { username, instagram_url, force, search_context } = req.query;
+      const { username, instagram_url, force, search_context, check_only } =
+        req.query;
 
       // Parse search context if provided
       let parsedSearchContext = undefined;
@@ -26,39 +34,39 @@ export class InfluencerAudienceController {
         try {
           parsedSearchContext = JSON.parse(search_context as string);
           console.log(
-            '[InfluencerAudience] Search context received:',
-            parsedSearchContext,
+            "[InfluencerAudience] Search context received:",
+            parsedSearchContext
           );
         } catch (e) {
           console.warn(
-            '[InfluencerAudience] Invalid search_context JSON, ignoring',
+            "[InfluencerAudience] Invalid search_context JSON, ignoring"
           );
         }
       }
 
       let instagramUrl: string;
-      let influencerId: string = id;
+      const influencerId: string = id;
 
       // Check if Instagram URL is provided directly
       if (instagram_url) {
         instagramUrl = instagram_url as string;
         console.log(
-          '[InfluencerAudience] Using provided Instagram URL:',
-          instagramUrl,
+          "[InfluencerAudience] Using provided Instagram URL:",
+          instagramUrl
         );
       } else if (username) {
         // Clean username: remove spaces, special chars, convert to lowercase
         const cleanUsername = (username as string)
           .toLowerCase()
           .trim()
-          .replace(/\s+/g, '') // Remove all spaces
-          .replace(/[^a-z0-9._]/g, ''); // Keep only valid Instagram characters
+          .replace(/\s+/g, "") // Remove all spaces
+          .replace(/[^a-z0-9._]/g, ""); // Keep only valid Instagram characters
 
         instagramUrl = `https://instagram.com/${cleanUsername}`;
         console.log(
-          '[InfluencerAudience] Built Instagram URL from username:',
+          "[InfluencerAudience] Built Instagram URL from username:",
           instagramUrl,
-          username !== cleanUsername ? `(cleaned from: ${username})` : '',
+          username !== cleanUsername ? `(cleaned from: ${username})` : ""
         );
       } else {
         // Try to get influencer from database
@@ -67,14 +75,14 @@ export class InfluencerAudienceController {
           return res.status(404).json({
             success: false,
             error:
-              'Influencer not found in database. Please provide username or instagram_url as query params.',
+              "Influencer not found in database. Please provide username or instagram_url as query params.",
           });
         }
 
         // Extract Instagram URL or username from influencer data
         console.log(
-          '[InfluencerAudience] Fetching influencer from database:',
-          influencer,
+          "[InfluencerAudience] Fetching influencer from database:",
+          influencer
         );
         const influencerUsername =
           influencer.instagram_username ||
@@ -85,29 +93,63 @@ export class InfluencerAudienceController {
           return res.status(400).json({
             success: false,
             error:
-              'No Instagram username found for this influencer. Please provide username or instagram_url.',
+              "No Instagram username found for this influencer. Please provide username or instagram_url.",
           });
         }
 
         instagramUrl = `https://instagram.com/${influencerUsername}`;
         console.log(
-          '[InfluencerAudience] Using database influencer Instagram:',
-          instagramUrl,
+          "[InfluencerAudience] Using database influencer Instagram:",
+          instagramUrl
         );
       }
 
-      // Call OpenAI inference service
-      console.log('[InfluencerAudience] Calling OpenAI inference...');
-      const result = await this.openaiService.inferAudience(instagramUrl, {
+      // If check_only=true, only check cache without generating
+      if (check_only === "true") {
+        console.log("[InfluencerAudience] Check-only mode - checking cache...");
+        const cachedResult = await this.agentService.inferAudience(
+          instagramUrl,
+          {
+            influencerId: influencerId,
+            forceRefresh: false,
+            searchContext: parsedSearchContext,
+            skipGeneration: true, // New option to skip generation
+          }
+        );
+
+        if (cachedResult.cached) {
+          // Data found in cache
+          return res.json({
+            success: true,
+            audience: cachedResult.demographics,
+            description: cachedResult.description,
+            cached: true,
+            generation_required: false,
+            cost: 0,
+          });
+        } else {
+          // No cache found, generation required
+          return res.json({
+            success: true,
+            cached: false,
+            generation_required: true,
+            message: "Audience data not found in cache. Generation required.",
+          });
+        }
+      }
+
+      // Call Agent inference service (full generation)
+      console.log("[InfluencerAudience] Calling Agent inference...");
+      const result = await this.agentService.inferAudience(instagramUrl, {
         influencerId: influencerId,
-        forceRefresh: force === 'true',
+        forceRefresh: force === "true",
         searchContext: parsedSearchContext,
       });
 
       if (!result.success) {
         return res.status(500).json({
           success: false,
-          error: result.error || 'Failed to infer audience demographics',
+          error: result.error || "Failed to infer audience demographics",
           details: result.details,
         });
       }
@@ -115,14 +157,15 @@ export class InfluencerAudienceController {
       res.json({
         success: true,
         audience: result.demographics,
+        description: result.description,
         cached: result.cached,
         cost: result.cost,
       });
     } catch (error: any) {
-      console.error('[InfluencerAudience] Error inferring audience:', error);
+      console.error("[InfluencerAudience] Error inferring audience:", error);
       res.status(500).json({
         success: false,
-        error: error.message || 'Error inferring audience data',
+        error: error.message || "Error inferring audience data",
       });
     }
   }

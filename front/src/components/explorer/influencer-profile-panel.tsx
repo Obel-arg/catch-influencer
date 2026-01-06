@@ -1,41 +1,38 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useMemo, useRef } from 'react';
-import { X, Loader2, Info, Download } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { NumberDisplay } from '@/components/ui/NumberDisplay';
-import { toast } from 'sonner';
-import { exportInfluencerSquadPDF } from '@/utils/influencer-pdf-export';
-import { InfluencerSquadPDFTemplate } from '@/components/explorer/pdf-templates/InfluencerSquadPDFTemplate';
+import { InfluencerSquadPDFTemplate } from "@/components/explorer/pdf-templates/InfluencerSquadPDFTemplate";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { NumberDisplay } from "@/components/ui/NumberDisplay";
 import {
-  getInstagramThumbnailValidated,
-  getOptimizedAvatarUrl,
-} from '@/utils/instagram';
+  influencerService,
+  normalizeAudienceData,
+} from "@/lib/services/influencer";
+import { AudienceDemographics } from "@/types/audience";
+import { exportInfluencerSquadPDF } from "@/utils/influencer-pdf-export";
+import { getInstagramThumbnailValidated } from "@/utils/instagram";
 import {
-  getTikTokThumbnailValidated,
-  getTikTokDefaultThumbnail,
   getSafeAvatarUrlForModal,
-} from '@/utils/tiktok';
-import { CountryFlag } from '@/components/ui/country-flag';
-import { influencerService } from '@/lib/services/influencer';
-import { AudienceDemographics } from '@/types/audience';
+  getTikTokDefaultThumbnail,
+  getTikTokThumbnailValidated,
+} from "@/utils/tiktok";
+import { useToast } from "@/hooks/common/useToast";
+import { Download, Info, Loader2, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
   Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from 'recharts';
+} from "recharts";
 
 interface InfluencerProfilePanelProps {
   influencer: any;
@@ -56,26 +53,30 @@ interface InfluencerProfilePanelProps {
       cities: Array<{ id: number; prc: number }>;
     };
   };
+  /** Callback when user clicks toast to re-open the panel after background generation */
+  onRequestOpen?: (influencer: any) => void;
+  /** Platform filter from explorer view (e.g., "Instagram", "TikTok", "all") */
+  platformFilter?: string;
 }
 
 // 🎯 Helper para usar iconos desde /public/icons
-const getPlatformIcon = (platform: string, className = 'h-5 w-5') => {
-  let iconSrc = '';
+const getPlatformIcon = (platform: string, className = "h-5 w-5") => {
+  let iconSrc = "";
   switch (platform) {
-    case 'Instagram':
-      iconSrc = '/icons/instagram.svg';
+    case "Instagram":
+      iconSrc = "/icons/instagram.svg";
       break;
-    case 'TikTok':
-      iconSrc = '/icons/tiktok.svg';
+    case "TikTok":
+      iconSrc = "/icons/tiktok.svg";
       break;
-    case 'YouTube':
-      iconSrc = '/icons/youtube.svg';
+    case "YouTube":
+      iconSrc = "/icons/youtube.svg";
       break;
-    case 'Facebook':
-      iconSrc = '/icons/facebook.svg';
+    case "Facebook":
+      iconSrc = "/icons/facebook.svg";
       break;
-    case 'Threads':
-      iconSrc = '/icons/threads.svg';
+    case "Threads":
+      iconSrc = "/icons/threads.svg";
       break;
     default:
       return null;
@@ -206,7 +207,7 @@ const ImageWithLoader = ({
         src={currentSrc}
         alt={alt}
         className={`w-full h-full object-cover rounded-md transition-all duration-300 ${
-          isLoading ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+          isLoading ? "opacity-0 scale-95" : "opacity-100 scale-100"
         }`}
         onLoad={handleLoad}
         onError={handleError}
@@ -288,7 +289,7 @@ const AvatarWithLoader = ({
           src={currentSrc}
           alt={alt}
           className={`transition-all duration-300 ${
-            isLoading ? 'opacity-0' : 'opacity-100'
+            isLoading ? "opacity-0" : "opacity-100"
           }`}
           onLoad={handleLoad}
           onError={handleError}
@@ -318,7 +319,11 @@ export function InfluencerProfilePanel({
   audienceCache,
   onAudienceFetched,
   searchContext,
+  onRequestOpen,
+  platformFilter,
 }: InfluencerProfilePanelProps) {
+  const { showToast } = useToast();
+
   // 🎯 FUNCIÓN PARA DETECTAR SI TIENE DATOS EXTENDIDOS
   const hasExtendedData = useMemo(() => {
     if (!influencer) return false;
@@ -373,21 +378,21 @@ export function InfluencerProfilePanel({
   const getPlatformData = (platform: string) => {
     const pdata = influencer.platformInfo[platform.toLowerCase()];
     if (!pdata) return null;
-    if (platform === 'Instagram' && pdata.basicInstagram)
+    if (platform === "Instagram" && pdata.basicInstagram)
       return pdata.basicInstagram;
-    if (platform === 'TikTok' && pdata.basicTikTok) return pdata.basicTikTok;
-    if (platform === 'Facebook' && pdata.basicFacebook)
+    if (platform === "TikTok" && pdata.basicTikTok) return pdata.basicTikTok;
+    if (platform === "Facebook" && pdata.basicFacebook)
       return pdata.basicFacebook;
-    if (platform === 'Threads' && pdata.basicThreads) return pdata.basicThreads;
+    if (platform === "Threads" && pdata.basicThreads) return pdata.basicThreads;
     return pdata;
   };
 
   // ✨ ESTADO PARA AVATAR PROCESADO
-  const [processedAvatar, setProcessedAvatar] = useState<string>('');
+  const [processedAvatar, setProcessedAvatar] = useState<string>("");
 
   // ✨ ESTADO PARA AUDIENCIA SINTÉTICA
   const [audienceData, setAudienceData] = useState<AudienceDemographics | null>(
-    null,
+    null
   );
   const [loadingAudience, setLoadingAudience] = useState(false);
 
@@ -409,7 +414,7 @@ export function InfluencerProfilePanel({
         platformInfo.youtube.views > 0 ||
         Object.keys(platformInfo.youtube).length > 0)
     ) {
-      platforms.push('YouTube');
+      platforms.push("YouTube");
     }
 
     // Instagram
@@ -420,7 +425,7 @@ export function InfluencerProfilePanel({
         platformInfo.instagram.basicInstagram?.engageRate > 0 ||
         Object.keys(platformInfo.instagram).length > 0)
     ) {
-      platforms.push('Instagram');
+      platforms.push("Instagram");
     }
 
     // TikTok
@@ -431,7 +436,7 @@ export function InfluencerProfilePanel({
         platformInfo.tiktok.basicTikTok?.engageRate > 0 ||
         Object.keys(platformInfo.tiktok).length > 0)
     ) {
-      platforms.push('TikTok');
+      platforms.push("TikTok");
     }
 
     // Facebook
@@ -442,7 +447,7 @@ export function InfluencerProfilePanel({
         platformInfo.facebook.basicFacebook?.engageRate > 0 ||
         Object.keys(platformInfo.facebook).length > 0)
     ) {
-      platforms.push('Facebook');
+      platforms.push("Facebook");
     }
 
     // Threads
@@ -453,29 +458,38 @@ export function InfluencerProfilePanel({
         platformInfo.threads.basicThreads?.gRateThreadsTabAvgLikes > 0 ||
         Object.keys(platformInfo.threads).length > 0)
     ) {
-      platforms.push('Threads');
+      platforms.push("Threads");
     }
 
     return platforms;
   }, [influencer]);
 
   const [activePlatform, setActivePlatform] = useState(
-    influencer.platform || 'YouTube',
+    influencer.platform || "YouTube"
   );
 
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
   const requestedThumbnails = useRef<Record<string, boolean>>({});
   const [isExportingPDF, setIsExportingPDF] = useState(false);
 
+  // Track background generation jobs to avoid duplicates
+  const backgroundGenerationJobs = useRef<Set<string>>(new Set());
+
   // 📄 Export to PDF handler
   const handleExportPDF = async () => {
     try {
       setIsExportingPDF(true);
       await exportInfluencerSquadPDF(influencer.name);
-      toast.success('PDF exportado exitosamente');
+      showToast({
+        title: "PDF exportado exitosamente",
+        status: "success",
+      });
     } catch (error) {
-      console.error('Error exporting PDF:', error);
-      toast.error('Error al exportar el PDF');
+      console.error("Error exporting PDF:", error);
+      showToast({
+        title: "Error al exportar el PDF",
+        status: "error",
+      });
     } finally {
       setIsExportingPDF(false);
     }
@@ -485,16 +499,16 @@ export function InfluencerProfilePanel({
   const fetchAndCacheThumbnail = async (
     key: string,
     platform: string,
-    post: any,
+    post: any
   ) => {
     if (requestedThumbnails.current[key]) return;
     requestedThumbnails.current[key] = true;
-    let url = '';
-    if (platform === 'Instagram') {
+    let url = "";
+    if (platform === "Instagram") {
       url = `https://www.instagram.com/p/${post.shortcode}`;
       const thumb = await getInstagramThumbnailValidated(url);
       setThumbnails((prev) => ({ ...prev, [key]: thumb }));
-    } else if (platform === 'TikTok') {
+    } else if (platform === "TikTok") {
       // Construir la URL del video de TikTok
       const tiktokId =
         platformData?.tiktokId || influencer?.platformInfo?.tiktok?.tiktokId;
@@ -509,27 +523,28 @@ export function InfluencerProfilePanel({
 
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
       setActivePlatform(
-        influencer.platform || availablePlatforms[0] || 'YouTube',
+        influencer.platform || availablePlatforms[0] || "YouTube"
       );
     }
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     };
   }, [isOpen, influencer, availablePlatforms]);
 
   // ✨ PROCESAR AVATAR CUANDO CAMBIE EL INFLUENCER
   useEffect(() => {
     if (influencer) {
-      const originalAvatar = influencer.avatar || influencer.image || '';
-      const influencerName = influencer.name || 'Influencer';
+      const originalAvatar = influencer.avatar || influencer.image || "";
+      const influencerName = influencer.name || "Influencer";
       const processed = getProcessedAvatar(originalAvatar, influencerName);
       setProcessedAvatar(processed);
     }
   }, [influencer]);
 
   // ✨ CARGAR AUDIENCIA SINTÉTICA CUANDO SE ABRA EL MODAL
+  // Uses a two-phase approach: fast cache check, then background generation if needed
   useEffect(() => {
     const loadSyntheticAudience = async () => {
       if (!isOpen || !influencer?.id) {
@@ -547,60 +562,163 @@ export function InfluencerProfilePanel({
         return;
       }
 
-      // If not in cache or expired, fetch from API
+      // Extract influencer data for API calls
+      const instagramUsername =
+        influencer.platformInfo?.instagram?.username ||
+        influencer.creatorId ||
+        influencer.id;
+
+      const influencerDataForApi = {
+        username: instagramUsername,
+        follower_count: influencer.followersCount || 50000,
+        platform: influencer.mainSocialPlatform || "instagram",
+        niche: influencer.categories?.[0] || undefined,
+        location: influencer.location || influencer.country || undefined,
+        search_context: searchContext,
+      };
+
+      // Phase 1: Fast cache check (check_only=true)
       setLoadingAudience(true);
-      // Clear old data while loading to prevent showing wrong data
       setAudienceData(null);
 
       try {
-        // Extract the correct Instagram username from platformInfo
         console.log(
-          '[InfluencerProfilePanel] Extracting Instagram username for influencer:',
-          influencer,
-        );
-        const instagramUsername =
-          influencer.platformInfo?.instagram?.username ||
-          influencer.creatorId ||
-          influencer.id;
-
-        console.log(
-          '[InfluencerProfilePanel] Using Instagram username:',
-          instagramUsername,
-          '(from platformInfo.instagram.username)',
+          "[InfluencerProfilePanel] Phase 1: Checking cache for:",
+          influencer.name
         );
 
-        // Prepare influencer data for the API call
-        const influencerData = {
-          username: instagramUsername,
-          follower_count: influencer.followersCount || 50000,
-          platform: influencer.mainSocialPlatform || 'instagram',
-          niche: influencer.categories?.[0] || undefined,
-          location: influencer.location || influencer.country || undefined,
-          // Pass search context for better AI inference
-          search_context: searchContext,
-        };
-
-        const response = await influencerService.getSyntheticAudience(
+        const cacheCheckResponse = await influencerService.getSyntheticAudience(
           influencer.id,
-          influencerData,
+          influencerDataForApi,
+          true // checkOnly
         );
-        if (response.success && response.audience) {
-          setAudienceData(response.audience);
-          // Update cache
-          if (onAudienceFetched) {
-            onAudienceFetched(influencer.id, response.audience);
+
+        if (
+          cacheCheckResponse.success &&
+          cacheCheckResponse.cached &&
+          cacheCheckResponse.audience
+        ) {
+          // Data found in server cache - use it immediately
+          console.log(`✅ Server cache hit for influencer ${influencer.id}`);
+          const normalizedData = normalizeAudienceData(
+            cacheCheckResponse.audience,
+            cacheCheckResponse.description
+          );
+          setAudienceData(normalizedData);
+          setLoadingAudience(false);
+
+          // Update client cache
+          if (onAudienceFetched && normalizedData) {
+            onAudienceFetched(influencer.id, normalizedData);
           }
+          return;
+        }
+
+        // Phase 2: Generation required - do it in background
+        if (cacheCheckResponse.generation_required) {
+          console.log(
+            `[InfluencerProfilePanel] Generation required for ${influencer.name}, starting background job`
+          );
+
+          // Stop showing loading in the panel - data will come later
+          setLoadingAudience(false);
+
+          // Check if we already have a background job for this influencer
+          if (backgroundGenerationJobs.current.has(influencer.id)) {
+            console.log(
+              `[InfluencerProfilePanel] Background job already in progress for ${influencer.id}`
+            );
+            return;
+          }
+
+          // Mark as generating
+          backgroundGenerationJobs.current.add(influencer.id);
+
+          // Store influencer reference for toast callback
+          const influencerRef = { ...influencer };
+
+          // Show "generating" toast - keep it visible until operation completes
+          const loadingToast = showToast({
+            title: `Obteniendo información de audiencia`,
+            description: `Generando datos de ${influencer.name}...`,
+            status: "info",
+            duration: Infinity, // Keep visible until dismissed
+          });
+
+          // Start background generation (don't await, let it run in background)
+          influencerService
+            .getSyntheticAudience(
+              influencer.id,
+              influencerDataForApi,
+              false // Full generation
+            )
+            .then((response) => {
+              // Remove from active jobs
+              backgroundGenerationJobs.current.delete(influencerRef.id);
+
+              // Dismiss loading toast
+              loadingToast?.dismiss();
+
+              if (response.success && response.audience) {
+                // Normalize the data
+                const normalizedData = normalizeAudienceData(
+                  response.audience,
+                  response.description
+                );
+
+                // Update client cache
+                if (onAudienceFetched && normalizedData) {
+                  onAudienceFetched(influencerRef.id, normalizedData);
+                }
+
+                // Show success toast with action button to open panel
+                showToast({
+                  title: `Información de ${influencerRef.name} obtenida`,
+                  description: "Haz clic para ver los datos de audiencia",
+                  status: "success",
+                  duration: 10000,
+                  action: onRequestOpen
+                    ? {
+                        label: "Ver perfil",
+                        onClick: () => onRequestOpen(influencerRef),
+                      }
+                    : undefined,
+                });
+              } else {
+                showToast({
+                  title: `Error al obtener información`,
+                  description: `No se pudo obtener datos de ${influencerRef.name}`,
+                  status: "error",
+                });
+              }
+            })
+            .catch((error) => {
+              console.error("Error in background audience generation:", error);
+              backgroundGenerationJobs.current.delete(influencerRef.id);
+
+              // Dismiss loading toast
+              loadingToast?.dismiss();
+
+              showToast({
+                title: `Error al obtener información`,
+                description: `No se pudo obtener datos de ${influencerRef.name}`,
+                status: "error",
+              });
+            });
         }
       } catch (error) {
-        console.error('Error loading synthetic audience:', error);
+        console.error("Error loading synthetic audience:", error);
         setAudienceData(null);
-      } finally {
         setLoadingAudience(false);
       }
     };
 
     loadSyntheticAudience();
-  }, [isOpen, influencer?.id, influencer?.name]);
+    // NOTE: We intentionally only depend on influencer.id to prevent infinite loops.
+    // The effect accesses other influencer properties via closure, but we only want
+    // to re-run when the influencer ID changes (meaning a different influencer is selected).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, influencer.id, audienceCache, onAudienceFetched, searchContext]);
 
   const platformData = useMemo(() => {
     if (!influencer?.platformInfo) return null;
@@ -634,13 +752,13 @@ export function InfluencerProfilePanel({
   useEffect(() => {
     if (isOpen && influencer?.platformInfo) {
       // Preload thumbnails para todos los posts de Instagram y TikTok
-      ['Instagram', 'TikTok'].forEach((platform) => {
+      ["Instagram", "TikTok"].forEach((platform) => {
         const pdata = getPlatformData(platform);
         if (!pdata) return;
         const posts = pdata.recentPosts || pdata.recentVideos || [];
         posts.forEach((post: any) => {
           let key =
-            platform === 'Instagram'
+            platform === "Instagram"
               ? post.shortcode
               : post.videoId || post.tiktokId || post.id || post.url;
           if (key && !thumbnails[key]) {
@@ -653,7 +771,7 @@ export function InfluencerProfilePanel({
   }, [isOpen, influencer]);
 
   useEffect(() => {
-    if (activePlatform === 'TikTok') {
+    if (activePlatform === "TikTok") {
     }
   }, [activePlatform, platformData]);
 
@@ -662,34 +780,34 @@ export function InfluencerProfilePanel({
   // Icon helper definido arriba
 
   const getPostImageUrl = (post: any, platform: string) => {
-    if (platform === 'YouTube') {
+    if (platform === "YouTube") {
       return `https://img.youtube.com/vi/${post.videoId}/hqdefault.jpg`;
     }
-    if (platform === 'Instagram') {
+    if (platform === "Instagram") {
       const key = post.shortcode;
       if (thumbnails[key]) return thumbnails[key];
       fetchAndCacheThumbnail(key, platform, post);
-      return '/placeholder.svg';
+      return "/placeholder.svg";
     }
-    if (platform === 'TikTok') {
+    if (platform === "TikTok") {
       const key = post.videoId || post.tiktokId || post.id || post.url;
       if (thumbnails[key]) return thumbnails[key];
       fetchAndCacheThumbnail(key, platform, post);
       return getTikTokDefaultThumbnail();
     }
-    return post.photoURL || post.cover || '/placeholder.svg';
+    return post.photoURL || post.cover || "/placeholder.svg";
   };
 
   const getPostUrl = (post: any, platform: string) => {
     switch (platform) {
-      case 'Instagram':
+      case "Instagram":
         return `https://www.instagram.com/p/${post.shortcode}`;
-      case 'YouTube':
+      case "YouTube":
         return `https://www.youtube.com/watch?v=${post.videoId}`;
-      case 'TikTok':
+      case "TikTok":
         return `https://www.tiktok.com/@${platformData.tiktokId}/video/${post.videoId}`;
       default:
-        return '#';
+        return "#";
     }
   };
 
@@ -703,6 +821,7 @@ export function InfluencerProfilePanel({
           <InfluencerSquadPDFTemplate
             influencer={influencer}
             audienceData={audienceData}
+            platformFilter={platformFilter}
           />
         </div>
       )}
@@ -710,7 +829,7 @@ export function InfluencerProfilePanel({
       {/* Overlay */}
       <div
         className={`fixed inset-0 bg-black/30 z-40 transition-opacity duration-300 ${
-          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         onClick={onClose}
       />
@@ -718,7 +837,7 @@ export function InfluencerProfilePanel({
       {/* Panel */}
       <div
         className={`fixed top-0 left-0 h-full w-full md:w-[550px] lg:w-[650px] bg-white shadow-xl z-50 overflow-y-auto transition-transform duration-300 ease-in-out ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
+          isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="sticky top-0 z-10 flex items-center justify-between p-6 pb-4 border-b bg-white">
@@ -737,7 +856,7 @@ export function InfluencerProfilePanel({
                 <Download className="h-4 w-4" />
               )}
               <span className="text-xs">
-                {isExportingPDF ? 'Exportando...' : 'Exportar PDF'}
+                {isExportingPDF ? "Exportando..." : "Exportar PDF"}
               </span>
             </Button>
             <Button
@@ -764,27 +883,27 @@ export function InfluencerProfilePanel({
                     src={
                       processedAvatar || influencer.avatar || influencer.image
                     }
-                    alt={influencer.name || 'Influencer'}
-                    fallback={influencer.name?.charAt(0) || 'I'}
+                    alt={influencer.name || "Influencer"}
+                    fallback={influencer.name?.charAt(0) || "I"}
                     className="h-16 w-16"
                   />
                   <div>
                     <h1 className="text-xl font-bold">{influencer.name}</h1>
                     <div className="text-sm text-gray-500">
-                      {influencer.location || influencer.country} •{' '}
+                      {influencer.location || influencer.country} •{" "}
                       <NumberDisplay
                         value={influencer?.followersCount}
                         format="short"
-                      />{' '}
+                      />{" "}
                       Seguidores Totales
                     </div>
                     {/* 🎯 MOSTRAR FUENTE DE DATOS SI ESTÁ DISPONIBLE */}
                     {influencer._metadata?.source && (
                       <div className="text-xs text-blue-600 font-medium mt-1">
-                        📊{' '}
-                        {influencer._metadata.source === 'local-database'
-                          ? 'Base de Datos'
-                          : 'API Externa'}
+                        📊{" "}
+                        {influencer._metadata.source === "local-database"
+                          ? "Base de Datos"
+                          : "API Externa"}
                         {influencer._metadata.completenessScore &&
                           ` • ${influencer._metadata.completenessScore}% completo`}
                       </div>
@@ -804,37 +923,37 @@ export function InfluencerProfilePanel({
                         {influencer.platformInfo.socialNetworks.map(
                           (sn: any, idx: number) => {
                             const platformKey = String(
-                              sn.platform || '',
+                              sn.platform || ""
                             ).toLowerCase();
                             const platformLabel =
-                              platformKey === 'instagram'
-                                ? 'Instagram'
-                                : platformKey === 'youtube'
-                                ? 'YouTube'
-                                : platformKey === 'tiktok'
-                                ? 'TikTok'
-                                : platformKey === 'facebook'
-                                ? 'Facebook'
-                                : platformKey === 'threads'
-                                ? 'Threads'
-                                : sn.platform || '';
+                              platformKey === "instagram"
+                                ? "Instagram"
+                                : platformKey === "youtube"
+                                ? "YouTube"
+                                : platformKey === "tiktok"
+                                ? "TikTok"
+                                : platformKey === "facebook"
+                                ? "Facebook"
+                                : platformKey === "threads"
+                                ? "Threads"
+                                : sn.platform || "";
                             const followers = Number(
-                              sn.followers || sn.followersCount || 0,
+                              sn.followers || sn.followersCount || 0
                             );
                             const engagement =
-                              typeof sn.engagement === 'number'
+                              typeof sn.engagement === "number"
                                 ? sn.engagement
                                 : null; // ya viene en %
-                            const state = String(sn.state || '').toUpperCase();
+                            const state = String(sn.state || "").toUpperCase();
 
                             const stateClasses =
-                              state === 'READY'
-                                ? 'bg-green-100 text-green-700 border-green-200'
-                                : state === 'PENDING'
-                                ? 'bg-yellow-100 text-yellow-700 border-yellow-200'
-                                : state === 'ERROR'
-                                ? 'bg-red-100 text-red-700 border-red-200'
-                                : 'bg-gray-100 text-gray-700 border-gray-200';
+                              state === "READY"
+                                ? "bg-green-100 text-green-700 border-green-200"
+                                : state === "PENDING"
+                                ? "bg-yellow-100 text-yellow-700 border-yellow-200"
+                                : state === "ERROR"
+                                ? "bg-red-100 text-red-700 border-red-200"
+                                : "bg-gray-100 text-gray-700 border-gray-200";
 
                             return (
                               <div
@@ -843,7 +962,7 @@ export function InfluencerProfilePanel({
                               >
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-2 min-w-0">
-                                    {getPlatformIcon(platformLabel, 'h-4 w-4')}
+                                    {getPlatformIcon(platformLabel, "h-4 w-4")}
                                     <span className="text-sm font-medium text-gray-800 truncate">
                                       {platformLabel}
                                     </span>
@@ -873,9 +992,9 @@ export function InfluencerProfilePanel({
                                 <div className="mt-3 flex items-center gap-4 text-sm">
                                   <div className="flex flex-col">
                                     <span className="text-gray-500">
-                                      {platformLabel === 'YouTube'
-                                        ? 'Suscriptores'
-                                        : 'Seguidores'}
+                                      {platformLabel === "YouTube"
+                                        ? "Suscriptores"
+                                        : "Seguidores"}
                                     </span>
                                     <span className="font-semibold text-gray-900">
                                       {formatNumber(followers)}
@@ -886,13 +1005,13 @@ export function InfluencerProfilePanel({
                                     <span className="font-semibold text-gray-900">
                                       {engagement !== null
                                         ? `${engagement.toFixed(2)}%`
-                                        : '—'}
+                                        : "—"}
                                     </span>
                                   </div>
                                 </div>
                               </div>
                             );
-                          },
+                          }
                         )}
                       </div>
                     </div>
@@ -942,7 +1061,7 @@ export function InfluencerProfilePanel({
                                   ([age, value]) => ({
                                     name: age,
                                     value: parseFloat(value.toFixed(1)),
-                                  }),
+                                  })
                                 )}
                               >
                                 <CartesianGrid strokeDasharray="3 3" />
@@ -969,15 +1088,15 @@ export function InfluencerProfilePanel({
                                   <Pie
                                     data={[
                                       {
-                                        name: 'Masculino',
+                                        name: "Masculino",
                                         value: parseFloat(
-                                          audienceData.gender.male.toFixed(1),
+                                          audienceData.gender.male.toFixed(1)
                                         ),
                                       },
                                       {
-                                        name: 'Femenino',
+                                        name: "Femenino",
                                         value: parseFloat(
-                                          audienceData.gender.female.toFixed(1),
+                                          audienceData.gender.female.toFixed(1)
                                         ),
                                       },
                                     ]}
@@ -1001,14 +1120,14 @@ export function InfluencerProfilePanel({
                                 <div className="flex items-center gap-2">
                                   <div className="w-3 h-3 bg-[#3b82f6] rounded-full"></div>
                                   <span className="text-gray-700">
-                                    Masculino:{' '}
+                                    Masculino:{" "}
                                     {audienceData.gender.male.toFixed(1)}%
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <div className="w-3 h-3 bg-[#ec4899] rounded-full"></div>
                                   <span className="text-gray-700">
-                                    Femenino:{' '}
+                                    Femenino:{" "}
                                     {audienceData.gender.female.toFixed(1)}%
                                   </span>
                                 </div>
@@ -1028,7 +1147,7 @@ export function InfluencerProfilePanel({
                               width="100%"
                               height={Math.max(
                                 250,
-                                audienceData.geography.length * 30,
+                                audienceData.geography.length * 30
                               )}
                             >
                               <BarChart
@@ -1057,7 +1176,7 @@ export function InfluencerProfilePanel({
                     </div>
                   ) : (
                     <div className="text-center py-8 text-gray-500">
-                      No hay datos de audiencia disponibles
+                      No hay datos de audiencia disponibles, generando...
                     </div>
                   )}
                 </div>

@@ -34,8 +34,12 @@
   },
   "dependencies": {
     "@huggingface/inference": "^2.8.1",
+    "@langchain/core": "^1.1.8",
+    "@langchain/google-genai": "^2.1.2",
+    "@langchain/groq": "^1.0.2",
     "@sparticuz/chromium": "^143.0.0",
     "@supabase/supabase-js": "^2.45.4",
+    "@tavily/core": "^0.6.3",
     "@types/bull": "^4.10.4",
     "@types/ioredis": "^5.0.0",
     "@types/passport": "^1.0.17",
