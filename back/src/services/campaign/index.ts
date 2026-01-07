@@ -494,7 +494,7 @@ export class CampaignService {
   }
 
   async removeInfluencer(campaignId: string, influencerId: string): Promise<void> {
-  
+
 
     try {
       // Primero verificar si el registro existe
@@ -503,7 +503,7 @@ export class CampaignService {
         .select('id, campaign_id, influencer_id, status')
         .eq('campaign_id', campaignId)
         .eq('influencer_id', influencerId)
-        .single();
+        .maybeSingle();
 
       if (checkError) {
         console.error('❌ [CampaignService] Error verificando registro existente:', checkError);
@@ -511,10 +511,11 @@ export class CampaignService {
       }
 
       if (!existingRecord) {
-        console.warn('⚠️ [CampaignService] No se encontró registro para eliminar:', {
+        console.warn('⚠️ [CampaignService] No se encontró registro para eliminar (ya eliminado o no existe):', {
           campaignId,
           influencerId
         });
+        // No es un error, simplemente no hay nada que eliminar
         return;
       }
 
