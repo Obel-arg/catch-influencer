@@ -5,7 +5,6 @@ import {
   Search,
   Loader2,
   UserPlus,
-  X,
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
@@ -151,7 +150,7 @@ export const AddInfluencerToCampaignModal = ({
       } finally {
         setIsSearching(false);
       }
-    }, 300);
+    }, 1000); // Increased debounce time to 1000ms for better UX
 
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
@@ -256,13 +255,17 @@ export const AddInfluencerToCampaignModal = ({
           `Influencer "${selectedInfluencer.name}" agregado exitosamente`
         );
 
-        // Refetch influencers to update the list
-        await refetch();
+        // Wait a bit for backend to process, then refetch influencers to update the list
+        try {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          await refetch();
+        } catch (refetchError) {
+          console.error("Error refetching influencers:", refetchError);
+          // Still close modal even if refetch fails
+        }
 
-        // Close modal after a short delay
-        setTimeout(() => {
-          onClose();
-        }, 500);
+        // Close modal after refetch completes
+        onClose();
       } else {
         setAddError("Error al agregar el influencer");
       }
@@ -326,7 +329,7 @@ export const AddInfluencerToCampaignModal = ({
           )}
 
           {/* Selected Influencer Preview */}
-          {selectedInfluencer && (
+          {/* {selectedInfluencer && (
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex-shrink-0 max-h-[200px] overflow-y-auto">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -391,7 +394,7 @@ export const AddInfluencerToCampaignModal = ({
                 </Button>
               </div>
             </div>
-          )}
+          )} */}
 
           {/* Search Results */}
           <div
@@ -511,11 +514,11 @@ export const AddInfluencerToCampaignModal = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="flex justify-end gap-2 pt-1.5 px-4 border-t flex-shrink-0">
+        <div className="flex justify-end gap-2 pt-1.5 px-4 flex-shrink-0">
           <Button
             onClick={handleAddInfluencer}
             disabled={!selectedInfluencer || isAdding || isSearching}
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-blue-600 hover:bg-blue-700 w-full"
             size="sm"
           >
             {isAdding ? (
