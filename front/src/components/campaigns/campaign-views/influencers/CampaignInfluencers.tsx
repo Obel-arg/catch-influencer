@@ -1,12 +1,5 @@
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { 
-  Users, 
-  XCircle, 
-  RefreshCw, 
-  Grid, 
-  List
-} from "lucide-react";
+import { Users, XCircle, RefreshCw, Grid, List, UserPlus } from "lucide-react";
 import { Campaign } from "@/types/campaign";
 import { useCampaignContext } from "@/contexts/CampaignContext";
 import { useCampaigns } from "@/hooks/campaign/useCampaigns";
@@ -16,11 +9,18 @@ import { useEffect, useState } from "react";
 import { InfluencerCard } from "./components/InfluencerCard";
 import { InfluencerListItem } from "./components/InfluencerListItem";
 import { InfluencerCardSkeleton } from "./components/InfluencerCardSkeleton";
-import { InfluencerFilters, InfluencerFiltersButton } from "./components/InfluencerFilters";
+import {
+  InfluencerFilters,
+  InfluencerFiltersButton,
+} from "./components/InfluencerFilters";
 import { DeleteInfluencerModal } from "./components/DeleteInfluencerModal";
+import { AddInfluencerToCampaignModal } from "./components/AddInfluencerToCampaignModal";
 import { handleHttpError } from "@/utils/httpErrorHandler";
 import { CacheInvalidators } from "@/lib/http/cacheManager";
-import { calculatePerformanceScore, getPlatformInfluencerId } from "./components/InfluencerUtils";
+import {
+  calculatePerformanceScore,
+  getPlatformInfluencerId,
+} from "./components/InfluencerUtils";
 import { CardNoInfo, CardNoInfoContent } from "@/components/ui/cardNoInfo";
 
 interface CampaignInfluencersProps {
@@ -28,31 +28,30 @@ interface CampaignInfluencersProps {
 }
 
 export const CampaignInfluencers = ({ campaign }: CampaignInfluencersProps) => {
-  const { 
-    influencers, 
-    influencersLoading: loading, 
-    error, 
+  const {
+    influencers,
+    influencersLoading: loading,
+    error,
     refetch,
     updateInfluencers,
     postsCountByInfluencer,
-    platformsByInfluencer 
+    platformsByInfluencer,
   } = useCampaignContext();
-  
+
   // Log de platform_info de cada influencer (temporal)
   useEffect(() => {
     try {
       influencers.forEach((ci) => {
         const inf = ci.influencers;
-        
       });
     } catch {}
   }, [influencers]);
-  
-  console.log(influencers);
+
   // Hook para manejar operaciones de campaña
   const { removeInfluencerFromCampaign } = useCampaigns();
-  
+
   const [showAddPostModal, setShowAddPostModal] = useState(false);
+  const [showAddInfluencerModal, setShowAddInfluencerModal] = useState(false);
   const [selectedInfluencer, setSelectedInfluencer] = useState<{
     id: string;
     name: string;
@@ -65,15 +64,17 @@ export const CampaignInfluencers = ({ campaign }: CampaignInfluencersProps) => {
     influencerName: string;
   }>({
     isOpen: false,
-    influencerId: '',
-    influencerName: ''
+    influencerId: "",
+    influencerName: "",
   });
 
   // 🚀 NUEVO: Estado para rastrear influencers eliminados localmente
-  const [locallyDeletedInfluencers, setLocallyDeletedInfluencers] = useState<Set<string>>(new Set());
+  const [locallyDeletedInfluencers, setLocallyDeletedInfluencers] = useState<
+    Set<string>
+  >(new Set());
 
   // Estados para la vista y filtros (similar a CampaignPosts)
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   // Estados para filtros
@@ -84,18 +85,18 @@ export const CampaignInfluencers = ({ campaign }: CampaignInfluencersProps) => {
   // Función para manejar el refresh - invalidar cache y recargar influencers
   const handleRefresh = () => {
     setIsRefreshing(true);
-    
+
     // 🚀 NUEVO: Limpiar estado de influencers eliminados localmente
     setLocallyDeletedInfluencers(new Set());
-    
+
     // Invalidar cache de influencers de esta campaña específica
     CacheInvalidators.onCampaignInfluencersUpdate(campaign.id);
-    
+
     setTimeout(async () => {
       try {
         await refetch();
       } catch (error) {
-        console.error('❌ Error recargando influencers:', error);
+        console.error("❌ Error recargando influencers:", error);
       } finally {
         setIsRefreshing(false);
       }
@@ -123,22 +124,25 @@ export const CampaignInfluencers = ({ campaign }: CampaignInfluencersProps) => {
         ...postData,
         influencer_id: selectedInfluencer.id,
         campaign_id: campaign.id,
-        post_date: postData.post_date || new Date()
+        post_date: postData.post_date || new Date(),
       });
-      
+
       // NO hacer refetch inmediatamente - el modal se encargará de mostrar la confirmación
       // El refetch se hará cuando el modal se cierre automáticamente
-      
+
       // Mostrar notificación visual al usuario
-      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-        new Notification('Post creado', {
+      if (
+        typeof window !== "undefined" &&
+        "Notification" in window &&
+        Notification.permission === "granted"
+      ) {
+        new Notification("Post creado", {
           body: result.message,
-          icon: '/favicon.ico'
+          icon: "/favicon.ico",
         });
       }
-      
     } catch (error) {
-      console.error('❌ Error creating post with metrics:', error);
+      console.error("❌ Error creating post with metrics:", error);
       throw error;
     }
   };
@@ -146,73 +150,81 @@ export const CampaignInfluencers = ({ campaign }: CampaignInfluencersProps) => {
   const handleCloseModal = () => {
     setShowAddPostModal(false);
     setSelectedInfluencer(null);
-    
+
     // NO hacer refetch automático para evitar que se vuelvan a cargar los influencers
     // El usuario puede usar el botón de refresh manualmente si necesita actualizar los datos
   };
 
   // Función para manejar la eliminación de influencers
-  const handleDeleteInfluencer = (influencerId: string, influencerName: string) => {
+  const handleDeleteInfluencer = (
+    influencerId: string,
+    influencerName: string
+  ) => {
     setDeleteInfluencerModal({
       isOpen: true,
       influencerId,
-      influencerName
+      influencerName,
     });
   };
 
   // Función para confirmar eliminación
   const confirmDeleteInfluencer = async () => {
-
-
     const influencerIdToDelete = deleteInfluencerModal.influencerId;
 
     try {
       // 🚀 OPTIMIZACIÓN: Cerrar modal inmediatamente para feedback visual
       setDeleteInfluencerModal({
         isOpen: false,
-        influencerId: '',
-        influencerName: ''
+        influencerId: "",
+        influencerName: "",
       });
 
       // 🚀 OPTIMIZACIÓN: Eliminación optimista - actualizar UI inmediatamente
       const updatedInfluencers = influencers.filter(
-        (campaignInfluencer) => campaignInfluencer.influencers?.id !== influencerIdToDelete
+        (campaignInfluencer) =>
+          campaignInfluencer.influencers?.id !== influencerIdToDelete
       );
       updateInfluencers(updatedInfluencers);
-      
+
       // 🚀 NUEVO: Marcar como eliminado localmente
-      setLocallyDeletedInfluencers(prev => new Set([...prev, influencerIdToDelete]));
+      setLocallyDeletedInfluencers(
+        (prev) => new Set([...prev, influencerIdToDelete])
+      );
 
       // Usar el servicio para eliminar el influencer de la campaña
-      const success = await removeInfluencerFromCampaign(campaign.id, influencerIdToDelete);
-      
-      
+      const success = await removeInfluencerFromCampaign(
+        campaign.id,
+        influencerIdToDelete
+      );
+
       if (success) {
-        
         // Invalidar cache manualmente
-        if (typeof window !== 'undefined') {
-          const globalInfluencersCache = (window as any).campaignInfluencersCache || new Map();
+        if (typeof window !== "undefined") {
+          const globalInfluencersCache =
+            (window as any).campaignInfluencersCache || new Map();
           globalInfluencersCache.delete(campaign.id);
         }
-        
-        // ✅ SOLUCIÓN: NO hacer refetch automático - mantener la eliminación optimista
+
+        // Refetch influencers to update the list
+        await refetch();
       } else {
-        console.warn('⚠️ [Frontend] removeInfluencerFromCampaign retornó false');
+        console.warn(
+          "⚠️ [Frontend] removeInfluencerFromCampaign retornó false"
+        );
         // Si falla, restaurar el estado original
-        setLocallyDeletedInfluencers(prev => {
+        setLocallyDeletedInfluencers((prev) => {
           const newSet = new Set(prev);
           newSet.delete(influencerIdToDelete);
           return newSet;
         });
         await refetch();
       }
-      
     } catch (error) {
-      console.error('❌ [Frontend] Error eliminando influencer:', error);
+      console.error("❌ [Frontend] Error eliminando influencer:", error);
       handleHttpError(error);
-      
+
       // Si hay error, restaurar el estado original
-      setLocallyDeletedInfluencers(prev => {
+      setLocallyDeletedInfluencers((prev) => {
         const newSet = new Set(prev);
         newSet.delete(influencerIdToDelete);
         return newSet;
@@ -225,16 +237,21 @@ export const CampaignInfluencers = ({ campaign }: CampaignInfluencersProps) => {
   const cancelDeleteInfluencer = () => {
     setDeleteInfluencerModal({
       isOpen: false,
-      influencerId: '',
-      influencerName: ''
+      influencerId: "",
+      influencerName: "",
     });
   };
 
   // Filtrar y ordenar influencers
   const normalizePlatformName = (platform: string): string => {
     const lower = platform.toLowerCase();
-    if (lower === 'x') return 'twitter';
-    if (lower === 'youtube shorts' || lower === 'shorts' || lower === 'ytshorts') return 'youtube';
+    if (lower === "x") return "twitter";
+    if (
+      lower === "youtube shorts" ||
+      lower === "shorts" ||
+      lower === "ytshorts"
+    )
+      return "youtube";
     return lower;
   };
 
@@ -258,22 +275,23 @@ export const CampaignInfluencers = ({ campaign }: CampaignInfluencersProps) => {
       // Filtro de plataforma: exigir @ (handle) válido en esa plataforma
       if (filterPlatform !== "all") {
         const normalized = normalizePlatformName(filterPlatform);
-        const influencerId = influencer.id || '';
+        const influencerId = influencer.id || "";
         const platforms = platformsByInfluencer[influencerId] || [];
         if (!platforms.includes(normalized)) return false;
 
-        const handle = getPlatformInfluencerId(influencer.platform_info, normalized);
+        const handle = getPlatformInfluencerId(
+          influencer.platform_info,
+          normalized
+        );
         if (!handle) return false;
       }
-
-
 
       return true;
     })
     .sort((a, b) => {
       const influencerA = a.influencers;
       const influencerB = b.influencers;
-      
+
       if (!influencerA || !influencerB) return 0;
 
       if (sortBy === "engagement") {
@@ -297,7 +315,7 @@ export const CampaignInfluencers = ({ campaign }: CampaignInfluencersProps) => {
   // 🎯 NUEVO: Mostrar skeleton cards mientras carga
   if (loading || isRefreshing) {
     const skeletonCount = 9; // Número de skeleton cards a mostrar (múltiplo de 3 para filas perfectas)
-    
+
     return (
       <div className="space-y-6">
         {/* Header con acciones */}
@@ -313,25 +331,47 @@ export const CampaignInfluencers = ({ campaign }: CampaignInfluencersProps) => {
             <Button
               variant="ghost"
               size="sm"
-              className={`bg-white shadow-none p-0 w-10 h-10 flex items-center justify-center rounded-lg border-0 focus:ring-0 focus:outline-none ${viewMode === 'grid' ? 'bg-blue-100' : ''}`}
-              onClick={() => setViewMode('grid')}
+              className={`bg-white shadow-none p-0 w-10 h-10 flex items-center justify-center rounded-lg border-0 focus:ring-0 focus:outline-none ${
+                viewMode === "grid" ? "bg-blue-100" : ""
+              }`}
+              onClick={() => setViewMode("grid")}
             >
-              <Grid className={`h-5 w-5 ${viewMode === 'grid' ? 'text-blue-600' : 'text-gray-700'}`} />
+              <Grid
+                className={`h-5 w-5 ${
+                  viewMode === "grid" ? "text-blue-600" : "text-gray-700"
+                }`}
+              />
             </Button>
             {/* Botón de vista (lista) */}
             <Button
               variant="ghost"
               size="sm"
-              className={`bg-white shadow-none p-0 w-10 h-10 flex items-center justify-center rounded-lg border-0 focus:ring-0 focus:outline-none ${viewMode === 'list' ? 'bg-blue-100' : ''}`}
-              onClick={() => setViewMode('list')}
+              className={`bg-white shadow-none p-0 w-10 h-10 flex items-center justify-center rounded-lg border-0 focus:ring-0 focus:outline-none ${
+                viewMode === "list" ? "bg-blue-100" : ""
+              }`}
+              onClick={() => setViewMode("list")}
             >
-              <List className={`h-5 w-5 ${viewMode === 'list' ? 'text-blue-600' : 'text-gray-700'}`} />
+              <List
+                className={`h-5 w-5 ${
+                  viewMode === "list" ? "text-blue-600" : "text-gray-700"
+                }`}
+              />
             </Button>
             {/* Botón de filtros */}
             <InfluencerFiltersButton
               showFilters={showFilters}
               setShowFilters={setShowFilters}
             />
+            {/* Botón de agregar influencer */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="bg-white shadow-none p-0 w-10 h-10 flex items-center justify-center rounded-lg border-0 focus:ring-0 focus:outline-none hover:bg-blue-100"
+              onClick={() => setShowAddInfluencerModal(true)}
+              title="Agregar influencer"
+            >
+              <UserPlus className="h-5 w-5 text-gray-700 hover:text-blue-600" />
+            </Button>
             {/* Botón de reload */}
             <Button
               variant="ghost"
@@ -340,7 +380,11 @@ export const CampaignInfluencers = ({ campaign }: CampaignInfluencersProps) => {
               onClick={handleRefresh}
               title="Recargar influencers"
             >
-              <RefreshCw className={`h-5 w-5 text-gray-700 hover:text-blue-600 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-5 w-5 text-gray-700 hover:text-blue-600 ${
+                  isRefreshing ? "animate-spin" : ""
+                }`}
+              />
             </Button>
           </div>
         </div>
@@ -359,7 +403,7 @@ export const CampaignInfluencers = ({ campaign }: CampaignInfluencersProps) => {
         )}
 
         {/* Skeleton cards */}
-        {viewMode === 'grid' ? (
+        {viewMode === "grid" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
             {Array.from({ length: skeletonCount }).map((_, index) => (
               <InfluencerCardSkeleton key={index} viewMode="grid" />
@@ -405,19 +449,31 @@ export const CampaignInfluencers = ({ campaign }: CampaignInfluencersProps) => {
           <Button
             variant="ghost"
             size="sm"
-            className={`bg-white shadow-none p-0 w-10 h-10 flex items-center justify-center rounded-lg border-0 focus:ring-0 focus:outline-none ${viewMode === 'grid' ? 'bg-blue-100' : ''}`}
-            onClick={() => setViewMode('grid')}
+            className={`bg-white shadow-none p-0 w-10 h-10 flex items-center justify-center rounded-lg border-0 focus:ring-0 focus:outline-none ${
+              viewMode === "grid" ? "bg-blue-100" : ""
+            }`}
+            onClick={() => setViewMode("grid")}
           >
-            <Grid className={`h-5 w-5 ${viewMode === 'grid' ? 'text-blue-600' : 'text-gray-700'}`} />
+            <Grid
+              className={`h-5 w-5 ${
+                viewMode === "grid" ? "text-blue-600" : "text-gray-700"
+              }`}
+            />
           </Button>
           {/* Botón de vista (lista) */}
           <Button
             variant="ghost"
             size="sm"
-            className={`bg-white shadow-none p-0 w-10 h-10 flex items-center justify-center rounded-lg border-0 focus:ring-0 focus:outline-none ${viewMode === 'list' ? 'bg-blue-100' : ''}`}
-            onClick={() => setViewMode('list')}
+            className={`bg-white shadow-none p-0 w-10 h-10 flex items-center justify-center rounded-lg border-0 focus:ring-0 focus:outline-none ${
+              viewMode === "list" ? "bg-blue-100" : ""
+            }`}
+            onClick={() => setViewMode("list")}
           >
-            <List className={`h-5 w-5 ${viewMode === 'list' ? 'text-blue-600' : 'text-gray-700'}`} />
+            <List
+              className={`h-5 w-5 ${
+                viewMode === "list" ? "text-blue-600" : "text-gray-700"
+              }`}
+            />
           </Button>
           {/* Botón de filtros con panel anclado al borde derecho del botón */}
           <div className="relative">
@@ -440,6 +496,16 @@ export const CampaignInfluencers = ({ campaign }: CampaignInfluencersProps) => {
               </div>
             )}
           </div>
+          {/* Botón de agregar influencer */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="bg-white shadow-none p-0 w-10 h-10 flex items-center justify-center rounded-lg border-0 focus:ring-0 focus:outline-none hover:bg-blue-100"
+            onClick={() => setShowAddInfluencerModal(true)}
+            title="Agregar influencer"
+          >
+            <UserPlus className="h-5 w-5 text-gray-700 hover:text-blue-600" />
+          </Button>
           {/* Botón de reload */}
           <Button
             variant="ghost"
@@ -448,7 +514,11 @@ export const CampaignInfluencers = ({ campaign }: CampaignInfluencersProps) => {
             onClick={handleRefresh}
             title="Recargar influencers"
           >
-            <RefreshCw className={`h-5 w-5 text-gray-700 hover:text-blue-600 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`h-5 w-5 text-gray-700 hover:text-blue-600 ${
+                isRefreshing ? "animate-spin" : ""
+              }`}
+            />
           </Button>
         </div>
       </div>
@@ -462,54 +532,53 @@ export const CampaignInfluencers = ({ campaign }: CampaignInfluencersProps) => {
             <div className="text-center">
               <Users className="h-16 w-16 mx-auto mb-4 text-gray-300" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                {influencers.length === 0 ? "No hay influencers aún" : "No se encontraron influencers"}
+                {influencers.length === 0
+                  ? "No hay influencers aún"
+                  : "No se encontraron influencers"}
               </h3>
               <p className="text-gray-500">
-                {influencers.length === 0 
+                {influencers.length === 0
                   ? "No se han agregado influencers a esta campaña"
-                  : "Intenta ajustar los filtros para encontrar influencers"
-                }
+                  : "Intenta ajustar los filtros para encontrar influencers"}
               </p>
             </div>
           </CardNoInfoContent>
         </CardNoInfo>
+      ) : viewMode === "grid" ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
+          {filteredInfluencers.map((campaignInfluencer) => {
+            const influencerId = campaignInfluencer.influencers?.id || "";
+
+            return (
+              <InfluencerCard
+                key={campaignInfluencer.id}
+                campaignInfluencer={campaignInfluencer}
+                postsCount={postsCountByInfluencer[influencerId] || 0}
+                activePlatforms={platformsByInfluencer[influencerId] || []}
+                onAddPost={handleAddPost}
+                onDeleteInfluencer={handleDeleteInfluencer}
+                campaignId={campaign.id} // 🎯 NUEVO: Pasar el ID de la campaña
+              />
+            );
+          })}
+        </div>
       ) : (
-        viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
-            {filteredInfluencers.map((campaignInfluencer) => {
-              const influencerId = campaignInfluencer.influencers?.id || '';
-              
-              return (
-                <InfluencerCard
-                  key={campaignInfluencer.id}
-                  campaignInfluencer={campaignInfluencer}
-                  postsCount={postsCountByInfluencer[influencerId] || 0}
-                  activePlatforms={platformsByInfluencer[influencerId] || []}
-                  onAddPost={handleAddPost}
-                  onDeleteInfluencer={handleDeleteInfluencer}
-                  campaignId={campaign.id} // 🎯 NUEVO: Pasar el ID de la campaña
-                />
-              );
-            })}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {filteredInfluencers.map((campaignInfluencer) => {
-              const influencerId = campaignInfluencer.influencers?.id || '';
-              
-              return (
-                <InfluencerListItem
-                  key={campaignInfluencer.id}
-                  campaignInfluencer={campaignInfluencer}
-                  postsCount={postsCountByInfluencer[influencerId] || 0}
-                  activePlatforms={platformsByInfluencer[influencerId] || []}
-                  onAddPost={handleAddPost}
-                  onDeleteInfluencer={handleDeleteInfluencer}
-                />
-              );
-            })}
-          </div>
-        )
+        <div className="space-y-3">
+          {filteredInfluencers.map((campaignInfluencer) => {
+            const influencerId = campaignInfluencer.influencers?.id || "";
+
+            return (
+              <InfluencerListItem
+                key={campaignInfluencer.id}
+                campaignInfluencer={campaignInfluencer}
+                postsCount={postsCountByInfluencer[influencerId] || 0}
+                activePlatforms={platformsByInfluencer[influencerId] || []}
+                onAddPost={handleAddPost}
+                onDeleteInfluencer={handleDeleteInfluencer}
+              />
+            );
+          })}
+        </div>
       )}
 
       {/* Modal para agregar posts */}
@@ -538,6 +607,13 @@ export const CampaignInfluencers = ({ campaign }: CampaignInfluencersProps) => {
           onCancel={cancelDeleteInfluencer}
         />
       )}
+
+      {/* Modal para agregar influencer */}
+      <AddInfluencerToCampaignModal
+        open={showAddInfluencerModal}
+        onClose={() => setShowAddInfluencerModal(false)}
+        campaignId={campaign.id}
+      />
     </div>
   );
-}; 
+};
