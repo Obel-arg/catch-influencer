@@ -1,6 +1,9 @@
 import { Request, Response } from "express";
 import { AgentAudienceService } from "../../services/audience/agent-audience.service";
-import { InferenceOptions } from "../../models/audience/openai-audience-inference.model";
+import {
+  InferenceOptions,
+  SupportedPlatform,
+} from "../../models/audience/openai-audience-inference.model";
 
 export class AgentAudienceController {
   private agentAudienceService: AgentAudienceService;
@@ -10,11 +13,13 @@ export class AgentAudienceController {
   }
 
   /**
-   * Endpoint para analizar la audiencia de un perfil de Instagram usando agentes AI
-   * GET /agent-audience?instagramUrl=<<url>>&searchContext=<<json>>
+   * Endpoint para analizar la audiencia de un perfil de redes sociales usando agentes AI
+   * GET /agent-audience?url=<<url>>&platform=<<platform>>&searchContext=<<json>>
    *
    * Query parameters:
-   * - instagramUrl: Instagram profile URL (required)
+   * - url: Social media profile URL (required, replaces instagramUrl)
+   * - instagramUrl: Legacy parameter (still supported)
+   * - platform: Platform type (instagram, youtube, tiktok, twitter, twitch, threads) - optional, auto-detected from URL
    * - influencerId: UUID of the influencer (optional)
    * - searchContext: JSON string with search context from frontend (optional)
    * - forceRefresh: "true" to bypass cache (optional)
@@ -23,31 +28,52 @@ export class AgentAudienceController {
   async analyzeAudience(req: Request, res: Response) {
     try {
       const {
-        instagramUrl,
+        url,
+        instagramUrl, // Legacy support
+        platform,
         influencerId,
         forceRefresh,
         skipCache,
         searchContext,
       } = req.query;
 
-      if (!instagramUrl || typeof instagramUrl !== "string") {
+      // Use new 'url' param or fallback to legacy 'instagramUrl'
+      const profileUrl = (url || instagramUrl) as string;
+
+      if (!profileUrl || typeof profileUrl !== "string") {
         return res.status(400).json({
-          error: "instagramUrl es requerido como query parameter",
+          error: "url es requerido como query parameter",
           example:
-            "/agent-audience?instagramUrl=https://instagram.com/username",
+            "/agent-audience?url=https://instagram.com/username&platform=instagram",
         });
       }
 
-      // Validar que sea una URL de Instagram
-      const isInstagramUrl = /(?:instagram\.com)/.test(instagramUrl);
-      if (!isInstagramUrl) {
-        return res.status(400).json({
-          error: "La URL debe ser de Instagram",
-          received: instagramUrl,
-        });
+      // Validate platform if provided
+      const validPlatforms: SupportedPlatform[] = [
+        "instagram",
+        "youtube",
+        "tiktok",
+        "twitter",
+        "twitch",
+        "threads",
+      ];
+      
+      let platformParam: SupportedPlatform | undefined = undefined;
+      if (platform) {
+        if (!validPlatforms.includes(platform as SupportedPlatform)) {
+          return res.status(400).json({
+            error: `Invalid platform. Must be one of: ${validPlatforms.join(", ")}`,
+            received: platform,
+          });
+        }
+        platformParam = platform as SupportedPlatform;
       }
 
-      console.log(`🔍 [Controller] Analyzing audience for: ${instagramUrl}`);
+      console.log(
+        `🔍 [Controller] Analyzing audience for: ${profileUrl}${
+          platformParam ? ` (platform: ${platformParam})` : ""
+        }`
+      );
 
       const startTime = Date.now();
 
@@ -55,6 +81,9 @@ export class AgentAudienceController {
       const options: InferenceOptions = {};
       if (influencerId && typeof influencerId === "string") {
         options.influencerId = influencerId;
+      }
+      if (platformParam) {
+        options.platform = platformParam;
       }
       if (forceRefresh === "true") {
         options.forceRefresh = true;
@@ -81,7 +110,7 @@ export class AgentAudienceController {
 
       // Llamar al servicio para analizar la audiencia
       const result = await this.agentAudienceService.inferAudience(
-        instagramUrl,
+        profileUrl,
         options
       );
 

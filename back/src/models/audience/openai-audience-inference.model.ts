@@ -185,6 +185,7 @@ export interface InferenceOptions {
   influencerId?: string; // Influencer ID for database caching
   searchContext?: SearchContext; // Search context from Explorer UI
   skipGeneration?: boolean; // Only check cache, don't generate if not found
+  platform?: SupportedPlatform; // Social media platform for multi-platform support
 }
 
 /**
@@ -254,14 +255,26 @@ export interface OpenAIAudienceInferenceDB {
 }
 
 /**
+ * Supported social media platforms for audience inference
+ */
+export type SupportedPlatform =
+  | "instagram"
+  | "youtube"
+  | "tiktok"
+  | "twitter"
+  | "twitch"
+  | "threads";
+
+/**
  * Agentic Audience Inference Database Interface
- * Same structure as OpenAI but for agentic AI analysis
+ * Multi-platform support for agentic AI analysis
  */
 export interface AgenticAudienceInferenceDB {
   id: string;
   influencer_id?: string;
-  instagram_url: string;
-  instagram_username: string;
+  url: string; // Platform-agnostic URL (renamed from instagram_url)
+  username: string; // Platform-agnostic username (renamed from instagram_username)
+  platform: SupportedPlatform; // Social media platform
   audience_demographics: AudienceDemographics;
   audience_geography: any; // Same as demographics.geography
   model_used: string;

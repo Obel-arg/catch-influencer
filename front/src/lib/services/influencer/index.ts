@@ -369,6 +369,7 @@ export interface SyntheticAudienceResponse {
   generation_required?: boolean;
   cost?: number;
   message?: string;
+  platform?: string; // Platform used for this inference
 }
 
 /**

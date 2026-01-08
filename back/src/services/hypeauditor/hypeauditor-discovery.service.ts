@@ -1062,6 +1062,7 @@ export class HypeAuditorDiscoveryService {
 
   /**
    * Check if audience data is cached for multiple influencers
+   * Checks across all platforms - returns true if ANY platform has cached data for the username
    */
   private async checkAudienceDataCached(
     usernames: string[]
@@ -1074,9 +1075,9 @@ export class HypeAuditorDiscoveryService {
       const currentTime = new Date().toISOString();
       const { data, error } = await supabase
         .from("agentic_audience_inferences")
-        .select("instagram_username, expires_at")
-        .in("instagram_username", usernames)
-        .not("expires_at", "lt", currentTime);
+        .select("username, expires_at")
+        .in("username", usernames)
+        .gt("expires_at", currentTime);
 
       if (error) {
         console.warn(
@@ -1087,10 +1088,11 @@ export class HypeAuditorDiscoveryService {
       }
 
       // Create a map of username -> has_cached_data
+      // Note: A username might have cache for multiple platforms, but we just need to know if ANY exists
       const cacheMap: Record<string, boolean> = {};
       data?.forEach((record: any) => {
-        if (record.instagram_username) {
-          cacheMap[record.instagram_username] = true;
+        if (record.username) {
+          cacheMap[record.username] = true;
         }
       });
 
