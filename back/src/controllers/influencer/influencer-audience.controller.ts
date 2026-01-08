@@ -20,7 +20,7 @@ export class InfluencerAudienceController {
     platform: SupportedPlatform
   ): string {
     const cleanUsername = username.toLowerCase().trim().replace(/\s+/g, "");
-    
+
     switch (platform) {
       case "instagram":
         return `https://instagram.com/${cleanUsername}`;
@@ -47,7 +47,7 @@ export class InfluencerAudienceController {
     platform: SupportedPlatform
   ): string | null {
     const platformInfo = influencer.platformInfo || {};
-    
+
     switch (platform) {
       case "instagram":
         return (
@@ -72,21 +72,15 @@ export class InfluencerAudienceController {
         );
       case "twitter":
         return (
-          influencer.twitter_username ||
-          platformInfo.twitter?.username ||
-          null
+          influencer.twitter_username || platformInfo.twitter?.username || null
         );
       case "twitch":
         return (
-          influencer.twitch_username ||
-          platformInfo.twitch?.username ||
-          null
+          influencer.twitch_username || platformInfo.twitch?.username || null
         );
       case "threads":
         return (
-          influencer.threads_username ||
-          platformInfo.threads?.username ||
-          null
+          influencer.threads_username || platformInfo.threads?.username || null
         );
       default:
         return null;
@@ -143,12 +137,85 @@ export class InfluencerAudienceController {
         "twitter",
         "twitch",
         "threads",
+        "general",
       ];
-      
+
       if (!validPlatforms.includes(platformParam)) {
         return res.status(400).json({
           success: false,
-          error: `Invalid platform. Must be one of: ${validPlatforms.join(", ")}`,
+          error: `Invalid platform. Must be one of: ${validPlatforms.join(
+            ", "
+          )}`,
+        });
+      }
+
+      // Handle general inference request - ONLY merge stored data, never scrape
+      if (platformParam === "general") {
+        // Use the provided ID directly - it should match what was used when storing platform inferences
+        // The ID can be either a UUID or a creator_id
+        const actualInfluencerId = id;
+
+        console.log(
+          `[General Inference] Processing for influencer ID: ${actualInfluencerId}`
+        );
+
+        // Check if general inference exists in cache
+        const generalUrl = `general-${actualInfluencerId}`;
+
+        // Use internal cache check (not inferAudience which would scrape)
+        const cachedGeneral = await this.agentService.checkGeneralCache(
+          generalUrl,
+          actualInfluencerId,
+          parsedSearchContext
+        );
+
+        if (cachedGeneral && !force) {
+          // Return cached general inference
+          const demographics = cachedGeneral.audience_demographics as any;
+          return res.json({
+            success: true,
+            audience: {
+              ...demographics,
+              bio: demographics.bio, // Ensure bio is included in response
+            },
+            description: demographics.bio || (cachedGeneral as any).description,
+            cached: true,
+            cost: 0,
+          });
+        }
+
+        // If check_only mode and not cached, return generation_required
+        if (check_only === "true") {
+          return res.json({
+            success: true,
+            cached: false,
+            generation_required: true,
+            message:
+              "General inference not found in cache. Generation required.",
+          });
+        }
+
+        // Generate general inference by merging stored platform inferences
+        const generalResult = await this.agentService.generateGeneralInference(
+          actualInfluencerId,
+          parsedSearchContext
+        );
+
+        if (!generalResult.success) {
+          return res.status(500).json({
+            success: false,
+            error:
+              generalResult.error || "Failed to generate general inference",
+            details: generalResult.details,
+          });
+        }
+
+        return res.json({
+          success: true,
+          audience: generalResult.demographics,
+          description: generalResult.description,
+          cached: false,
+          cost: generalResult.cost || 0,
         });
       }
 
@@ -213,16 +280,13 @@ export class InfluencerAudienceController {
       // If check_only=true, only check cache without generating
       if (check_only === "true") {
         console.log("[InfluencerAudience] Check-only mode - checking cache...");
-        const cachedResult = await this.agentService.inferAudience(
-          profileUrl,
-          {
-            influencerId: influencerId,
-            platform: platformParam,
-            forceRefresh: false,
-            searchContext: parsedSearchContext,
-            skipGeneration: true, // New option to skip generation
-          }
-        );
+        const cachedResult = await this.agentService.inferAudience(profileUrl, {
+          influencerId: influencerId,
+          platform: platformParam,
+          forceRefresh: false,
+          searchContext: parsedSearchContext,
+          skipGeneration: true, // New option to skip generation
+        });
 
         if (cachedResult.cached) {
           // Data found in cache

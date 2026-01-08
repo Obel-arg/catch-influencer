@@ -15,6 +15,7 @@ import {
   InferenceOptions,
   InferenceResult,
   SupportedPlatform,
+  AudienceDemographics,
 } from "../../models/audience/openai-audience-inference.model";
 import { BaseAudienceService } from "./base-audience.service";
 import {
@@ -193,20 +194,25 @@ export class AgentAudienceService extends BaseAudienceService {
       let query = this.supabase
         .from("agentic_audience_inferences")
         .select("*")
-        .eq("url", url)
-        .eq("platform", platform);
+        .eq("platform", platform)
+        .eq("url", url); // Always query by URL for uniqueness constraint
 
-      // Add influencer_id filter if provided
+      // Add influencer_id filter if provided and valid
       if (influencerId && this.isValidUUID(influencerId)) {
         query = query.eq("influencer_id", influencerId);
       }
 
-      // Add search context filters if provided
-      if (searchContext?.creator_location) {
-        query = query.eq("creator_location", searchContext.creator_location);
-      } else {
-        // Match entries with no creator_location
-        query = query.is("creator_location", null);
+      // For general inference, don't filter by search context
+      // The unique constraint is (url, platform), and we want to update the same general inference
+      // regardless of search context changes
+      if (platform !== "general") {
+        // Add search context filters for platform-specific inferences
+        if (searchContext?.creator_location) {
+          query = query.eq("creator_location", searchContext.creator_location);
+        } else {
+          // Match entries with no creator_location
+          query = query.is("creator_location", null);
+        }
       }
 
       const { data, error } = await query
@@ -273,6 +279,440 @@ export class AgentAudienceService extends BaseAudienceService {
     const uuidRegex =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     return uuidRegex.test(str);
+  }
+
+  /**
+   * Fetch all platform-specific inferences for an influencer
+   */
+  private async fetchPlatformInferences(
+    influencerId: string,
+    searchContext?: SearchContext
+  ): Promise<AgenticAudienceInferenceDB[]> {
+    try {
+      // Only filter by influencer_id if it's a valid UUID
+      if (this.isValidUUID(influencerId)) {
+        let query = this.supabase
+          .from("agentic_audience_inferences")
+          .select("*")
+          .eq("influencer_id", influencerId)
+          .neq("platform", "general"); // Exclude general inferences
+
+        // Add search context filters if provided
+        if (searchContext?.creator_location) {
+          query = query.eq("creator_location", searchContext.creator_location);
+        } else {
+          query = query.is("creator_location", null);
+        }
+
+        const { data, error } = await query.order("inferred_at", {
+          ascending: false,
+        });
+
+        if (error) {
+          console.error(
+            "[General Inference] Error fetching platform inferences:",
+            error
+          );
+          return [];
+        }
+
+        if (!data || data.length === 0) {
+          return [];
+        }
+
+        // Filter out expired entries
+        const now = new Date();
+        const validInferences = data.filter((entry) => {
+          const expiresAt = new Date(entry.expires_at as string);
+          return expiresAt >= now;
+        });
+
+        return validInferences.map((entry) => ({
+          ...entry,
+          inferred_at: new Date(entry.inferred_at as string),
+          expires_at: new Date(entry.expires_at as string),
+          created_at: new Date(entry.created_at as string),
+          updated_at: new Date(entry.updated_at as string),
+        })) as AgenticAudienceInferenceDB[];
+      } else {
+        // If not a valid UUID, try to find inferences by username pattern
+        console.log(
+          `[General Inference] Not a valid UUID (${influencerId}), searching by username pattern`
+        );
+
+        let query = this.supabase
+          .from("agentic_audience_inferences")
+          .select("*")
+          .ilike("username", `%${influencerId}%`)
+          .neq("platform", "general");
+
+        // Add search context filters if provided
+        if (searchContext?.creator_location) {
+          query = query.eq("creator_location", searchContext.creator_location);
+        } else {
+          query = query.is("creator_location", null);
+        }
+
+        const { data, error } = await query.order("inferred_at", {
+          ascending: false,
+        });
+
+        if (error) {
+          console.error(
+            "[General Inference] Error fetching by username:",
+            error
+          );
+          return [];
+        }
+
+        if (!data || data.length === 0) {
+          console.warn(
+            `[General Inference] No inferences found for username pattern: ${influencerId}`
+          );
+          return [];
+        }
+
+        // Filter out expired entries
+        const now = new Date();
+        const validInferences = data.filter((entry) => {
+          const expiresAt = new Date(entry.expires_at as string);
+          return expiresAt >= now;
+        });
+
+        return validInferences.map((entry) => ({
+          ...entry,
+          inferred_at: new Date(entry.inferred_at as string),
+          expires_at: new Date(entry.expires_at as string),
+          created_at: new Date(entry.created_at as string),
+          updated_at: new Date(entry.updated_at as string),
+        })) as AgenticAudienceInferenceDB[];
+      }
+    } catch (error) {
+      console.error(
+        "[General Inference] Error fetching platform inferences:",
+        error
+      );
+      return [];
+    }
+  }
+
+  /**
+   * Extract follower count from profile snapshot or use default
+   */
+  private extractFollowerCount(inference: AgenticAudienceInferenceDB): number {
+    const snapshot = inference.profile_data_snapshot as any;
+    if (snapshot?.followerCount) {
+      return Number(snapshot.followerCount);
+    }
+    // Default to 50000 if not available
+    return 50000;
+  }
+
+  /**
+   * Round percentages to nearest integer while ensuring they sum to exactly 100
+   */
+  private roundToHundred(
+    values: Record<string, number>
+  ): Record<string, number> {
+    const keys = Object.keys(values);
+
+    // Round each value and track the fractional parts
+    const rounded = keys.map((key) => ({
+      key,
+      rounded: Math.round(values[key]),
+      fractional: values[key] - Math.floor(values[key]),
+    }));
+
+    // Calculate the difference from 100
+    const sum = rounded.reduce((acc, item) => acc + item.rounded, 0);
+    const diff = 100 - sum;
+
+    // If we need to adjust, sort by fractional part and adjust accordingly
+    if (diff !== 0) {
+      // Sort by fractional part descending to determine which values to adjust
+      rounded.sort((a, b) => b.fractional - a.fractional);
+
+      // Adjust values one by one
+      for (let i = 0; i < Math.abs(diff) && i < rounded.length; i++) {
+        rounded[i].rounded += diff > 0 ? 1 : -1;
+      }
+    }
+
+    // Convert back to object
+    const result: Record<string, number> = {};
+    rounded.forEach((item) => {
+      result[item.key] = Math.max(0, item.rounded); // Ensure no negatives
+    });
+
+    return result;
+  }
+
+  /**
+   * Merge multiple platform inferences using weighted averages
+   */
+  private mergeInferences(
+    inferences: AgenticAudienceInferenceDB[]
+  ): AudienceAnalysis {
+    if (inferences.length === 0) {
+      throw new Error("Cannot merge empty inference array");
+    }
+
+    if (inferences.length === 1) {
+      // Return the single inference as-is, but ensure it has bio and username
+      const single = inferences[0].audience_demographics as any;
+      return {
+        bio: single.bio || `Audiencia de ${inferences[0].platform}`,
+        username: single.username || inferences[0].username,
+        age: single.age,
+        gender: single.gender,
+        geography: single.geography,
+      };
+    }
+
+    // Calculate total followers for weighting
+    const followerCounts = inferences.map((inf) =>
+      this.extractFollowerCount(inf)
+    );
+    const totalFollowers = followerCounts.reduce(
+      (sum, count) => sum + count,
+      0
+    );
+
+    if (totalFollowers === 0) {
+      // Fallback to equal weights if no follower data
+      const equalWeight = 1 / inferences.length;
+      followerCounts.fill(equalWeight * totalFollowers);
+    }
+
+    // Calculate weights (normalized to sum to 1)
+    const weights = followerCounts.map((count) => count / totalFollowers);
+
+    // Merge age distribution
+    const mergedAge = {
+      "13-17": 0,
+      "18-24": 0,
+      "25-34": 0,
+      "35-44": 0,
+      "45-54": 0,
+      "55+": 0,
+    };
+
+    inferences.forEach((inf, idx) => {
+      const age = inf.audience_demographics.age;
+      Object.keys(mergedAge).forEach((key) => {
+        mergedAge[key as keyof typeof mergedAge] +=
+          (age[key as keyof typeof age] || 0) * weights[idx];
+      });
+    });
+
+    // Round age distribution to integers summing to 100
+    const roundedAge = this.roundToHundred(mergedAge);
+
+    // Merge gender distribution
+    const mergedGender = {
+      male: 0,
+      female: 0,
+    };
+
+    inferences.forEach((inf, idx) => {
+      const gender = inf.audience_demographics.gender;
+      mergedGender.male += (gender.male || 0) * weights[idx];
+      mergedGender.female += (gender.female || 0) * weights[idx];
+    });
+
+    // Round gender distribution to integers summing to 100
+    const roundedGender = this.roundToHundred(mergedGender);
+
+    // Merge geography - aggregate countries with weighted percentages
+    const countryMap = new Map<
+      string,
+      { country: string; country_code: string; weightedSum: number }
+    >();
+
+    inferences.forEach((inf, idx) => {
+      const geography = inf.audience_demographics.geography || [];
+      geography.forEach((geo) => {
+        const code = geo.country_code.toUpperCase();
+        const existing = countryMap.get(code);
+        if (existing) {
+          existing.weightedSum += geo.percentage * weights[idx];
+        } else {
+          countryMap.set(code, {
+            country: geo.country,
+            country_code: code,
+            weightedSum: geo.percentage * weights[idx],
+          });
+        }
+      });
+    });
+
+    // Convert to array and sort by weighted percentage
+    const mergedGeography = Array.from(countryMap.values())
+      .map((item) => ({
+        country: item.country,
+        country_code: item.country_code,
+        percentage: item.weightedSum,
+      }))
+      .sort((a, b) => b.percentage - a.percentage)
+      .slice(0, 10); // Top 10 countries
+
+    // Normalize geography percentages to sum to 100
+    const geoTotal = mergedGeography.reduce(
+      (sum, geo) => sum + geo.percentage,
+      0
+    );
+    if (geoTotal > 0) {
+      // First normalize to 0-100 scale
+      const normalizedGeo: Record<string, number> = {};
+      mergedGeography.forEach((geo) => {
+        normalizedGeo[geo.country_code] = (geo.percentage / geoTotal) * 100;
+      });
+
+      // Round to integers summing to 100
+      const roundedGeo = this.roundToHundred(normalizedGeo);
+
+      // Apply rounded values back to geography array
+      mergedGeography.forEach((geo) => {
+        geo.percentage = roundedGeo[geo.country_code] || 0;
+      });
+    }
+
+    // Use bio from the platform with the most followers
+    // Find the inference with the highest follower count
+    let maxFollowers = 0;
+    let bioFromLargestPlatform = `Audiencia combinada de ${inferences.length} plataformas sociales`;
+
+    inferences.forEach((inf, idx) => {
+      const followers = followerCounts[idx];
+      if (followers > maxFollowers) {
+        maxFollowers = followers;
+        const demographics = inf.audience_demographics as any;
+        if (demographics?.bio) {
+          bioFromLargestPlatform = demographics.bio;
+        }
+      }
+    });
+
+    const mergedBio = bioFromLargestPlatform;
+
+    // Use first username (or combine if needed)
+    const mergedUsername =
+      inferences.map((inf) => inf.username).join("+") || "combined";
+
+    return {
+      bio: mergedBio,
+      username: mergedUsername,
+      age: roundedAge as AudienceDemographics["age"],
+      gender: roundedGender as AudienceDemographics["gender"],
+      geography: mergedGeography,
+    };
+  }
+
+  /**
+   * Check if general inference exists in cache (public method for controller)
+   */
+  async checkGeneralCache(
+    url: string,
+    influencerId: string,
+    searchContext?: SearchContext
+  ): Promise<AgenticAudienceInferenceDB | null> {
+    return this.checkDatabaseCache(
+      url,
+      "general" as SupportedPlatform,
+      influencerId,
+      searchContext
+    );
+  }
+
+  /**
+   * Generate general inference by merging all platform-specific inferences
+   */
+  async generateGeneralInference(
+    influencerId: string,
+    searchContext?: SearchContext
+  ): Promise<InferenceResult> {
+    try {
+      console.log(
+        `[General Inference] Generating general inference for influencer: ${influencerId}`
+      );
+
+      // Fetch all platform-specific inferences
+      const platformInferences = await this.fetchPlatformInferences(
+        influencerId,
+        searchContext
+      );
+
+      if (platformInferences.length < 2) {
+        return {
+          success: false,
+          error: `Need at least 2 platform inferences to generate general inference. Found: ${platformInferences.length}`,
+        };
+      }
+
+      console.log(
+        `[General Inference] Found ${platformInferences.length} platform inferences to merge`
+      );
+
+      // Merge inferences
+      const mergedDemographics = this.mergeInferences(platformInferences);
+
+      // Create a consistent URL for general inference
+      const generalUrl = `general-${influencerId}`;
+
+      // Check if this is an update or new creation
+      const existingGeneral = await this.checkDatabaseCache(
+        generalUrl,
+        "general",
+        influencerId,
+        searchContext
+      );
+
+      // Store to database with platform='general'
+      await this.storeToDatabase(
+        generalUrl,
+        `general-${influencerId}`,
+        "general" as SupportedPlatform,
+        mergedDemographics,
+        influencerId,
+        0, // No cost for merge operation
+        undefined,
+        searchContext
+      );
+
+      if (existingGeneral) {
+        console.log(
+          `[General Inference] ✅ Successfully updated general inference with ${platformInferences.length} platforms`
+        );
+      } else {
+        console.log(
+          `[General Inference] ✅ Successfully created general inference from ${platformInferences.length} platforms`
+        );
+      }
+
+      return {
+        success: true,
+        demographics: {
+          inference_source: "agentic",
+          model_used: "agent-audience-merged",
+          inferred_at: new Date(),
+          is_synthetic: false,
+          age: mergedDemographics.age,
+          gender: mergedDemographics.gender,
+          geography: mergedDemographics.geography,
+          bio: mergedDemographics.bio, // Include bio in demographics for consistency
+        } as any,
+        description: mergedDemographics.bio,
+        cached: false,
+        cost: 0,
+      };
+    } catch (error) {
+      console.error("[General Inference] Error:", error);
+      return {
+        success: false,
+        error: (error as Error).message,
+        details: error,
+      };
+    }
   }
 
   /**
@@ -357,6 +797,53 @@ export class AgentAudienceService extends BaseAudienceService {
             `  ✅ Inserted to database: ${url} (platform: ${platform})${
               validInfluencerId ? ` (influencer: ${validInfluencerId})` : ""
             }`
+          );
+        }
+      }
+
+      // Auto-regenerate general inference if:
+      // 1. This is a platform-specific inference (not general itself)
+      // 2. Influencer ID is valid
+      // 3. At least 2 platform inferences exist
+      if (
+        platform !== "general" &&
+        validInfluencerId &&
+        this.isValidUUID(validInfluencerId)
+      ) {
+        // Check if we have at least 2 platform inferences
+        const platformInferences = await this.fetchPlatformInferences(
+          validInfluencerId,
+          searchContext
+        );
+
+        if (platformInferences.length >= 2) {
+          // Check if general inference already exists
+          const generalUrl = `general-${validInfluencerId}`;
+          const existingGeneral = await this.checkDatabaseCache(
+            generalUrl,
+            "general",
+            validInfluencerId,
+            searchContext
+          );
+
+          if (existingGeneral) {
+            console.log(
+              `  🔄 Re-generating existing general inference (${platformInferences.length} platforms now)`
+            );
+          } else {
+            console.log(
+              `  ✨ Auto-generating new general inference (${platformInferences.length} platforms)`
+            );
+          }
+
+          // Trigger regeneration asynchronously (don't block the response)
+          this.generateGeneralInference(validInfluencerId, searchContext).catch(
+            (error) => {
+              console.error(
+                "[Auto-Regenerate] Error regenerating general inference:",
+                error
+              );
+            }
           );
         }
       }
@@ -491,8 +978,22 @@ export class AgentAudienceService extends BaseAudienceService {
     try {
       // Detect platform from URL if not provided
       const platform = options.platform || this.detectPlatformFromUrl(url);
-      
-      console.log(`\n🚀 [Service] Starting analysis for: ${url} (platform: ${platform})`);
+
+      // General platform should NEVER go through the scraping pipeline
+      if (platform === "general") {
+        console.error(
+          "❌ [Service] inferAudience called with platform='general'. Use generateGeneralInference() instead."
+        );
+        return {
+          success: false,
+          error:
+            "General inference cannot be scraped. Use generateGeneralInference() to merge stored platform data.",
+        };
+      }
+
+      console.log(
+        `\n🚀 [Service] Starting analysis for: ${url} (platform: ${platform})`
+      );
       console.log("=".repeat(60));
 
       // Check database cache first (unless force refresh or skip cache)
