@@ -216,7 +216,10 @@ export const CampaignInfluencers = ({ campaign }: CampaignInfluencersProps) => {
             return;
           }
           // For other errors, log but don't block
-          console.warn("⚠️ [Frontend] Error refetching after delete:", refetchError);
+          console.warn(
+            "⚠️ [Frontend] Error refetching after delete:",
+            refetchError
+          );
         }
       } else {
         console.warn(
@@ -232,14 +235,14 @@ export const CampaignInfluencers = ({ campaign }: CampaignInfluencersProps) => {
       }
     } catch (error: any) {
       console.error("❌ [Frontend] Error eliminando influencer:", error);
-      
+
       // Handle 304 (Not Modified) as success - cached version is still valid
       if (error?.response?.status === 304) {
         // 304 means cached version is valid, which is fine
         // The optimistic update already handled the UI change
         return;
       }
-      
+
       handleHttpError(error);
 
       // Si hay error, restaurar el estado original
@@ -248,7 +251,7 @@ export const CampaignInfluencers = ({ campaign }: CampaignInfluencersProps) => {
         newSet.delete(influencerIdToDelete);
         return newSet;
       });
-      
+
       try {
         await refetch();
       } catch (refetchError: any) {
@@ -256,7 +259,10 @@ export const CampaignInfluencers = ({ campaign }: CampaignInfluencersProps) => {
         if (refetchError?.response?.status === 304) {
           return;
         }
-        console.warn("⚠️ [Frontend] Error refetching after delete error:", refetchError);
+        console.warn(
+          "⚠️ [Frontend] Error refetching after delete error:",
+          refetchError
+        );
       }
     }
   };

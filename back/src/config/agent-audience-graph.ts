@@ -15,9 +15,18 @@ import { SearchContext } from "../models/audience/openai-audience-inference.mode
  * Sanitize JSON string by removing or escaping invalid control characters
  */
 function sanitizeJSON(jsonStr: string): string {
-  // First pass: Fix common issues with control characters in string values
-  // This regex finds string values in JSON and fixes control characters within them
-  return jsonStr.replace(/"([^"\\]|\\.)*"/g, (match) => {
+  // First, remove all backspace and other control characters from the entire string
+  // This handles control characters in both keys and values
+  // eslint-disable-next-line no-control-regex
+  const cleaned = jsonStr.replace(
+    // eslint-disable-next-line no-control-regex
+    /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g,
+    ""
+  );
+
+  // Second pass: Fix common unescaped newlines, tabs, etc. in string values
+  // This regex finds string values in JSON and escapes special characters
+  return cleaned.replace(/"([^"\\]|\\.)*"/g, (match) => {
     // Don't modify if already properly escaped
     if (
       match.includes("\\n") ||
@@ -27,17 +36,11 @@ function sanitizeJSON(jsonStr: string): string {
       return match;
     }
 
-    // Replace unescaped control characters
-    return (
-      match
-        .replace(/\n/g, "\\n") // Newlines
-        .replace(/\r/g, "\\r") // Carriage returns
-        .replace(/\t/g, "\\t") // Tabs
-        .replace(/\f/g, "\\f") // Form feeds
-        .replace(/\b/g, "\\b") // Backspaces
-        // eslint-disable-next-line no-control-regex
-        .replace(/[\u0000-\u001F]/g, "")
-    ); // Remove other control characters
+    // Replace unescaped newlines and tabs (but not control chars - already removed)
+    return match
+      .replace(/\n/g, "\\n") // Newlines
+      .replace(/\r/g, "\\r") // Carriage returns
+      .replace(/\t/g, "\\t"); // Tabs
   });
 }
 
@@ -358,8 +361,19 @@ Before finalizing, verify:
 - ✅ Username matches Instagram handle format
 - ✅ Bio is extracted exactly from Ground Truth
 
+## CRITICAL: MANDATORY FIELDS (ALL REQUIRED)
+Your JSON response MUST include ALL of these fields or it will FAIL:
+1. "bio" (string)
+2. "username" (string)  
+3. "age" (object with ALL 6 age ranges: "13-17", "18-24", "25-34", "35-44", "45-54", "55+")
+4. "gender" (object with "male" and "female" keys)
+5. "geography" (array with EXACTLY 10 country objects)
+
+## OUTPUT FORMAT
+{format_instructions}
+
 ## CRITICAL OUTPUT REQUIREMENTS
-You MUST return ONLY a valid JSON object. Nothing else.
+You MUST return ONLY valid JSON with ALL 5 REQUIRED FIELDS.
 
 Rules:
 - Start your response with {{ and end with }}
@@ -367,31 +381,41 @@ Rules:
 - NO text after the JSON
 - NO markdown (no \`\`\`, no ##, no bullets)
 - NO explanations or comments
-- Include ALL required fields: bio, username, age, gender, geography
+- "age" MUST have all 6 age groups
+- "gender" MUST have both male and female (must sum to 100)
+- "geography" MUST have exactly 10 countries (percentages must sum to 100)
 
-{format_instructions}
-
-Example of CORRECT output:
+Example (COPY THIS EXACT STRUCTURE):
 {{
-  "bio": "Content creator",
+  "bio": "Content creator specializing in cooking and lifestyle",
   "username": "example_user",
-  "age": {{ "13-17": 5, "18-24": 25, "25-34": 35, "35-44": 20, "45-54": 10, "55+": 5 }},
-  "gender": {{ "male": 50, "female": 50 }},
+  "age": {{
+    "13-17": 3,
+    "18-24": 22,
+    "25-34": 38,
+    "35-44": 24,
+    "45-54": 10,
+    "55+": 3
+  }},
+  "gender": {{
+    "male": 35,
+    "female": 65
+  }},
   "geography": [
-    {{ "country": "United States", "country_code": "US", "percentage": 30 }},
-    {{ "country": "Mexico", "country_code": "MX", "percentage": 20 }},
-    {{ "country": "Argentina", "country_code": "AR", "percentage": 15 }},
-    {{ "country": "Spain", "country_code": "ES", "percentage": 10 }},
-    {{ "country": "Colombia", "country_code": "CO", "percentage": 8 }},
-    {{ "country": "Chile", "country_code": "CL", "percentage": 5 }},
+    {{ "country": "Argentina", "country_code": "AR", "percentage": 45 }},
+    {{ "country": "Mexico", "country_code": "MX", "percentage": 18 }},
+    {{ "country": "Spain", "country_code": "ES", "percentage": 12 }},
+    {{ "country": "Chile", "country_code": "CL", "percentage": 8 }},
+    {{ "country": "Colombia", "country_code": "CO", "percentage": 5 }},
     {{ "country": "Peru", "country_code": "PE", "percentage": 4 }},
-    {{ "country": "Ecuador", "country_code": "EC", "percentage": 3 }},
-    {{ "country": "Venezuela", "country_code": "VE", "percentage": 3 }},
-    {{ "country": "Guatemala", "country_code": "GT", "percentage": 2 }}
+    {{ "country": "United States", "country_code": "US", "percentage": 3 }},
+    {{ "country": "Uruguay", "country_code": "UY", "percentage": 2 }},
+    {{ "country": "Ecuador", "country_code": "EC", "percentage": 2 }},
+    {{ "country": "Paraguay", "country_code": "PY", "percentage": 1 }}
   ]
 }}
 
-RESPOND WITH ONLY THE JSON. NO OTHER TEXT.
+RESPOND WITH ONLY THE JSON OBJECT. NO OTHER TEXT.
 `;
 
 const BIO_PROMPT = `
@@ -886,6 +910,16 @@ export async function judgeNode(
 
     const result = res as AudienceAnalysis;
 
+    // Debug: Log what the judge returned
+    console.log("🔍 [Graph] Judge raw output keys:", Object.keys(result));
+    console.log("🔍 [Graph] Judge output sample:", {
+      hasAge: !!result.age,
+      hasGender: !!result.gender,
+      hasGeography: !!result.geography,
+      hasBio: !!result.bio,
+      hasUsername: !!result.username,
+    });
+
     // Replace bio with generated one
     result.bio = state.generatedBio || result.bio;
 
@@ -893,6 +927,10 @@ export async function judgeNode(
     if (!result.geography || result.geography.length === 0) {
       console.warn(
         "⚠️ [Graph] Judge didn't return geography, using Llama fallback"
+      );
+      console.warn(
+        "🔍 [Graph] Judge returned:",
+        JSON.stringify(result, null, 2)
       );
       result.geography =
         (state.llamaAnalysis as AudienceAnalysis)?.geography ||
@@ -902,6 +940,10 @@ export async function judgeNode(
 
     if (!result.age) {
       console.warn("⚠️ [Graph] Judge didn't return age, using Llama fallback");
+      console.warn(
+        "🔍 [Graph] Judge returned:",
+        JSON.stringify(result, null, 2)
+      );
       result.age = (state.llamaAnalysis as AudienceAnalysis)?.age ||
         (state.geminiAnalysis as AudienceAnalysis)?.age || {
           "13-17": 5,
@@ -916,6 +958,10 @@ export async function judgeNode(
     if (!result.gender) {
       console.warn(
         "⚠️ [Graph] Judge didn't return gender, using Llama fallback"
+      );
+      console.warn(
+        "🔍 [Graph] Judge returned:",
+        JSON.stringify(result, null, 2)
       );
       result.gender = (state.llamaAnalysis as AudienceAnalysis)?.gender ||
         (state.geminiAnalysis as AudienceAnalysis)?.gender || {
