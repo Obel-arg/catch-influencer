@@ -310,6 +310,7 @@ export class InfluencerService {
       platform?: string;
       niche?: string;
       search_context?: unknown;
+      force?: boolean;
     },
     checkOnly?: boolean
   ): Promise<SyntheticAudienceResponse> {
@@ -321,6 +322,7 @@ export class InfluencerService {
         params.follower_count = influencerData.follower_count;
       if (influencerData.platform) params.platform = influencerData.platform;
       if (influencerData.niche) params.niche = influencerData.niche;
+      if (influencerData.force) params.force = "true";
       // Pass search context as JSON string
       if (influencerData.search_context) {
         params.search_context = JSON.stringify(influencerData.search_context);
@@ -432,7 +434,8 @@ export function normalizeAudienceData(
     gender: audience.gender || { male: 50, female: 50 },
     geography: audience.geography || [],
     is_synthetic: audience.is_synthetic ?? true,
-    bio: audience.bio,
+    // Prioritize description parameter (used by general inference) over audience.bio
+    bio: description || audience.bio,
     description,
   };
 }

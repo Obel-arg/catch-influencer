@@ -48,7 +48,7 @@ export function InfluencerSquadPDFTemplate({
 }: InfluencerSquadPDFTemplateProps) {
   // Ensure platformFilter has a default value
   const platformFilterValue = platformFilter || undefined;
-  
+
   console.log(
     "🎨 Rendering Squad PDF Template with audienceData:",
     audienceData
@@ -126,7 +126,11 @@ export function InfluencerSquadPDFTemplate({
       const filterPlatformKey = platformFilter.toLowerCase();
       for (const sn of socialNetworks) {
         const snPlatformKey = String(sn.platform || "").toLowerCase();
-        if (snPlatformKey === filterPlatformKey && typeof sn.engagement === "number" && sn.engagement > 0) {
+        if (
+          snPlatformKey === filterPlatformKey &&
+          typeof sn.engagement === "number" &&
+          sn.engagement > 0
+        ) {
           return sn.engagement;
         }
       }
@@ -150,15 +154,37 @@ export function InfluencerSquadPDFTemplate({
 
   // Get primary platform: use filter if provided and not "all", otherwise find platform with most followers
   const primaryPlatform = useMemo(() => {
+    // If platform filter is "general", return "General"
+    if (platformFilter === "general") {
+      return "General";
+    }
+
     // If platform filter is provided and not "all", use it
     if (platformFilter && platformFilter !== "all") {
-      // Capitalize first letter to match expected format
-      return platformFilter.charAt(0).toUpperCase() + platformFilter.slice(1).toLowerCase();
+      // Map platform filter to display name
+      const platformMap: Record<string, string> = {
+        instagram: "Instagram",
+        youtube: "YouTube",
+        tiktok: "TikTok",
+        facebook: "Facebook",
+        threads: "Threads",
+        twitter: "Twitter",
+        twitch: "Twitch",
+      };
+      return (
+        platformMap[platformFilter.toLowerCase()] ||
+        platformFilter.charAt(0).toUpperCase() +
+          platformFilter.slice(1).toLowerCase()
+      );
     }
 
     // Otherwise, find the platform with the most followers
     const socialNetworks = influencer?.platformInfo?.socialNetworks;
-    if (socialNetworks && Array.isArray(socialNetworks) && socialNetworks.length > 0) {
+    if (
+      socialNetworks &&
+      Array.isArray(socialNetworks) &&
+      socialNetworks.length > 0
+    ) {
       // Find the platform with the most followers
       let maxFollowers = 0;
       let platformWithMostFollowers = "Instagram"; // Default fallback
@@ -243,7 +269,7 @@ export function InfluencerSquadPDFTemplate({
         {/* Main Content Area - Grid Layout */}
         <div
           style={{
-            padding: "20px 30px",
+            padding: "30px 30px 20px 30px",
             display: "grid",
             gridTemplateColumns: "260px 1fr",
             gap: "16px",
@@ -460,7 +486,7 @@ export function InfluencerSquadPDFTemplate({
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={ageData}
-                      margin={{ top: 5, right: 10, bottom: 0, left: -20 }}
+                      margin={{ top: 5, right: 10, bottom: 0, left: 5 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                       <XAxis

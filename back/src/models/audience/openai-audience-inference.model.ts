@@ -263,7 +263,8 @@ export type SupportedPlatform =
   | "tiktok"
   | "twitter"
   | "twitch"
-  | "threads";
+  | "threads"
+  | "general"; // General unified inference combining all platforms
 
 /**
  * Agentic Audience Inference Database Interface

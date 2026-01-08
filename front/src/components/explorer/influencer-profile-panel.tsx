@@ -19,7 +19,15 @@ import {
   getTikTokThumbnailValidated,
 } from "@/utils/tiktok";
 import { useToast } from "@/hooks/common/useToast";
-import { Download, Info, Loader2, X, Check } from "lucide-react";
+import {
+  Download,
+  Info,
+  Loader2,
+  X,
+  Check,
+  Globe,
+  RefreshCw,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bar,
@@ -402,6 +410,8 @@ export function InfluencerProfilePanel({
   const [platformsWithCache, setPlatformsWithCache] = useState<Set<string>>(
     new Set()
   );
+  const [hasGeneralCache, setHasGeneralCache] = useState(false);
+  const [loadingGeneral, setLoadingGeneral] = useState(false);
 
   const availablePlatforms = useMemo(() => {
     const platforms: string[] = [];
@@ -566,6 +576,132 @@ export function InfluencerProfilePanel({
     }
   }, [isOpen, determineInitialSocialNetwork]);
 
+  // Check all cached inferences when panel opens
+  useEffect(() => {
+    const checkAllCachedInferences = async () => {
+      if (
+        !isOpen ||
+        !influencer?.id ||
+        !influencer?.platformInfo?.socialNetworks
+      ) {
+        return;
+      }
+
+      const socialNetworks = influencer.platformInfo.socialNetworks;
+      const clickablePlatforms = [
+        "instagram",
+        "youtube",
+        "tiktok",
+        "twitter",
+        "twitch",
+        "threads",
+      ];
+      const cachedPlatforms = new Set<string>();
+      let generalCacheFound = false;
+
+      // Check each platform for cached data
+      for (const sn of socialNetworks) {
+        const platformKey = String(sn.platform || "").toLowerCase();
+        if (!clickablePlatforms.includes(platformKey) || !sn.username) {
+          continue;
+        }
+
+        const socialNetworkKey = `${platformKey}-${sn.username}`;
+
+        // Check client cache first
+        const cacheKey = `${influencer.id}-${socialNetworkKey}`;
+        const cached = audienceCache?.[cacheKey];
+        if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) {
+          cachedPlatforms.add(socialNetworkKey);
+          continue;
+        }
+
+        // Check server cache
+        try {
+          const platformUsername = sn.username;
+          const cacheCheckResponse =
+            await influencerService.getSyntheticAudience(
+              influencer.id,
+              {
+                username: platformUsername,
+                platform: platformKey,
+              },
+              true // checkOnly
+            );
+
+          if (
+            cacheCheckResponse.success &&
+            cacheCheckResponse.cached &&
+            cacheCheckResponse.audience
+          ) {
+            cachedPlatforms.add(socialNetworkKey);
+            // Cache it locally
+            if (onAudienceFetched && cacheCheckResponse.audience) {
+              const normalizedData = normalizeAudienceData(
+                cacheCheckResponse.audience,
+                cacheCheckResponse.description
+              );
+              onAudienceFetched(cacheKey, normalizedData);
+            }
+          }
+        } catch (error) {
+          console.error(`[Cache Check] Error checking ${platformKey}:`, error);
+        }
+      }
+
+      // Check general inference if we have 2+ platform caches
+      if (cachedPlatforms.size >= 2) {
+        try {
+          const generalKey = `${influencer.id}-general-${influencer.id}`;
+          const cached = audienceCache?.[generalKey];
+          if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) {
+            generalCacheFound = true;
+          } else {
+            // Check server cache
+            const cacheCheckResponse =
+              await influencerService.getSyntheticAudience(
+                influencer.id,
+                {
+                  platform: "general",
+                },
+                true // checkOnly
+              );
+
+            if (
+              cacheCheckResponse.success &&
+              cacheCheckResponse.cached &&
+              cacheCheckResponse.audience
+            ) {
+              generalCacheFound = true;
+              // Cache it locally
+              if (onAudienceFetched && cacheCheckResponse.audience) {
+                const normalizedData = normalizeAudienceData(
+                  cacheCheckResponse.audience,
+                  cacheCheckResponse.description
+                );
+                onAudienceFetched(generalKey, normalizedData);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("[General Cache Check] Error:", error);
+        }
+      }
+
+      // Update state
+      setPlatformsWithCache(cachedPlatforms);
+      setHasGeneralCache(generalCacheFound);
+    };
+
+    checkAllCachedInferences();
+  }, [
+    isOpen,
+    influencer?.id,
+    influencer?.platformInfo?.socialNetworks,
+    audienceCache,
+    onAudienceFetched,
+  ]);
+
   // 📄 Export to PDF handler
   const handleExportPDF = async () => {
     try {
@@ -641,6 +777,12 @@ export function InfluencerProfilePanel({
       if (!isOpen || !influencer?.id || !selectedSocialNetworkKey) {
         // Clear audience data when panel closes or no influencer/platform
         setAudienceData(null);
+        return;
+      }
+
+      // Handle general inference separately
+      if (selectedSocialNetworkKey === "general") {
+        // General inference is handled by separate useEffect
         return;
       }
 
@@ -869,6 +1011,138 @@ export function InfluencerProfilePanel({
     searchContext,
   ]);
 
+  // Update general cache status when platformsWithCache changes
+  // This is a fallback to ensure general cache is checked when platform caches are updated
+  useEffect(() => {
+    const updateGeneralCacheStatus = async () => {
+      if (!isOpen || !influencer?.id) {
+        return;
+      }
+
+      // Count platform-specific cached inferences
+      const platformCount = Array.from(platformsWithCache).filter(
+        (key) => !key.includes("general")
+      ).length;
+
+      if (platformCount < 2) {
+        setHasGeneralCache(false);
+        return;
+      }
+
+      // Only check if we don't already know the status
+      if (hasGeneralCache) {
+        return;
+      }
+
+      // Check if general inference exists
+      try {
+        const generalKey = `${influencer.id}-general-${influencer.id}`;
+        const cached = audienceCache?.[generalKey];
+        if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) {
+          setHasGeneralCache(true);
+          return;
+        }
+
+        // Check server cache
+        const cacheCheckResponse = await influencerService.getSyntheticAudience(
+          influencer.id,
+          {
+            platform: "general",
+          },
+          true // checkOnly
+        );
+
+        if (
+          cacheCheckResponse.success &&
+          cacheCheckResponse.cached &&
+          cacheCheckResponse.audience
+        ) {
+          setHasGeneralCache(true);
+          // Cache it locally
+          if (onAudienceFetched && cacheCheckResponse.audience) {
+            const normalizedData = normalizeAudienceData(
+              cacheCheckResponse.audience,
+              cacheCheckResponse.description
+            );
+            onAudienceFetched(generalKey, normalizedData);
+          }
+        }
+      } catch (error) {
+        console.error("[General Cache Check] Error:", error);
+      }
+    };
+
+    updateGeneralCacheStatus();
+  }, [
+    isOpen,
+    influencer?.id,
+    platformsWithCache,
+    audienceCache,
+    onAudienceFetched,
+    hasGeneralCache,
+  ]);
+
+  // Load general inference when selected
+  useEffect(() => {
+    const loadGeneralInference = async () => {
+      if (
+        !isOpen ||
+        !influencer?.id ||
+        selectedSocialNetworkKey !== "general"
+      ) {
+        return;
+      }
+
+      setLoadingAudience(true);
+      setAudienceData(null);
+
+      try {
+        const generalKey = `${influencer.id}-general-${influencer.id}`;
+        const cached = audienceCache?.[generalKey];
+        if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) {
+          setAudienceData(cached.data);
+          setLoadingAudience(false);
+          return;
+        }
+
+        const response = await influencerService.getSyntheticAudience(
+          influencer.id,
+          {
+            platform: "general",
+          },
+          false // not checkOnly, generate if needed
+        );
+
+        if (response.success && response.audience) {
+          const normalizedData = normalizeAudienceData(
+            response.audience,
+            response.description
+          );
+          setAudienceData(normalizedData);
+          setHasGeneralCache(true);
+
+          if (onAudienceFetched) {
+            onAudienceFetched(generalKey, normalizedData);
+          }
+        }
+      } catch (error) {
+        console.error("[General Inference] Error:", error);
+      } finally {
+        setLoadingAudience(false);
+      }
+    };
+
+    if (selectedSocialNetworkKey === "general") {
+      loadGeneralInference();
+    }
+  }, [
+    isOpen,
+    influencer?.id,
+    selectedSocialNetworkKey,
+    audienceCache,
+    onAudienceFetched,
+  ]);
+
   const platformData = useMemo(() => {
     if (!influencer?.platformInfo) return null;
     return getPlatformData(activePlatform);
@@ -970,7 +1244,13 @@ export function InfluencerProfilePanel({
           <InfluencerSquadPDFTemplate
             influencer={influencer}
             audienceData={audienceData}
-            platformFilter={platformFilter}
+            platformFilter={
+              selectedSocialNetworkKey === "general"
+                ? "general"
+                : selectedSocialNetworkKey
+                ? selectedSocialNetworkKey.split("-")[0]
+                : platformFilter
+            }
           />
         </div>
       )}
@@ -1069,6 +1349,185 @@ export function InfluencerProfilePanel({
                         Redes sociales
                       </div>
                       <div className="flex flex-col gap-3">
+                        {/* General Inference Card */}
+                        {Array.from(platformsWithCache).filter(
+                          (key) => !key.includes("general")
+                        ).length >= 2 && (
+                          <>
+                            <div
+                              className={`rounded-lg border p-3 transition-all ${
+                                selectedSocialNetworkKey === "general"
+                                  ? "border-blue-500 bg-blue-50"
+                                  : "border-gray-200 hover:border-gray-300"
+                              }`}
+                            >
+                              <div
+                                onClick={() => {
+                                  if (selectedSocialNetworkKey !== "general") {
+                                    setSelectedSocialNetworkKey("general");
+                                    setAudienceData(null);
+                                  }
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <Globe className="h-4 w-4 text-gray-600" />
+                                    <span className="text-sm font-medium text-gray-800">
+                                      General
+                                    </span>
+                                    {hasGeneralCache && (
+                                      <Check className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {selectedSocialNetworkKey === "general" && (
+                                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 border border-blue-200">
+                                        Seleccionado
+                                      </span>
+                                    )}
+                                    <span className="text-[11px] px-2 py-0.5 rounded bg-purple-100 text-purple-700 border border-purple-200">
+                                      Combinado
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="mt-2 text-xs text-gray-500">
+                                  Inferencia unificada de todas las plataformas
+                                </div>
+                              </div>
+                              {hasGeneralCache && (
+                                <Button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    setLoadingGeneral(true);
+                                    try {
+                                      // Force regeneration
+                                      const response =
+                                        await influencerService.getSyntheticAudience(
+                                          influencer.id,
+                                          {
+                                            platform: "general",
+                                            force: true,
+                                          },
+                                          false
+                                        );
+                                      if (
+                                        response.success &&
+                                        response.audience
+                                      ) {
+                                        const normalizedData =
+                                          normalizeAudienceData(
+                                            response.audience,
+                                            response.description
+                                          );
+                                        setAudienceData(normalizedData);
+                                        const generalKey = `${influencer.id}-general-${influencer.id}`;
+                                        if (onAudienceFetched) {
+                                          onAudienceFetched(
+                                            generalKey,
+                                            normalizedData
+                                          );
+                                        }
+                                        showToast({
+                                          title:
+                                            "Inferencia general regenerada",
+                                          status: "success",
+                                        });
+                                      }
+                                    } catch (error) {
+                                      console.error(
+                                        "[Regenerate General] Error:",
+                                        error
+                                      );
+                                      showToast({
+                                        title:
+                                          "Error al regenerar inferencia general",
+                                        status: "error",
+                                      });
+                                    } finally {
+                                      setLoadingGeneral(false);
+                                    }
+                                  }}
+                                  disabled={loadingGeneral}
+                                  className="w-full mt-2"
+                                  variant="outline"
+                                  size="sm"
+                                >
+                                  {loadingGeneral ? (
+                                    <>
+                                      <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                                      Regenerando...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <RefreshCw className="h-3 w-3 mr-2" />
+                                      Regenerar Inferencia
+                                    </>
+                                  )}
+                                </Button>
+                              )}
+                            </div>
+                            {!hasGeneralCache && (
+                              <Button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  setLoadingGeneral(true);
+                                  try {
+                                    const response =
+                                      await influencerService.getSyntheticAudience(
+                                        influencer.id,
+                                        {
+                                          platform: "general",
+                                        },
+                                        false
+                                      );
+                                    if (response.success && response.audience) {
+                                      const normalizedData =
+                                        normalizeAudienceData(
+                                          response.audience,
+                                          response.description
+                                        );
+                                      setHasGeneralCache(true);
+                                      setSelectedSocialNetworkKey("general");
+                                      setAudienceData(normalizedData);
+                                      const generalKey = `${influencer.id}-general-${influencer.id}`;
+                                      if (onAudienceFetched) {
+                                        onAudienceFetched(
+                                          generalKey,
+                                          normalizedData
+                                        );
+                                      }
+                                    }
+                                  } catch (error) {
+                                    console.error(
+                                      "[Generate General] Error:",
+                                      error
+                                    );
+                                    showToast({
+                                      title:
+                                        "Error al generar inferencia general",
+                                      status: "error",
+                                    });
+                                  } finally {
+                                    setLoadingGeneral(false);
+                                  }
+                                }}
+                                disabled={loadingGeneral}
+                                className="w-full"
+                                variant="outline"
+                              >
+                                {loadingGeneral ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Generando...
+                                  </>
+                                ) : (
+                                  "Generar Inferencia General"
+                                )}
+                              </Button>
+                            )}
+                          </>
+                        )}
                         {influencer.platformInfo.socialNetworks.map(
                           (sn: any, idx: number) => {
                             const platformKey = String(
