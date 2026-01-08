@@ -29,7 +29,8 @@ export type AudienceAnalysis = z.infer<typeof AudienceAnalysisSchema>;
 
 // Estado del Grafo
 export interface GraphState {
-  instagramUrl: string;
+  instagramUrl: string; // Keep for backward compatibility
+  platform: string; // Social media platform (instagram, youtube, tiktok, etc.)
   rawScrapedData: string;
   llamaAnalysis: Partial<AudienceAnalysis> | null;
   geminiAnalysis: Partial<AudienceAnalysis> | null;

@@ -14,6 +14,7 @@ import {
   SearchContext,
   InferenceOptions,
   InferenceResult,
+  SupportedPlatform,
 } from "../../models/audience/openai-audience-inference.model";
 import { BaseAudienceService } from "./base-audience.service";
 import {
@@ -70,6 +71,33 @@ export class AgentAudienceService extends BaseAudienceService {
   }
 
   // --- MÉTODOS PRIVADOS ---
+
+  /**
+   * Detect platform from URL
+   */
+  private detectPlatformFromUrl(url: string): SupportedPlatform {
+    const urlLower = url.toLowerCase();
+    if (urlLower.includes("instagram.com")) {
+      return "instagram";
+    }
+    if (urlLower.includes("youtube.com") || urlLower.includes("youtu.be")) {
+      return "youtube";
+    }
+    if (urlLower.includes("tiktok.com")) {
+      return "tiktok";
+    }
+    if (urlLower.includes("twitter.com") || urlLower.includes("x.com")) {
+      return "twitter";
+    }
+    if (urlLower.includes("twitch.tv")) {
+      return "twitch";
+    }
+    if (urlLower.includes("threads.net")) {
+      return "threads";
+    }
+    // Default to instagram for backward compatibility
+    return "instagram";
+  }
 
   /**
    * Calcula el costo aproximado de una llamada a Groq
@@ -150,20 +178,23 @@ export class AgentAudienceService extends BaseAudienceService {
    * Check database for cached inference
    */
   private async checkDatabaseCache(
-    instagramUrl: string,
+    url: string,
+    platform: SupportedPlatform,
     influencerId?: string,
     searchContext?: SearchContext
   ): Promise<AgenticAudienceInferenceDB | null> {
     try {
       console.log(`[Cache Check] Starting database cache check`);
-      console.log(`[Cache Check] URL: ${instagramUrl}`);
+      console.log(`[Cache Check] URL: ${url}`);
+      console.log(`[Cache Check] Platform: ${platform}`);
       console.log(`[Cache Check] Influencer ID: ${influencerId || "none"}`);
       console.log(`[Cache Check] Search Context:`, searchContext);
 
       let query = this.supabase
         .from("agentic_audience_inferences")
         .select("*")
-        .eq("instagram_url", instagramUrl);
+        .eq("url", url)
+        .eq("platform", platform);
 
       // Add influencer_id filter if provided
       if (influencerId && this.isValidUUID(influencerId)) {
@@ -194,7 +225,8 @@ export class AgentAudienceService extends BaseAudienceService {
       }
 
       console.log(`[Cache Check] Found entry:`, {
-        instagram_url: data.instagram_url,
+        url: data.url,
+        platform: data.platform,
         inferred_at: data.inferred_at,
         expires_at: data.expires_at,
         model_used: data.model_used,
@@ -247,8 +279,9 @@ export class AgentAudienceService extends BaseAudienceService {
    * Store inference result to database
    */
   private async storeToDatabase(
-    instagramUrl: string,
+    url: string,
     username: string,
+    platform: SupportedPlatform,
     demographics: AudienceAnalysis,
     influencerId?: string,
     cost: number = 0.05,
@@ -264,8 +297,9 @@ export class AgentAudienceService extends BaseAudienceService {
         influencerId && this.isValidUUID(influencerId) ? influencerId : null;
 
       const record: any = {
-        instagram_url: instagramUrl,
-        instagram_username: username,
+        url: url,
+        username: username,
+        platform: platform,
         audience_demographics: demographics,
         audience_geography: demographics.geography,
         model_used: "agent-audience", // Custom model identifier for this service
@@ -286,9 +320,10 @@ export class AgentAudienceService extends BaseAudienceService {
         record.influencer_id = validInfluencerId;
       }
 
-      // Check if entry exists with same URL + context
+      // Check if entry exists with same URL + platform + context
       const existing = await this.checkDatabaseCache(
-        instagramUrl,
+        url,
+        platform,
         validInfluencerId || undefined,
         searchContext
       );
@@ -304,7 +339,7 @@ export class AgentAudienceService extends BaseAudienceService {
           console.error("  Error updating database:", error);
         } else {
           console.log(
-            `  ✅ Updated database: ${instagramUrl}${
+            `  ✅ Updated database: ${url} (platform: ${platform})${
               validInfluencerId ? ` (influencer: ${validInfluencerId})` : ""
             }`
           );
@@ -319,7 +354,7 @@ export class AgentAudienceService extends BaseAudienceService {
           console.error("  Error inserting to database:", error);
         } else {
           console.log(
-            `  ✅ Inserted to database: ${instagramUrl}${
+            `  ✅ Inserted to database: ${url} (platform: ${platform})${
               validInfluencerId ? ` (influencer: ${validInfluencerId})` : ""
             }`
           );
@@ -432,7 +467,7 @@ export class AgentAudienceService extends BaseAudienceService {
   // --- MÉTODO PÚBLICO (ENTRY POINT) ---
 
   async inferAudience(
-    instagramUrl: string,
+    url: string,
     options: InferenceOptions = {}
   ): Promise<InferenceResult> {
     const totalStartTime = Date.now();
@@ -454,18 +489,22 @@ export class AgentAudienceService extends BaseAudienceService {
     };
 
     try {
-      console.log(`\n🚀 [Service] Starting analysis for: ${instagramUrl}`);
+      // Detect platform from URL if not provided
+      const platform = options.platform || this.detectPlatformFromUrl(url);
+      
+      console.log(`\n🚀 [Service] Starting analysis for: ${url} (platform: ${platform})`);
       console.log("=".repeat(60));
 
       // Check database cache first (unless force refresh or skip cache)
       if (!options.forceRefresh && !options.skipCache) {
         const dbCached = await this.checkDatabaseCache(
-          instagramUrl,
+          url,
+          platform,
           options.influencerId,
           options.searchContext
         );
         if (dbCached) {
-          console.log(`✅ Database cache hit: ${instagramUrl}`);
+          console.log(`✅ Database cache hit: ${url} (platform: ${platform})`);
           return {
             success: true,
             demographics: {
@@ -484,7 +523,7 @@ export class AgentAudienceService extends BaseAudienceService {
       // If skipGeneration is true and no cache found, return early
       if (options.skipGeneration) {
         console.log(
-          `⏭️ Skip generation mode - no cache found for: ${instagramUrl}`
+          `⏭️ Skip generation mode - no cache found for: ${url} (platform: ${platform})`
         );
         return {
           success: true,
@@ -501,6 +540,7 @@ export class AgentAudienceService extends BaseAudienceService {
         jsonParser: this.jsonParser,
         tavilyClient: this.tavilyClient,
         searchContext: options.searchContext,
+        platform: platform,
       };
 
       // Create and compile graph
@@ -508,7 +548,8 @@ export class AgentAudienceService extends BaseAudienceService {
 
       // Initialize state
       const initialState: GraphState = {
-        instagramUrl,
+        instagramUrl: url, // Keep for backward compatibility with graph state
+        platform: platform,
         rawScrapedData: "",
         llamaAnalysis: null,
         geminiAnalysis: null,
@@ -539,8 +580,8 @@ export class AgentAudienceService extends BaseAudienceService {
       // Execute graph with LangSmith metadata
       console.log("🚀 [Service] Starting LangGraph execution...");
 
-      // Extract username for better run identification in LangSmith
-      const usernameMatch = instagramUrl.match(/instagram\.com\/([^/?]+)/);
+      // Extract username for better run identification in LangSmith (platform-agnostic)
+      const usernameMatch = url.match(/\/([^/?]+)/);
       const username = usernameMatch ? usernameMatch[1] : "unknown";
 
       // Configure LangSmith run metadata
@@ -561,7 +602,8 @@ export class AgentAudienceService extends BaseAudienceService {
               ? `location-${options.searchContext.creator_location}`
               : "no-location",
           ],
-          instagramUrl,
+          url,
+          platform,
           username,
           influencerId: options.influencerId || null,
           hasSearchContext: !!options.searchContext,
@@ -635,7 +677,7 @@ export class AgentAudienceService extends BaseAudienceService {
           cost: costs.tavily,
           model: "tavily",
           success: true,
-          url: instagramUrl,
+          url: url,
         }),
         this.recordCost({
           timestamp: new Date(),
@@ -643,7 +685,7 @@ export class AgentAudienceService extends BaseAudienceService {
           cost: costs.bioGeneration,
           model: "gemini-2.5-flash",
           success: true,
-          url: instagramUrl,
+          url: url,
         }),
         this.recordCost({
           timestamp: new Date(),
@@ -651,7 +693,7 @@ export class AgentAudienceService extends BaseAudienceService {
           cost: costs.llamaAnalysis,
           model: "llama-3.1-8b-instant",
           success: true,
-          url: instagramUrl,
+          url: url,
         }),
         this.recordCost({
           timestamp: new Date(),
@@ -659,7 +701,7 @@ export class AgentAudienceService extends BaseAudienceService {
           cost: costs.geminiAnalysis,
           model: "gemini-2.5-flash",
           success: true,
-          url: instagramUrl,
+          url: url,
         }),
         this.recordCost({
           timestamp: new Date(),
@@ -667,7 +709,7 @@ export class AgentAudienceService extends BaseAudienceService {
           cost: costs.debate,
           model: "multi-model",
           success: true,
-          url: instagramUrl,
+          url: url,
         }),
         this.recordCost({
           timestamp: new Date(),
@@ -675,7 +717,7 @@ export class AgentAudienceService extends BaseAudienceService {
           cost: costs.aggregation,
           model: "gemini-2.5-flash",
           success: true,
-          url: instagramUrl,
+          url: url,
         }),
       ]);
 
@@ -750,8 +792,9 @@ export class AgentAudienceService extends BaseAudienceService {
       // Store to database
       if (!options.skipCache) {
         await this.storeToDatabase(
-          instagramUrl,
+          url,
           result.username || "",
+          platform,
           result,
           options.influencerId,
           totalCost,
@@ -797,7 +840,7 @@ export class AgentAudienceService extends BaseAudienceService {
         cost: totalCost,
         model: "agent-audience",
         success: false,
-        url: instagramUrl,
+        url: url,
       });
 
       return {

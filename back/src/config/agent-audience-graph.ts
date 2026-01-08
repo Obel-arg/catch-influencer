@@ -113,7 +113,7 @@ const ANALYSIS_PROMPT = `
 You are an expert social media audience analyst with deep expertise in demographic analysis, social media behavior patterns, and influencer marketing analytics.
 
 ## Your Task
-Analyze the provided Instagram profile context and estimate the audience demographics with high accuracy.
+Analyze the provided {platform} profile context and estimate the audience demographics with high accuracy.
 
 ## Context Provided
 {context}
@@ -162,7 +162,7 @@ Analyze the content, engagement patterns, and profile characteristics to estimat
    - High engagement, comments → younger
    - Thoughtful, longer comments → older
 
-**Be Realistic**: Most Instagram audiences skew younger (18-34 typically 60-70% combined). Adjust based on niche.
+**Be Realistic**: Most social media audiences skew younger (18-34 typically 60-70% combined). Adjust based on niche and platform.
 
 ### 3. Gender Demographics (Be Precise Based on Niche)
 Estimate male/female distribution with high accuracy based on multiple indicators:
@@ -189,7 +189,7 @@ Estimate male/female distribution with high accuracy based on multiple indicator
 
 4. **Industry Benchmarks**:
    - Use known industry demographics for the niche
-   - Consider Instagram's overall 52% female, 48% male baseline
+   - Consider platform-specific baselines (e.g., Instagram: 52% female, 48% male; TikTok: younger skew; YouTube: broader age range)
    - Adjust based on specific content type
 
 **Important:** 
@@ -296,7 +296,7 @@ You are a Chief Data Officer and expert in data fusion, statistical analysis, an
 ## Data Sources
 
 ### Ground Truth (Scraper Data - Most Reliable)
-This is the raw scraped data from the Instagram profile. Use this as the primary source for factual information.
+This is the raw scraped data from the {platform} profile. Use this as the primary source for factual information.
 {scraped_data}
 
 ### Source 1: LLaMA Analysis
@@ -311,7 +311,7 @@ This is the raw scraped data from the Instagram profile. Use this as the primary
 ## Synthesis Rules
 
 ### 1. Factual Data (Use Ground Truth)
-- **username**: Extract EXACTLY from Ground Truth. Must match the Instagram handle
+- **username**: Extract EXACTLY from Ground Truth. Must match the {platform} handle/username
 - **bio**: Use the bio from either LLaMA or Gemini analysis (whichever is more complete). If both are missing or insufficient, use "Content creator" as fallback. The bio will be replaced with an AI-generated one later, so any reasonable bio is acceptable here.
 
 ### 2. Demographic Estimates (Intelligent Fusion)
@@ -457,6 +457,7 @@ export interface GraphNodeContext {
   jsonParser: JsonOutputParser<AudienceAnalysis>;
   tavilyClient: ReturnType<typeof tavily>;
   searchContext?: SearchContext;
+  platform?: string; // Social media platform
 }
 
 /**
@@ -467,12 +468,31 @@ export async function scrapeNode(
   context: GraphNodeContext
 ): Promise<Partial<GraphState>> {
   const startTime = Date.now();
-  console.log(`🕷️ [Graph] Scraping: ${state.instagramUrl}`);
+  const platform = state.platform || context.platform || "instagram";
+  const platformName = platform.charAt(0).toUpperCase() + platform.slice(1);
+  console.log(`🕷️ [Graph] Scraping: ${state.instagramUrl} (platform: ${platform})`);
 
   try {
-    const usernameMatch = state.instagramUrl.match(/instagram\.com\/([^/?]+)/);
-    const username = usernameMatch ? usernameMatch[1] : state.instagramUrl;
-    const searchQuery = `Instagram profile ${username} bio followers posts content`;
+    // Extract username from URL (platform-agnostic)
+    let username = state.instagramUrl;
+    const urlPatterns = [
+      /instagram\.com\/([^/?]+)/,
+      /youtube\.com\/(?:@|channel\/|user\/|c\/)([^/?]+)/,
+      /tiktok\.com\/@([^/?]+)/,
+      /(?:twitter\.com|x\.com)\/([^/?]+)/,
+      /twitch\.tv\/([^/?]+)/,
+      /threads\.net\/@([^/?]+)/,
+    ];
+    
+    for (const pattern of urlPatterns) {
+      const match = state.instagramUrl.match(pattern);
+      if (match) {
+        username = match[1];
+        break;
+      }
+    }
+    
+    const searchQuery = `${platformName} profile ${username} bio followers posts content`;
 
     const searchResults = await context.tavilyClient.search(searchQuery, {
       searchDepth: "advanced",
@@ -639,8 +659,12 @@ export async function llamaAnalystNode(
       robustParser,
     ]);
 
+    const platform = state.platform || context.platform || "instagram";
+    const platformName = platform.charAt(0).toUpperCase() + platform.slice(1);
+    
     const res = await chain.invoke({
       context: state.rawScrapedData,
+      platform: platformName,
       format_instructions: context.jsonParser.getFormatInstructions(),
     });
 
@@ -684,8 +708,12 @@ export async function geminiAnalystNode(
       robustParser,
     ]);
 
+    const platform = state.platform || context.platform || "instagram";
+    const platformName = platform.charAt(0).toUpperCase() + platform.slice(1);
+    
     const res = await chain.invoke({
       context: state.rawScrapedData,
+      platform: platformName,
       format_instructions: context.jsonParser.getFormatInstructions(),
     });
 
@@ -900,11 +928,15 @@ export async function judgeNode(
       robustParser,
     ]);
 
+    const platform = state.platform || context.platform || "instagram";
+    const platformName = platform.charAt(0).toUpperCase() + platform.slice(1);
+    
     const res = await chain.invoke({
       llama_data: JSON.stringify(state.llamaAnalysis),
       gemini_data: JSON.stringify(state.geminiAnalysis),
       scraped_data: state.rawScrapedData,
       debate_history: JSON.stringify(state.debateHistory),
+      platform: platformName,
       format_instructions: context.jsonParser.getFormatInstructions(),
     });
 
@@ -1011,6 +1043,9 @@ export function checkAnalysesReady(state: GraphState): string {
  */
 const StateAnnotation = Annotation.Root({
   instagramUrl: Annotation<string>({
+    reducer: (x: string, y: string) => y || x,
+  }),
+  platform: Annotation<string>({
     reducer: (x: string, y: string) => y || x,
   }),
   rawScrapedData: Annotation<string>({

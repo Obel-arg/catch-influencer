@@ -19,7 +19,7 @@ import {
   getTikTokThumbnailValidated,
 } from "@/utils/tiktok";
 import { useToast } from "@/hooks/common/useToast";
-import { Download, Info, Loader2, X } from "lucide-react";
+import { Download, Info, Loader2, X, Check } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bar,
@@ -395,6 +395,13 @@ export function InfluencerProfilePanel({
     null
   );
   const [loadingAudience, setLoadingAudience] = useState(false);
+  // Store selected social network as unique key: "platform-username"
+  const [selectedSocialNetworkKey, setSelectedSocialNetworkKey] = useState<
+    string | null
+  >(null);
+  const [platformsWithCache, setPlatformsWithCache] = useState<Set<string>>(
+    new Set()
+  );
 
   const availablePlatforms = useMemo(() => {
     const platforms: string[] = [];
@@ -475,6 +482,90 @@ export function InfluencerProfilePanel({
   // Track background generation jobs to avoid duplicates
   const backgroundGenerationJobs = useRef<Set<string>>(new Set());
 
+  // Helper to determine initial social network (unique key: platform-username)
+  const determineInitialSocialNetwork = useMemo(() => {
+    if (!influencer?.platformInfo?.socialNetworks) return null;
+
+    const socialNetworks = influencer.platformInfo.socialNetworks;
+
+    // Priority 1: Use platformFilter if set and not "all"
+    if (platformFilter && platformFilter !== "all") {
+      const filterLower = platformFilter.toLowerCase();
+      const matchingNetworks = socialNetworks.filter(
+        (sn: any) => String(sn.platform || "").toLowerCase() === filterLower
+      );
+
+      if (matchingNetworks.length > 0) {
+        // If multiple accounts for same platform, pick the one with most followers
+        const sorted = [...matchingNetworks].sort((a: any, b: any) => {
+          const aFollowers = Number(a.followers || a.followersCount || 0);
+          const bFollowers = Number(b.followers || b.followersCount || 0);
+          return bFollowers - aFollowers;
+        });
+        const selected = sorted[0];
+        return `${String(selected.platform || "").toLowerCase()}-${
+          selected.username || ""
+        }`;
+      }
+    }
+
+    // Priority 2: Use account with most followers across all platforms
+    const sortedByFollowers = [...socialNetworks].sort((a: any, b: any) => {
+      const aFollowers = Number(a.followers || a.followersCount || 0);
+      const bFollowers = Number(b.followers || b.followersCount || 0);
+      return bFollowers - aFollowers;
+    });
+
+    if (sortedByFollowers.length > 0) {
+      const selected = sortedByFollowers[0];
+      return `${String(selected.platform || "").toLowerCase()}-${
+        selected.username || ""
+      }`;
+    }
+
+    return null;
+  }, [influencer, platformFilter]);
+
+  // Helper to get platform username from influencer data
+  const getPlatformUsername = (
+    platform: string,
+    socialNetwork: any
+  ): string | null => {
+    if (socialNetwork?.username) return socialNetwork.username;
+    const platformLower = platform.toLowerCase();
+    const platformInfo = influencer?.platformInfo || {};
+
+    switch (platformLower) {
+      case "instagram":
+        return platformInfo.instagram?.username || null;
+      case "youtube":
+        return (
+          platformInfo.youtube?.channelId ||
+          platformInfo.youtube?.youtubeId ||
+          null
+        );
+      case "tiktok":
+        return (
+          platformInfo.tiktok?.tiktokId || platformInfo.tiktok?.username || null
+        );
+      case "twitter":
+        return platformInfo.twitter?.username || null;
+      case "twitch":
+        return platformInfo.twitch?.username || null;
+      case "threads":
+        return platformInfo.threads?.username || null;
+      default:
+        return null;
+    }
+  };
+
+  // Initialize selected social network when panel opens
+  useEffect(() => {
+    if (isOpen && determineInitialSocialNetwork) {
+      setSelectedSocialNetworkKey(determineInitialSocialNetwork);
+    }
+  }, [isOpen, determineInitialSocialNetwork]);
+
   // 📄 Export to PDF handler
   const handleExportPDF = async () => {
     try {
@@ -547,31 +638,70 @@ export function InfluencerProfilePanel({
   // Uses a two-phase approach: fast cache check, then background generation if needed
   useEffect(() => {
     const loadSyntheticAudience = async () => {
-      if (!isOpen || !influencer?.id) {
-        // Clear audience data when panel closes or no influencer
+      if (!isOpen || !influencer?.id || !selectedSocialNetworkKey) {
+        // Clear audience data when panel closes or no influencer/platform
         setAudienceData(null);
         return;
       }
 
-      // Check client-side cache first (5 minute TTL)
-      const cached = audienceCache?.[influencer.id];
+      // Parse the selected key to get platform and username
+      const [selectedPlatform, selectedUsername] =
+        selectedSocialNetworkKey.split("-", 2);
+
+      if (!selectedPlatform || !selectedUsername) {
+        console.warn(
+          `[InfluencerProfilePanel] Invalid social network key: ${selectedSocialNetworkKey}`
+        );
+        return;
+      }
+
+      // Find the exact social network data for selected platform-username combo
+      const socialNetwork = influencer.platformInfo?.socialNetworks?.find(
+        (sn: any) =>
+          String(sn.platform || "").toLowerCase() === selectedPlatform &&
+          (sn.username || "").toLowerCase() === selectedUsername.toLowerCase()
+      );
+
+      if (!socialNetwork) {
+        console.warn(
+          `[InfluencerProfilePanel] No social network data found for: ${selectedSocialNetworkKey}`
+        );
+        return;
+      }
+
+      // Get platform username (use from social network or extracted from key)
+      const platformUsername = socialNetwork.username || selectedUsername;
+
+      if (!platformUsername) {
+        console.warn(
+          `[InfluencerProfilePanel] No username found for: ${selectedSocialNetworkKey}`
+        );
+        return;
+      }
+
+      // Check client-side cache first (5 minute TTL) - keyed by social network key
+      const cacheKey = `${influencer.id}-${selectedSocialNetworkKey}`;
+      const cached = audienceCache?.[cacheKey];
       if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) {
-        console.log(`✅ Client cache hit for influencer ${influencer.id}`);
+        console.log(`✅ Client cache hit for ${selectedSocialNetworkKey}`);
         setAudienceData(cached.data);
         setLoadingAudience(false);
+        setPlatformsWithCache((prev) =>
+          new Set(prev).add(selectedSocialNetworkKey)
+        );
         return;
       }
 
       // Extract influencer data for API calls
-      const instagramUsername =
-        influencer.platformInfo?.instagram?.username ||
-        influencer.creatorId ||
-        influencer.id;
-
       const influencerDataForApi = {
-        username: instagramUsername,
-        follower_count: influencer.followersCount || 50000,
-        platform: influencer.mainSocialPlatform || "instagram",
+        username: platformUsername,
+        follower_count:
+          Number(
+            socialNetwork.followers || socialNetwork.followersCount || 0
+          ) ||
+          influencer.followersCount ||
+          50000,
+        platform: selectedPlatform,
         niche: influencer.categories?.[0] || undefined,
         location: influencer.location || influencer.country || undefined,
         search_context: searchContext,
@@ -599,17 +729,23 @@ export function InfluencerProfilePanel({
           cacheCheckResponse.audience
         ) {
           // Data found in server cache - use it immediately
-          console.log(`✅ Server cache hit for influencer ${influencer.id}`);
+          console.log(`✅ Server cache hit for ${selectedSocialNetworkKey}`);
           const normalizedData = normalizeAudienceData(
             cacheCheckResponse.audience,
             cacheCheckResponse.description
           );
           setAudienceData(normalizedData);
           setLoadingAudience(false);
+          setPlatformsWithCache((prev) =>
+            new Set(prev).add(selectedSocialNetworkKey)
+          );
 
-          // Update client cache
+          // Update client cache (keyed by social network key)
           if (onAudienceFetched && normalizedData) {
-            onAudienceFetched(influencer.id, normalizedData);
+            onAudienceFetched(
+              `${influencer.id}-${selectedSocialNetworkKey}`,
+              normalizedData
+            );
           }
           return;
         }
@@ -666,10 +802,16 @@ export function InfluencerProfilePanel({
                   response.description
                 );
 
-                // Update client cache
+                // Update client cache (keyed by social network key)
                 if (onAudienceFetched && normalizedData) {
-                  onAudienceFetched(influencerRef.id, normalizedData);
+                  onAudienceFetched(
+                    `${influencerRef.id}-${selectedSocialNetworkKey}`,
+                    normalizedData
+                  );
                 }
+                setPlatformsWithCache((prev) =>
+                  new Set(prev).add(selectedSocialNetworkKey)
+                );
 
                 // Show success toast with action button to open panel
                 showToast({
@@ -714,11 +856,18 @@ export function InfluencerProfilePanel({
     };
 
     loadSyntheticAudience();
-    // NOTE: We intentionally only depend on influencer.id to prevent infinite loops.
+    // NOTE: We intentionally only depend on influencer.id and selectedSocialNetworkKey to prevent infinite loops.
     // The effect accesses other influencer properties via closure, but we only want
-    // to re-run when the influencer ID changes (meaning a different influencer is selected).
+    // to re-run when the influencer ID or selected social network changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, influencer.id, audienceCache, onAudienceFetched, searchContext]);
+  }, [
+    isOpen,
+    influencer.id,
+    selectedSocialNetworkKey,
+    audienceCache,
+    onAudienceFetched,
+    searchContext,
+  ]);
 
   const platformData = useMemo(() => {
     if (!influencer?.platformInfo) return null;
@@ -955,10 +1104,47 @@ export function InfluencerProfilePanel({
                                 ? "bg-red-100 text-red-700 border-red-200"
                                 : "bg-gray-100 text-gray-700 border-gray-200";
 
+                            // Create unique key for this social network: platform-username
+                            const socialNetworkKey = `${platformKey}-${
+                              sn.username || ""
+                            }`;
+                            const isSelected =
+                              selectedSocialNetworkKey === socialNetworkKey;
+                            const hasCache =
+                              platformsWithCache.has(socialNetworkKey);
+                            const isClickable = [
+                              "instagram",
+                              "youtube",
+                              "tiktok",
+                              "twitter",
+                              "twitch",
+                              "threads",
+                            ].includes(platformKey);
+
                             return (
                               <div
-                                key={`${platformKey}-${idx}`}
-                                className="rounded-lg border border-gray-200 p-3"
+                                key={socialNetworkKey}
+                                onClick={() => {
+                                  if (
+                                    isClickable &&
+                                    socialNetworkKey !==
+                                      selectedSocialNetworkKey
+                                  ) {
+                                    setSelectedSocialNetworkKey(
+                                      socialNetworkKey
+                                    );
+                                    setAudienceData(null); // Clear current data to show loading
+                                  }
+                                }}
+                                className={`rounded-lg border p-3 transition-all ${
+                                  isClickable
+                                    ? `cursor-pointer hover:shadow-md ${
+                                        isSelected
+                                          ? "border-blue-500 bg-blue-50"
+                                          : "border-gray-200 hover:border-gray-300"
+                                      }`
+                                    : "border-gray-200"
+                                }`}
                               >
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-2 min-w-0">
@@ -966,14 +1152,24 @@ export function InfluencerProfilePanel({
                                     <span className="text-sm font-medium text-gray-800 truncate">
                                       {platformLabel}
                                     </span>
+                                    {hasCache && isClickable && (
+                                      <Check className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
+                                    )}
                                   </div>
-                                  {state && (
-                                    <span
-                                      className={`text-[11px] px-2 py-0.5 rounded border ${stateClasses}`}
-                                    >
-                                      {state}
-                                    </span>
-                                  )}
+                                  <div className="flex items-center gap-2">
+                                    {isSelected && isClickable && (
+                                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 border border-blue-200">
+                                        Seleccionado
+                                      </span>
+                                    )}
+                                    {state && (
+                                      <span
+                                        className={`text-[11px] px-2 py-0.5 rounded border ${stateClasses}`}
+                                      >
+                                        {state}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
 
                                 <div className="mt-2 space-y-1">
