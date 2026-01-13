@@ -138,6 +138,9 @@ export class PostgresQueueService {
 
         // Process the job
         await this.processJob(job, handler);
+        console.log(
+          `✅ [POSTGRES-QUEUE] Processed job ${job.id} from ${queueName} (loop ${loopCount})`,
+        );
 
         // Small delay to prevent overwhelming the database
         await new Promise((resolve) => setTimeout(resolve, 100));
