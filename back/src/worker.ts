@@ -588,6 +588,8 @@ let cleanupInterval: NodeJS.Timeout;
 let forceProcessInterval: NodeJS.Timeout;
 let aggressiveRecoveryInterval: NodeJS.Timeout; // Nuevo intervalo para aggressiveJobRecovery
 let aggressiveQueueMonitoringInterval: NodeJS.Timeout; // Nuevo intervalo para aggressiveQueueMonitoring
+let keepAliveInterval: NodeJS.Timeout; // Keep-alive para mantener el proceso siempre vivo
+let processHealthInterval: NodeJS.Timeout; // Monitoreo de salud del proceso
 
 // Inicializar sistema completo
 async function initializeCompleteSystem() {
@@ -610,8 +612,76 @@ async function initializeCompleteSystem() {
   }
 }
 
+// Keep-alive mechanism - CRÍTICO para mantener el proceso siempre vivo
+function startKeepAlive() {
+  // Heartbeat cada 30 segundos para mantener el proceso activo
+  keepAliveInterval = setInterval(() => {
+    try {
+      // Verificar que el proceso esté activo
+      const uptime = process.uptime();
+      const memUsage = getMemoryUsage();
+      
+      // Log cada 10 minutos para no saturar logs
+      const uptimeMinutes = Math.floor(uptime / 60);
+      if (uptimeMinutes > 0 && uptimeMinutes % 10 === 0 && uptime % 60 < 30) {
+        console.log(`💓 [WORKER_SYSTEM] Keep-alive: Worker running for ${uptimeMinutes} minutes | Memory: ${memUsage.heapUsed}MB / ${memUsage.heapTotal}MB`);
+      }
+      
+      // Verificar que los workers estén activos
+      if (workers.length === 0) {
+        console.warn('⚠️ [WORKER_SYSTEM] No workers detected, attempting reinitialization...');
+        initializeWorkers().catch(err => {
+          console.error('❌ [WORKER_SYSTEM] Error reinitializing workers:', err);
+        });
+      }
+    } catch (error) {
+      console.error('❌ [WORKER_SYSTEM] Error in keep-alive check:', error);
+      // NO lanzar el error - solo loggear
+    }
+  }, 30000); // Cada 30 segundos
+  
+  // Monitoreo de salud del proceso cada 1 minuto
+  processHealthInterval = setInterval(() => {
+    try {
+      const memUsage = getMemoryUsage();
+      const uptime = process.uptime();
+      
+      // Verificar memoria crítica
+      if (memUsage.heapUsed > 2500) { // 2.5GB
+        console.error(`🚨 [WORKER_SYSTEM] Critical memory usage: ${memUsage.heapUsed}MB`);
+        // Forzar garbage collection si está disponible
+        if (global.gc) {
+          global.gc();
+          console.log('🧹 [WORKER_SYSTEM] Forced garbage collection');
+        }
+      }
+      
+      // Verificar que el proceso no esté colgado
+      if (uptime > 0) {
+        // Proceso está vivo
+        const healthStatuses = logWorkerMetrics();
+        if (healthStatuses) {
+          const allUnhealthy = healthStatuses.every(w => !w.isHealthy);
+          if (allUnhealthy && workers.length > 0) {
+            console.warn('⚠️ [WORKER_SYSTEM] All workers unhealthy, attempting recovery...');
+            restartUnhealthyWorkers().catch(err => {
+              console.error('❌ [WORKER_SYSTEM] Error in worker recovery:', err);
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('❌ [WORKER_SYSTEM] Error in process health check:', error);
+      // NO lanzar el error - solo loggear
+    }
+  }, 60000); // Cada 1 minuto
+}
+
 // Iniciar monitoreo
 function startMonitoring() {
+  // Iniciar keep-alive PRIMERO - esto es crítico para mantener el proceso vivo
+  startKeepAlive();
+  
   // Log métricas cada 5 minutos
   metricsInterval = setInterval(logWorkerMetrics, 5 * 60 * 1000);
 
@@ -700,31 +770,37 @@ function startMonitoring() {
   aggressiveQueueMonitoringInterval = setInterval(aggressiveQueueMonitoring, 1 * 60 * 1000);
 }
 
-// Manejo de errores no capturados
+// Manejo de errores no capturados - CRÍTICO: NO cerrar el proceso
+// Estos handlers previenen que el worker se apague por errores no críticos
 process.on('unhandledRejection', (reason, promise) => {
   console.error('🚨 [WORKER_SYSTEM] Unhandled Rejection at:', promise, 'reason:', reason);
-  // No cerrar el proceso, solo loggear el error
+  // NO cerrar el proceso - solo loggear y continuar
+  // Esto es crítico para mantener el worker siempre activo
 });
 
 process.on('uncaughtException', (error) => {
   console.error('🚨 [WORKER_SYSTEM] Uncaught Exception:', error);
-  // No cerrar el proceso, solo loggear el error
+  // NO cerrar el proceso - solo loggear y continuar
+  // Esto es crítico para mantener el worker siempre activo
+  // El proceso debe seguir corriendo incluso con errores no críticos
 });
 
 // Manejo de shutdown mejorado
 async function gracefulShutdown(signal: string) {
- 
+  console.log(`🛑 [WORKER_SYSTEM] Received ${signal} signal, initiating graceful shutdown...`);
   
-  // Limpiar intervalos
-  clearInterval(metricsInterval);
-  clearInterval(healthCheckInterval);
-  clearInterval(restartCheckInterval);
+  // Limpiar intervalos de forma segura
+  if (metricsInterval) clearInterval(metricsInterval);
+  if (healthCheckInterval) clearInterval(healthCheckInterval);
+  if (restartCheckInterval) clearInterval(restartCheckInterval);
   // clearInterval(autoScalingInterval); // TEMPORALMENTE DESHABILITADO
-  clearInterval(memoryInterval);
-  clearInterval(cleanupInterval);
-  clearInterval(forceProcessInterval);
-  clearInterval(aggressiveRecoveryInterval); // Limpiar el nuevo intervalo
-  clearInterval(aggressiveQueueMonitoringInterval); // Limpiar el nuevo intervalo
+  if (memoryInterval) clearInterval(memoryInterval);
+  if (cleanupInterval) clearInterval(cleanupInterval);
+  if (forceProcessInterval) clearInterval(forceProcessInterval);
+  if (aggressiveRecoveryInterval) clearInterval(aggressiveRecoveryInterval);
+  if (aggressiveQueueMonitoringInterval) clearInterval(aggressiveQueueMonitoringInterval);
+  if (keepAliveInterval) clearInterval(keepAliveInterval);
+  if (processHealthInterval) clearInterval(processHealthInterval);
   
   // Detener health checks
   healthManager.stopMonitoring();
@@ -755,21 +831,11 @@ async function gracefulShutdown(signal: string) {
   process.exit(0);
 }
 
-// Event listeners para shutdown
+// Event listeners para shutdown - SOLO para señales explícitas del sistema
+// NOTA: Los handlers de uncaughtException y unhandledRejection están definidos arriba
+// y NO llaman a gracefulShutdown para mantener el worker siempre activo
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-
-// Uncaught exception handler
-process.on('uncaughtException', (error) => {
-  console.error('🚨 [WORKER_SYSTEM] Uncaught Exception:', error);
-  gracefulShutdown('UNCAUGHT_EXCEPTION');
-});
-
-// Unhandled rejection handler
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('🚨 [WORKER_SYSTEM] Unhandled Rejection at:', promise, 'reason:', reason);
-  gracefulShutdown('UNHANDLED_REJECTION');
-});
 
 // Inicializar sistema completo
 initializeCompleteSystem();
