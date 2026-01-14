@@ -236,6 +236,13 @@ export class PostgresQueueService {
 
       if (updateError) {
         if (updateError.code === 'PGRST116') {
+          // Job was already claimed by another worker (race condition)
+          // This is normal in concurrent environments, but log occasionally
+          if (Math.random() < 0.1) { // Log 10% of the time to avoid spam
+            console.log(
+              `🟡 [POSTGRES-QUEUE] Job ${jobToClaim.id} already claimed by another worker (race condition)`,
+            );
+          }
           return null;
         }
 
@@ -248,9 +255,20 @@ export class PostgresQueueService {
 
       if (!claimedJob) {
         console.log(
-          `🟡 [POSTGRES-QUEUE] Job ${jobToClaim.id} could not be claimed (already taken)`,
+          `🟡 [POSTGRES-QUEUE] Job ${jobToClaim.id} could not be claimed (already taken or not found)`,
         );
         return null;
+      }
+
+      // Parse data if it's a string
+      if (claimedJob.data && typeof claimedJob.data === 'string') {
+        try {
+          claimedJob.data = JSON.parse(claimedJob.data);
+        } catch (parseError) {
+          console.warn(
+            `⚠️ [POSTGRES-QUEUE] Failed to parse job data for ${claimedJob.id}, using raw string`,
+          );
+        }
       }
 
       console.log(
@@ -779,7 +797,7 @@ export class PostgresQueueService {
       const { data, error } = await query;
 
       if (error) {
-        console.error('❌ [POSTGRES-QUEUE] Error getting queue stats:', error);
+        console.error(`❌ [POSTGRES-QUEUE] Error getting queue stats for ${queueName || 'all queues'}:`, error);
         throw error;
       }
 
@@ -791,24 +809,26 @@ export class PostgresQueueService {
         total: 0,
       };
 
-      data?.forEach((job) => {
-        const status = job.status as keyof typeof stats;
-        if (status in stats) {
-          stats[status]++;
-        }
-        stats.total++;
-      });
+      if (data) {
+        data.forEach((job) => {
+          const status = job.status as keyof typeof stats;
+          if (status in stats) {
+            stats[status]++;
+          }
+          stats.total++;
+        });
+      }
+
+      // Log detallado si hay jobs pendientes o procesándose
+      if (queueName && (stats.pending > 0 || stats.processing > 0)) {
+        console.log(`📊 [POSTGRES-QUEUE] Queue ${queueName} stats: pending=${stats.pending}, processing=${stats.processing}, completed=${stats.completed}, failed=${stats.failed}, total=${stats.total}`);
+      }
 
       return stats;
     } catch (error) {
-      console.error('❌ [POSTGRES-QUEUE] Failed to get queue stats:', error);
-      return {
-        pending: 0,
-        processing: 0,
-        completed: 0,
-        failed: 0,
-        total: 0,
-      };
+      console.error(`❌ [POSTGRES-QUEUE] Failed to get queue stats for ${queueName || 'all queues'}:`, error);
+      // Re-lanzar el error en lugar de devolver ceros para que el caller sepa que hubo un problema
+      throw error;
     }
   }
 
@@ -856,6 +876,46 @@ export class PostgresQueueService {
     } catch (error) {
       console.error('❌ [POSTGRES-QUEUE] Failed to get queues:', error);
       return [];
+    }
+  }
+
+  /**
+   * Migrate jobs from one queue name to another
+   */
+  async migrateQueueJobs(fromQueueName: string, toQueueName: string): Promise<number> {
+    try {
+      // Get all jobs from the old queue
+      const { data: jobs, error: selectError } = await supabase
+        .from('queue_jobs')
+        .select('*')
+        .eq('name', fromQueueName);
+
+      if (selectError) {
+        console.error(`❌ [POSTGRES-QUEUE] Error selecting jobs from ${fromQueueName}:`, selectError);
+        throw selectError;
+      }
+
+      if (!jobs || jobs.length === 0) {
+        console.log(`ℹ️ [POSTGRES-QUEUE] No jobs to migrate from ${fromQueueName} to ${toQueueName}`);
+        return 0;
+      }
+
+      // Update all jobs to use the new queue name
+      const { error: updateError } = await supabase
+        .from('queue_jobs')
+        .update({ name: toQueueName, updated_at: new Date() })
+        .eq('name', fromQueueName);
+
+      if (updateError) {
+        console.error(`❌ [POSTGRES-QUEUE] Error migrating jobs from ${fromQueueName} to ${toQueueName}:`, updateError);
+        throw updateError;
+      }
+
+      console.log(`✅ [POSTGRES-QUEUE] Successfully migrated ${jobs.length} jobs from ${fromQueueName} to ${toQueueName}`);
+      return jobs.length;
+    } catch (error) {
+      console.error(`❌ [POSTGRES-QUEUE] Failed to migrate jobs from ${fromQueueName} to ${toQueueName}:`, error);
+      throw error;
     }
   }
 

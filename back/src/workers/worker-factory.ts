@@ -74,7 +74,9 @@ export class WorkerFactory {
       }
 
       // Crear nuevo worker usando PostgreSQL queue
+      console.log(`🔧 [WORKER_FACTORY] Creating optimized worker for: ${workerName}`);
       const worker = createOptimizedWorker(config, processor);
+      console.log(`✅ [WORKER_FACTORY] Worker created for: ${workerName}`, worker ? 'SUCCESS' : 'FAILED');
       
       // Actualizar estado
       state.isInitialized = true;
@@ -84,6 +86,8 @@ export class WorkerFactory {
       state.initErrors = [];
 
       this.workerStates.set(workerName, state);
+      
+      console.log(`✅ [WORKER_FACTORY] Worker ${workerName} fully initialized and ready`);
 
       return worker;
 

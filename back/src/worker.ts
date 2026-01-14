@@ -91,13 +91,36 @@ async function initializeWorkerSystem() {
 // Función para inicializar workers
 async function initializeWorkers() {
   try {
+    console.log('🚀 [WORKER_SYSTEM] Starting worker initialization...');
+    
+    // Migrar jobs de metrics_queue a metrics si existe
+    const queueService = PostgresQueueService.getInstance();
+    const allQueues = await queueService.getQueues();
+    if (allQueues.includes('metrics_queue')) {
+      const stats = await queueService.getQueueStats('metrics_queue');
+      if (stats.pending > 0 || stats.processing > 0) {
+        console.log(`🔄 [WORKER_SYSTEM] Migrating ${stats.pending + stats.processing} jobs from metrics_queue to metrics...`);
+        try {
+          const migrated = await queueService.migrateQueueJobs('metrics_queue', 'metrics');
+          console.log(`✅ [WORKER_SYSTEM] Migrated ${migrated} jobs from metrics_queue to metrics`);
+        } catch (migError) {
+          console.error('❌ [WORKER_SYSTEM] Error migrating jobs:', migError);
+        }
+      }
+    }
     
     // Inicializar workers usando el factory
+    console.log('📦 [WORKER_SYSTEM] Initializing metrics worker...');
     const metricsWorker = await workerFactory.initializeWorker('metrics', DEFAULT_METRICS_CONFIG, processMetricsJob);
+    console.log('✅ [WORKER_SYSTEM] Metrics worker initialized:', metricsWorker ? 'SUCCESS' : 'FAILED');
     
+    console.log('📦 [WORKER_SYSTEM] Initializing sentiment worker...');
     const sentimentWorker = await workerFactory.initializeWorker('sentiment', DEFAULT_SENTIMENT_CONFIG, processSentimentJob);
+    console.log('✅ [WORKER_SYSTEM] Sentiment worker initialized:', sentimentWorker ? 'SUCCESS' : 'FAILED');
     
+    console.log('📦 [WORKER_SYSTEM] Initializing comment-fetch worker...');
     const commentFetchWorker = await workerFactory.initializeWorker('comment-fetch', DEFAULT_COMMENT_FETCH_CONFIG, processCommentFetchJob);
+    console.log('✅ [WORKER_SYSTEM] Comment-fetch worker initialized:', commentFetchWorker ? 'SUCCESS' : 'FAILED');
     
     workers = [
       { name: 'metrics', worker: metricsWorker },
@@ -105,9 +128,14 @@ async function initializeWorkers() {
       { name: 'comment-fetch', worker: commentFetchWorker }
     ];
     
+    console.log(`✅ [WORKER_SYSTEM] All workers initialized. Total: ${workers.length}`);
+    workers.forEach(w => {
+      console.log(`   - ${w.name}: ${w.worker ? 'OK' : 'MISSING'}`);
+    });
     
   } catch (error) {
     console.error('❌ [WORKER_SYSTEM] Error initializing workers:', error);
+    console.error('❌ [WORKER_SYSTEM] Error stack:', error instanceof Error ? error.stack : 'N/A');
   }
 }
 
@@ -146,7 +174,13 @@ function getMemoryUsage(): MemoryUsage {
 function logWorkerMetrics() {
   const metrics = getWorkerMetrics();
   if (!metrics) {
-    return;
+    console.log('⚠️ [WORKER_METRICS] No worker metrics available yet');
+    return [];
+  }
+  
+  if (Object.keys(metrics).length === 0) {
+    console.log('⚠️ [WORKER_METRICS] Worker metrics object is empty');
+    return [];
   }
   
   const healthStatuses: WorkerHealthStatus[] = [];
@@ -219,6 +253,28 @@ function logWorkerMetrics() {
   // Evaluar alertas de fallbacks
   alertManager.evaluateData('fallbacks', fallbackStats, ['system_health', 'fallbacks']);
   
+  // 🔍 DIAGNÓSTICO: Log detallado de workers unhealthy
+  const unhealthyWorkers = healthStatuses.filter(w => !w.isHealthy);
+  if (unhealthyWorkers.length > 0) {
+    console.log('\n🔍 [WORKER_DIAGNOSTICS] ========== UNHEALTHY WORKERS DETAILS ==========');
+    unhealthyWorkers.forEach(worker => {
+      const workerMetrics = getWorkerMetrics(worker.name);
+      console.log(`\n⚠️ Worker: ${worker.name}`);
+      console.log(`   - Healthy: ${worker.isHealthy}`);
+      console.log(`   - Success Rate: ${worker.successRate}%`);
+      console.log(`   - Consecutive Failures: ${worker.consecutiveFailures}`);
+      console.log(`   - Circuit Breaker: ${worker.circuitBreakerState}`);
+      console.log(`   - Last Processed: ${worker.lastProcessedAt ? new Date(worker.lastProcessedAt).toISOString() : 'Never'}`);
+      console.log(`   - Last Error: ${worker.lastErrorAt ? new Date(worker.lastErrorAt).toISOString() : 'Never'}`);
+      if (workerMetrics) {
+        console.log(`   - Total Processed: ${workerMetrics.processed}`);
+        console.log(`   - Total Failed: ${workerMetrics.failed}`);
+        console.log(`   - Avg Processing Time: ${workerMetrics.avgProcessingTime}ms`);
+      }
+    });
+    console.log('='.repeat(80) + '\n');
+  }
+  
   return healthStatuses;
 }
 
@@ -256,14 +312,32 @@ function performHealthCheck(): boolean {
 // Auto-restart mechanism for unhealthy workers
 async function restartUnhealthyWorkers() {
   const healthStatuses = logWorkerMetrics();
-  if (!healthStatuses) return;
+  if (!healthStatuses) {
+    console.warn('⚠️ [WORKER_SYSTEM] No health statuses available for restart check');
+    return;
+  }
   
   const unhealthyWorkers = healthStatuses.filter(w => 
     !w.isHealthy && w.consecutiveFailures > 5
   );
   
+  if (unhealthyWorkers.length === 0) {
+    // Log detallado de por qué no se reinician
+    const allUnhealthy = healthStatuses.filter(w => !w.isHealthy);
+    if (allUnhealthy.length > 0) {
+      console.log(`🔍 [WORKER_SYSTEM] Found ${allUnhealthy.length} unhealthy workers but none meet restart criteria (>5 failures):`);
+      allUnhealthy.forEach(w => {
+        console.log(`   - ${w.name}: failures=${w.consecutiveFailures}, successRate=${w.successRate}%`);
+      });
+    }
+    return;
+  }
+  
   for (const unhealthyWorker of unhealthyWorkers) {
     console.warn(`🔄 [WORKER_SYSTEM] Attempting to restart unhealthy worker: ${unhealthyWorker.name}`);
+    console.log(`   - Failures: ${unhealthyWorker.consecutiveFailures}`);
+    console.log(`   - Success Rate: ${unhealthyWorker.successRate}%`);
+    console.log(`   - Circuit Breaker: ${unhealthyWorker.circuitBreakerState}`);
     
     try {
       // Reinicializar worker usando el factory
@@ -301,6 +375,8 @@ async function monitorQueueCompletion() {
     const queueService = PostgresQueueService.getInstance();
     const allQueues = await queueService.getQueues();
     
+    console.log(`🔍 [QUEUE_MONITOR] Found ${allQueues.length} queues: ${allQueues.join(', ')}`);
+    
     for (const queueName of allQueues) {
       const stats = await queueService.getQueueStats(queueName);
       
@@ -311,9 +387,17 @@ async function monitorQueueCompletion() {
         // Si hay muchos jobs pendientes, verificar si el worker está funcionando
         if (stats.pending > 50) {
           const worker = workers.find(w => w.name === queueName);
-          if (worker && worker.worker.getStats) {
-            const workerStats = worker.worker.getStats();
-            console.warn(`⚠️ [QUEUE_MONITOR] Worker ${queueName} stats:`, workerStats);
+          if (worker && worker.worker) {
+            if (worker.worker.getStats) {
+              const workerStats = worker.worker.getStats();
+              console.warn(`⚠️ [QUEUE_MONITOR] Worker ${queueName} stats:`, workerStats);
+            }
+            if (worker.worker.getHealth) {
+              const health = worker.worker.getHealth();
+              console.warn(`⚠️ [QUEUE_MONITOR] Worker ${queueName} health:`, health);
+            }
+          } else {
+            console.error(`❌ [QUEUE_MONITOR] No worker found for queue ${queueName}! Available workers: ${workers.map(w => w.name).join(', ')}`);
           }
         }
       }
@@ -365,13 +449,14 @@ async function resetStuckJobs() {
     const allQueues = await queueService.getQueues();
     
     for (const queueName of allQueues) {
-      // Resetear jobs que han estado procesándose por más de 3 minutos
-      const stuckJobs = await queueService.getStuckJobs(queueName, 3);
+      // Resetear jobs que han estado procesándose por más de 2 minutos (reducido de 3)
+      const stuckJobs = await queueService.getStuckJobs(queueName, 2);
       if (stuckJobs.length > 0) {
-        
+        console.log(`🔄 [STUCK_RESET] Found ${stuckJobs.length} stuck jobs in queue ${queueName}, resetting...`);
         for (const job of stuckJobs) {
           try {
             await queueService.restartJob(job.id);
+            console.log(`✅ [STUCK_RESET] Reset stuck job ${job.id} in queue ${queueName}`);
           } catch (resetError) {
             console.error(`❌ [STUCK_RESET] Error resetting job ${job.id}:`, resetError);
           }
@@ -664,6 +749,10 @@ function startKeepAlive() {
           const allUnhealthy = healthStatuses.every(w => !w.isHealthy);
           if (allUnhealthy && workers.length > 0) {
             console.warn('⚠️ [WORKER_SYSTEM] All workers unhealthy, attempting recovery...');
+            console.log(`🔍 [WORKER_SYSTEM] Workers count: ${workers.length}, Health statuses: ${healthStatuses.length}`);
+            healthStatuses.forEach(status => {
+              console.log(`   - ${status.name}: healthy=${status.isHealthy}, successRate=${status.successRate}%, failures=${status.consecutiveFailures}`);
+            });
             restartUnhealthyWorkers().catch(err => {
               console.error('❌ [WORKER_SYSTEM] Error in worker recovery:', err);
             });

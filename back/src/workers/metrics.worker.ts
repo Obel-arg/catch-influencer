@@ -390,9 +390,8 @@ async function initializeWorker() {
         },
       };
 
-      // Iniciar el procesamiento automáticamente
-
-      await postgresQueueService.process(metricsConfig.name, processMetricsJob);
+      // NO iniciar procesamiento aquí - el base.worker.ts ya maneja el procesamiento
+      // await postgresQueueService.process(metricsConfig.name, processMetricsJob);
 
       isInitialized = true;
     });

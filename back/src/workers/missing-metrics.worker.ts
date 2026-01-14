@@ -268,10 +268,10 @@ export class MissingMetricsWorker {
 
       // Usar PostgreSQL para agregar a la cola
       console.log(
-        `➡️ [MISSING_METRICS_WORKER] Sending job to metrics_queue for post ${post.postId}`,
+        `➡️ [MISSING_METRICS_WORKER] Sending job to metrics queue for post ${post.postId}`,
       );
       const data_result = await postgresQueueService.send(
-        'metrics_queue',
+        'metrics', // Usar 'metrics' en lugar de 'metrics_queue' para que coincida con el nombre del worker
         jobData,
       );
       console.log(

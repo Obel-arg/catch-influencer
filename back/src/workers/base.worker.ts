@@ -165,7 +165,10 @@ export function getWorkerHealth(workerName?: string) {
   
   const totalJobs = metrics.processed + metrics.failed;
   const successRate = totalJobs > 0 ? (metrics.processed / totalJobs) * 100 : 100;
-  const isHealthy = successRate > 80 && metrics.consecutiveFailures < 5;
+  // Workers are healthy if:
+  // - They haven't processed any jobs yet (totalJobs === 0) OR
+  // - Success rate > 80% AND consecutive failures < 5
+  const isHealthy = totalJobs === 0 || (successRate > 80 && metrics.consecutiveFailures < 5);
   
   return {
     isHealthy,
@@ -201,33 +204,67 @@ export function createOptimizedWorker<T>(
   let processingInterval: NodeJS.Timeout | null = null;
   
   // Función para verificar si hay jobs pendientes
-  const checkPendingJobs = async (): Promise<number> => {
+  const checkPendingJobs = async (iteration?: number): Promise<number> => {
     try {
       const stats = await queueService.getQueueStats(queueName);
-      return stats.pending + stats.processing;
+      const total = stats.pending + stats.processing;
+      
+      // Log detallado cada 20 iteraciones para diagnóstico, o si hay jobs pendientes
+      if (iteration && (iteration % 20 === 0 || total > 0)) {
+        console.log(`📊 [${config.name.toUpperCase()}_WORKER] Queue stats for ${queueName}: pending=${stats.pending}, processing=${stats.processing}, completed=${stats.completed}, failed=${stats.failed}, total=${total}`);
+      }
+      
+      return total;
     } catch (error) {
-      console.warn(`⚠️ [${config.name.toUpperCase()}_WORKER] Error checking pending jobs:`, error);
-      return 0;
+      console.error(`❌ [${config.name.toUpperCase()}_WORKER] Error checking pending jobs for ${queueName}:`, error);
+      // En caso de error, retornar -1 para indicar que hubo un problema
+      return -1;
     }
   };
   
   // Función para procesar jobs de forma continua
   const processJobsContinuously = async () => {
+    console.log(`🚀 [${config.name.toUpperCase()}_WORKER] Starting continuous job processing loop for queue: ${queueName}`);
+    let loopIterations = 0;
+    
     while (isProcessing) {
       try {
+        loopIterations++;
+        
+        // Log cada 100 iteraciones para no saturar logs
+        if (loopIterations % 100 === 0) {
+          console.log(`🔄 [${config.name.toUpperCase()}_WORKER] Processing loop iteration ${loopIterations}, activeJobs: ${activeJobs}, totalProcessed: ${totalProcessed}, totalFailed: ${totalFailed}`);
+        }
+        
         // Actualizar heartbeat
         lastHeartbeat = Date.now();
         
         // Verificar jobs pendientes
-        const pendingJobs = await checkPendingJobs();
+        const pendingJobs = await checkPendingJobs(loopIterations);
+        
+        // Si hubo un error al verificar (retornó -1), esperar un poco y reintentar
+        if (pendingJobs === -1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          continue;
+        }
         
         if (pendingJobs === 0) {
           // No hay jobs, verificar si hay jobs fallidos que necesiten retry
           await retryFailedJobs();
           
+          // Log solo cada 50 iteraciones cuando no hay jobs
+          if (loopIterations % 50 === 0) {
+            console.log(`⏳ [${config.name.toUpperCase()}_WORKER] No pending jobs, waiting... (iteration ${loopIterations})`);
+          }
+          
           // Esperar un poco más
           await new Promise(resolve => setTimeout(resolve, 2000));
           continue;
+        }
+        
+        // Log cuando hay jobs pendientes
+        if (loopIterations % 10 === 0) {
+          console.log(`📋 [${config.name.toUpperCase()}_WORKER] Found ${pendingJobs} pending jobs, activeJobs: ${activeJobs}/${maxConcurrency}`);
         }
         
         // Verificar límite de concurrencia
@@ -240,14 +277,26 @@ export function createOptimizedWorker<T>(
         const job = await queueService.claimNextJob(queueName);
         
         if (!job) {
-          // No hay jobs disponibles, esperar un poco
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // No hay jobs disponibles, pero sabemos que hay pendientes
+          // Esto puede indicar un problema de race condition o que los jobs están siendo procesados por otro worker
+          if (loopIterations % 10 === 0 || pendingJobs > 0) {
+            console.log(`⚠️ [${config.name.toUpperCase()}_WORKER] No job available from claimNextJob but pending=${pendingJobs}. Possible race condition or jobs being processed by another worker.`);
+            // Verificar stats nuevamente para diagnóstico
+            const currentStats = await queueService.getQueueStats(queueName);
+            console.log(`🔍 [${config.name.toUpperCase()}_WORKER] Current queue stats: pending=${currentStats.pending}, processing=${currentStats.processing}, completed=${currentStats.completed}`);
+          }
+          await new Promise(resolve => setTimeout(resolve, 500)); // Reducir espera para reintentar más rápido
           continue;
         }
         
+        console.log(`✅ [${config.name.toUpperCase()}_WORKER] Claimed job ${job.id}, starting processing...`);
+        console.log(`📋 [${config.name.toUpperCase()}_WORKER] Job data:`, JSON.stringify(job.data, null, 2));
+        
         // Procesar job en paralelo
         activeJobs++;
-        processJob(job).finally(() => {
+        processJob(job).catch(error => {
+          console.error(`❌ [${config.name.toUpperCase()}_WORKER] Unhandled error processing job ${job.id}:`, error);
+        }).finally(() => {
           activeJobs--;
         });
         
@@ -271,6 +320,8 @@ export function createOptimizedWorker<T>(
         }
       }
     }
+    
+    console.log(`🛑 [${config.name.toUpperCase()}_WORKER] Processing loop stopped after ${loopIterations} iterations`);
   };
 
   // Función para reintentar jobs fallidos
@@ -316,6 +367,8 @@ export function createOptimizedWorker<T>(
         });
       }
 
+      console.log(`🚀 [${config.name.toUpperCase()}_WORKER] Starting to process job ${job.id}...`);
+      
       // Procesar el job con timeout
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Job timeout')), config.timeout || 300000);
@@ -324,8 +377,18 @@ export function createOptimizedWorker<T>(
       const jobPromise = processor(job as { id: string; data: T });
       
       await Promise.race([jobPromise, timeoutPromise]);
+      
+      console.log(`✅ [${config.name.toUpperCase()}_WORKER] Job ${job.id} processor completed successfully`);
           
       const processingTime = Date.now() - jobStartTime;
+      
+      // Marcar job como completado en la base de datos
+      try {
+        await queueService.markJobCompleted(job.id);
+      } catch (markError) {
+        console.error(`❌ [${config.name.toUpperCase()}_WORKER] Failed to mark job ${job.id} as completed:`, markError);
+      }
+      
       updateMetrics(config.name, true, processingTime);
       updateCircuitBreaker(config.name, true, config);
       
@@ -353,11 +416,27 @@ export function createOptimizedWorker<T>(
         console.error(`❌ [${config.name.toUpperCase()}_WORKER] Failed to mark job ${job.id} as failed:`, markError);
       }
           
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : 'N/A';
+      
+      // 🔍 DIAGNÓSTICO: Log detallado de errores
+      console.error(`\n❌ [${config.name.toUpperCase()}_WORKER] ========== JOB FAILURE DETAILS ==========`);
+      console.error(`❌ [${config.name.toUpperCase()}_WORKER] Job ID: ${job.id}`);
+      console.error(`❌ [${config.name.toUpperCase()}_WORKER] Job Data:`, JSON.stringify(job.data, null, 2));
+      console.error(`❌ [${config.name.toUpperCase()}_WORKER] Error Message: ${errorMessage}`);
+      console.error(`❌ [${config.name.toUpperCase()}_WORKER] Error Stack: ${errorStack}`);
+      console.error(`❌ [${config.name.toUpperCase()}_WORKER] Processing Time: ${processingTime}ms`);
+      console.error(`❌ [${config.name.toUpperCase()}_WORKER] Attempts: ${job.attempts || 1}`);
+      console.error(`❌ [${config.name.toUpperCase()}_WORKER] Total Failed: ${totalFailed}`);
+      console.error(`❌ [${config.name.toUpperCase()}_WORKER] Consecutive Failures: ${consecutiveErrors}`);
+      console.error(`❌ [${config.name.toUpperCase()}_WORKER] ===========================================\n`);
+      
       logWorkerEvent('error', config.name, `Job ${job.id} failed`, {
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage,
         processingTime,
         attempts: job.attempts || 1,
-        totalFailed
+        totalFailed,
+        consecutiveErrors
       });
           
       throw error;
@@ -396,6 +475,31 @@ export function createOptimizedWorker<T>(
       console.error(`❌ [${config.name.toUpperCase()}_WORKER] Error in health monitoring:`, error);
     }
   };
+
+  // Iniciar procesamiento continuo ANTES del return
+  console.log(`🚀 [${config.name.toUpperCase()}_WORKER] Initializing worker for queue: ${queueName}`);
+  console.log(`🚀 [${config.name.toUpperCase()}_WORKER] About to start processing loop...`);
+  
+  try {
+    processJobsContinuously().catch(error => {
+      console.error(`❌ [${config.name.toUpperCase()}_WORKER] Fatal error in job processing loop:`, error);
+      console.error(`❌ [${config.name.toUpperCase()}_WORKER] Stack:`, error instanceof Error ? error.stack : 'N/A');
+    });
+    console.log(`✅ [${config.name.toUpperCase()}_WORKER] Processing loop started successfully`);
+  } catch (error) {
+    console.error(`❌ [${config.name.toUpperCase()}_WORKER] Error starting processing loop:`, error);
+    console.error(`❌ [${config.name.toUpperCase()}_WORKER] Stack:`, error instanceof Error ? error.stack : 'N/A');
+  }
+
+  // Iniciar monitoreo de salud
+  try {
+    processingInterval = setInterval(monitorWorkerHealth, 5 * 60 * 1000); // Cada 5 minutos
+    console.log(`✅ [${config.name.toUpperCase()}_WORKER] Health monitoring started`);
+  } catch (error) {
+    console.error(`❌ [${config.name.toUpperCase()}_WORKER] Error starting health monitoring:`, error);
+  }
+  
+  console.log(`✅ [${config.name.toUpperCase()}_WORKER] Worker initialized and processing started`);
 
   // Retornar worker con métricas y estado
   return {
@@ -436,12 +540,4 @@ export function createOptimizedWorker<T>(
       };
     }
   };
-
-  // Iniciar procesamiento continuo
-  processJobsContinuously().catch(error => {
-    console.error(`❌ [${config.name.toUpperCase()}_WORKER] Error in job processing:`, error);
-  });
-
-  // Iniciar monitoreo de salud
-  processingInterval = setInterval(monitorWorkerHealth, 5 * 60 * 1000); // Cada 5 minutos
 } 

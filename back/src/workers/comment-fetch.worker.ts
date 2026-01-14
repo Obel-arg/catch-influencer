@@ -666,9 +666,8 @@ async function initializeWorker() {
         }
       };
       
-      // Iniciar el procesamiento automáticamente
-      
-      await postgresQueueService.process(commentFetchConfig.name, processCommentFetchJob);
+      // NO iniciar procesamiento aquí - el base.worker.ts ya maneja el procesamiento
+      // await postgresQueueService.process(commentFetchConfig.name, processCommentFetchJob);
       
       isInitialized = true;
       

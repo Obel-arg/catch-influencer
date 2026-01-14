@@ -122,10 +122,10 @@ const CampaignLoadingSkeleton = () => {
 };
 
 function CampaignDetailContent() {
-  const { campaign, loading, error } = useCampaignContext()
+  const { campaign, loading, error, influencersLoading, postsLoading } = useCampaignContext()
   const searchParams = useSearchParams()
   const { exportCampaign, isExporting, exportError } = useCampaignExport()
-  const { posts } = useCampaignPosts(campaign?.id || '')
+  const { posts, loading: postsLoadingFromHook } = useCampaignPosts(campaign?.id || '')
 
   // 🎯 NUEVO: Determinar tab inicial basado en parámetros de URL
   const getInitialView = (): ViewType => {
@@ -267,7 +267,15 @@ function CampaignDetailContent() {
                   variant="ghost"
                   size="sm"
                   className="h-7 gap-1 text-gray-500 hover:bg-gray-50 hover:text-gray-700"
-                  disabled={isExporting || !campaign || !posts}
+                  disabled={
+                    isExporting || 
+                    !campaign || 
+                    !posts || 
+                    loading || 
+                    influencersLoading || 
+                    postsLoading || 
+                    postsLoadingFromHook
+                  }
                 >
                   {isExporting ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
