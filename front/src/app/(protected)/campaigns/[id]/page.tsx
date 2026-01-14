@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, Suspense } from "react"
+import React, { useState, Suspense, useMemo, useEffect } from "react"
 import { useParams, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -122,7 +122,7 @@ const CampaignLoadingSkeleton = () => {
 };
 
 function CampaignDetailContent() {
-  const { campaign, loading, error, influencersLoading, postsLoading } = useCampaignContext()
+  const { campaign, loading, error, influencersLoading, postsLoading, influencers, posts: contextPosts } = useCampaignContext()
   const searchParams = useSearchParams()
   const { exportCampaign, isExporting, exportError } = useCampaignExport()
   const { posts, loading: postsLoadingFromHook } = useCampaignPosts(campaign?.id || '')
@@ -140,6 +140,44 @@ function CampaignDetailContent() {
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [isGeneratingLink, setIsGeneratingLink] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
+  
+  // 🎯 Verificar si TODOS los datos están completamente cargados
+  const isAllDataLoaded = useMemo(() => {
+    // Verificar que la campaña esté cargada y tenga datos esenciales
+    if (!campaign || loading) return false
+    
+    // Verificar que los influencers estén cargados (puede ser array vacío, pero debe estar cargado)
+    if (influencersLoading) return false
+    
+    // Verificar que los posts del contexto estén cargados
+    if (postsLoading) return false
+    
+    // Verificar que los posts del hook estén cargados
+    if (postsLoadingFromHook) return false
+    
+    // Verificar que tengamos posts disponibles (puede ser array vacío, pero debe estar definido)
+    if (!posts || posts === undefined) return false
+    
+    // Pequeño delay adicional para asegurar que los componentes hijos hayan terminado de renderizar
+    // Esto se maneja con un estado adicional
+    return true
+  }, [campaign, loading, influencersLoading, postsLoading, postsLoadingFromHook, posts])
+  
+  // Estado para rastrear si hemos esperado el tiempo suficiente después de que los datos se cargaron
+  const [dataReadyDelay, setDataReadyDelay] = useState(false)
+  
+  useEffect(() => {
+    if (isAllDataLoaded) {
+      // Esperar 5 segundos adicionales para asegurar que todos los componentes hijos hayan terminado de cargar
+      const timer = setTimeout(() => {
+        setDataReadyDelay(true)
+      }, 6000)
+      
+      return () => clearTimeout(timer)
+    } else {
+      setDataReadyDelay(false)
+    }
+  }, [isAllDataLoaded])
   
   // 🎯 Lógica de redirect: determinar URL de vuelta
   const getBackUrl = () => {
@@ -269,12 +307,15 @@ function CampaignDetailContent() {
                   className="h-7 gap-1 text-gray-500 hover:bg-gray-50 hover:text-gray-700"
                   disabled={
                     isExporting || 
+                    !isAllDataLoaded || 
+                    !dataReadyDelay ||
                     !campaign || 
-                    !posts || 
-                    loading || 
-                    influencersLoading || 
-                    postsLoading || 
-                    postsLoadingFromHook
+                    !posts
+                  }
+                  title={
+                    !isAllDataLoaded || !dataReadyDelay
+                      ? 'Cargando datos de la campaña...'
+                      : 'Exportar campaña'
                   }
                 >
                   {isExporting ? (
