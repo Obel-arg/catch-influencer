@@ -1276,7 +1276,13 @@ export function InfluencerProfilePanel({
               variant="ghost"
               size="sm"
               onClick={handleExportPDF}
-              disabled={isExportingPDF || isLoading}
+              disabled={
+                isExportingPDF ||
+                isLoading ||
+                loadingAudience ||
+                loadingGeneral ||
+                !audienceData
+              }
               className="h-8 gap-1.5"
             >
               {isExportingPDF ? (
