@@ -318,11 +318,31 @@ export const extractMetricsFromRawResponse = (post: InfluencerPost): {
     }
     if (platform === 'tiktok' && rawResponse.data?.basicTikTokVideo) {
       const tiktokData = rawResponse.data.basicTikTokVideo;
+      
+      // 🐛 FIX: TikTok uploadDate viene en milisegundos
+      // El timestamp 1766281936000 en milisegundos = 2025-12-21 (correcto)
+      // Si aparece 1970-01-21, significa que se dividió por 1000 en algún lugar
+      // Verificamos el tamaño del timestamp para determinar si está en milisegundos o segundos
+      let uploadDate: Date | null = null;
+      if (tiktokData.uploadDate) {
+        const timestamp = Number(tiktokData.uploadDate);
+        
+        // Si el timestamp es >= 1000000000000 (1 billón), está en milisegundos
+        // Si es < 1000000000000, podría estar en segundos
+        if (timestamp >= 1000000000000) {
+          // Timestamp está en milisegundos (correcto para TikTok)
+          uploadDate = new Date(timestamp);
+        } else {
+          // Timestamp está en segundos, convertir a milisegundos
+          uploadDate = new Date(timestamp * 1000);
+        }
+      }
+      
       return {
         likes: tiktokData.hearts || '...',
         comments: tiktokData.comments || '...',
         views: tiktokData.plays || '...',
-        uploadDate: tiktokData.uploadDate ? new Date(tiktokData.uploadDate) : null
+        uploadDate: uploadDate
       };
     }
 
