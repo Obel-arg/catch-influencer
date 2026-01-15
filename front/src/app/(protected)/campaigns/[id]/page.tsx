@@ -329,7 +329,7 @@ function CampaignDetailContent() {
                   {!isExporting && <ChevronDown className="h-3 w-3 ml-0.5" />}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuContent align="end" className="w-40 bg-white">
                 <DropdownMenuItem
                   onClick={() => handleExport('excel')}
                   className="cursor-pointer"
