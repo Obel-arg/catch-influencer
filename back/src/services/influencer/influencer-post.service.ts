@@ -124,14 +124,21 @@ export class InfluencerPostService {
     return influencerPost;
   }
 
-  async getInfluencerPostsByCampaign(campaignId: string, limit: number = 50, offset: number = 0): Promise<InfluencerPost[]> {
-    const { data: influencerPosts, error } = await supabase
+  async getInfluencerPostsByCampaign(campaignId: string, limit?: number, offset?: number): Promise<InfluencerPost[]> {
+    // 🚀 SIN LÍMITE: Traer todos los posts (Supabase tiene límite de 1000 por defecto)
+    let query = supabase
       .from('influencer_posts')
       .select('*, post_metrics(*)')
       .eq('campaign_id', campaignId)
       .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .order('created_at', { ascending: false });
+    
+    // Solo aplicar range si se especifica explícitamente
+    if (limit !== undefined && offset !== undefined) {
+      query = query.range(offset, offset + limit - 1);
+    }
+    
+    const { data: influencerPosts, error } = await query;
 
     if (error) throw error;
 
@@ -246,15 +253,22 @@ export class InfluencerPostService {
     return influencerPosts || [];
   }
 
-  async getInfluencerPostsWithMetrics(campaignId: string, limit: number = 50, offset: number = 0): Promise<any[]> {
+  async getInfluencerPostsWithMetrics(campaignId: string, limit?: number, offset?: number): Promise<any[]> {
     // First, get the influencer posts
-    const { data: influencerPosts, error: postsError } = await supabase
+    // 🚀 SIN LÍMITE: Traer todos los posts (Supabase tiene límite de 1000 por defecto)
+    let query = supabase
       .from('influencer_posts')
       .select('*')
       .eq('campaign_id', campaignId)
       .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .order('created_at', { ascending: false });
+    
+    // Solo aplicar range si se especifica explícitamente
+    if (limit !== undefined && offset !== undefined) {
+      query = query.range(offset, offset + limit - 1);
+    }
+    
+    const { data: influencerPosts, error: postsError } = await query;
 
     if (postsError) throw postsError;
 
