@@ -6,6 +6,8 @@ import { AutoScrapingService } from '../../services/scraping/auto-scraping.servi
 import { postTopicsService } from '../../services/post-topics.service';
 import { postgresCacheService } from '../../services/cache/postgres-cache.service';
 import { postgresQueueService } from '../../services/queues/postgres-queue.service';
+import { TikTokApiService } from '../../services/social/tiktok-api.service';
+import { SupabaseStorageService } from '../../services/supabase-storage.service';
 
 export class InfluencerPostsController {
   private influencerPostService = new InfluencerPostService();
@@ -26,6 +28,44 @@ export class InfluencerPostsController {
           postData.post_url,
           postData.platform,
         );
+      }
+
+      // 🎯 NUEVO: Si es un post de TikTok, descargar y subir miniatura a Supabase
+      if (
+        postData.platform?.toLowerCase() === 'tiktok' &&
+        (postData.post_url?.includes('tiktok.com') || postData.post_url?.includes('vm.tiktok.com'))
+      ) {
+        try {
+          console.log('🖼️ [TIKTOK-THUMBNAIL] Descargando miniatura de TikTok...');
+          
+          // Obtener la miniatura de TikTok
+          const thumbnailUrl = await TikTokApiService.getThumbnail(postData.post_url);
+          
+          if (thumbnailUrl) {
+            console.log('✅ [TIKTOK-THUMBNAIL] Miniatura obtenida:', thumbnailUrl);
+            
+            // Extraer video ID para el nombre del archivo
+            const videoIdMatch = postData.post_url.match(/video\/(\d+)/);
+            const videoId = videoIdMatch ? videoIdMatch[1] : Date.now().toString();
+            const fileName = `tiktok-${videoId}-${Date.now()}.jpg`;
+            
+            // Subir a Supabase Storage
+            const supabaseUrl = await SupabaseStorageService.uploadImageFromUrl(
+              thumbnailUrl,
+              fileName
+            );
+            
+            console.log('✅ [TIKTOK-THUMBNAIL] Miniatura subida a Supabase:', supabaseUrl);
+            
+            // Actualizar image_url con la URL de Supabase
+            postData.image_url = supabaseUrl;
+          } else {
+            console.warn('⚠️ [TIKTOK-THUMBNAIL] No se pudo obtener la miniatura de TikTok');
+          }
+        } catch (error) {
+          console.error('❌ [TIKTOK-THUMBNAIL] Error procesando miniatura:', error);
+          // Continuar con la creación del post aunque falle la miniatura
+        }
       }
 
       // 1. Crear el post (operación rápida)

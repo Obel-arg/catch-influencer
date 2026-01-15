@@ -487,37 +487,63 @@ export class PostMetricsService {
         updateData.caption = metrics.title;
       }
 
-      // Add image URL if available from raw_response
-      let imageUrl = null;
-      if (metrics.raw_response?.data?.basicInstagramPost?.imageUrl) {
-        imageUrl = metrics.raw_response.data.basicInstagramPost.imageUrl;
-      } else if (
-        metrics.raw_response?.data?.basicInstagramPost?.rawData?.displayUrl
-      ) {
-        imageUrl =
-          metrics.raw_response.data.basicInstagramPost.rawData.displayUrl;
-      } else if (metrics.platform_data?.imageUrl) {
-        imageUrl = metrics.platform_data.imageUrl;
-      } else if (metrics.raw_response?.data?.basicTikTokVideo?.cover) {
-        // 🎵 TikTok thumbnail from raw response
-        imageUrl = metrics.raw_response.data.basicTikTokVideo.cover;
-      } else if ((metrics as any).thumbnail_url) {
-        // 🎵 TikTok thumbnail from direct field
-        imageUrl = (metrics as any).thumbnail_url;
-      }
+      // 🎯 NUEVO: Verificar si el post ya tiene un image_url
+      // Para TikTok: nunca sobrescribir el image_url (ya se guardó en el controlador)
+      // Para otras plataformas: verificar si es de Supabase Storage antes de sobrescribir
+      const { data: existingPost } = await supabase
+        .from('influencer_posts')
+        .select('image_url, platform')
+        .eq('id', postId)
+        .single();
 
-      // For Instagram URLs, use proxy to avoid CORS issues
-      if (
-        imageUrl &&
-        (imageUrl.includes('instagram.com') ||
-          imageUrl.includes('fbcdn.net') ||
-          imageUrl.includes('cdninstagram.com'))
-      ) {
-        updateData.image_url = `https://images.weserv.nl/?url=${encodeURIComponent(
-          imageUrl,
-        )}&w=800&h=800&fit=cover&output=webp`;
-      } else if (imageUrl) {
-        updateData.image_url = imageUrl;
+      const isTikTok = existingPost?.platform?.toLowerCase() === 'tiktok';
+      const hasSupabaseImageUrl = existingPost?.image_url && 
+        (existingPost.image_url.includes('supabase.co') && 
+         existingPost.image_url.includes('/storage/v1/object/public/'));
+      const hasAnyImageUrl = !!existingPost?.image_url;
+
+      // Para TikTok: nunca sobrescribir el image_url (ya se procesó en el controlador)
+      // Para otras plataformas: solo actualizar si no hay URL de Supabase
+      if (isTikTok && hasAnyImageUrl) {
+        console.log(`✅ [SYNC] Post ${postId} es de TikTok y ya tiene image_url, no sobrescribiendo`);
+      } else if (!isTikTok && hasSupabaseImageUrl) {
+        console.log(`✅ [SYNC] Post ${postId} ya tiene image_url de Supabase, no sobrescribiendo`);
+      } else if (!isTikTok || !hasAnyImageUrl) {
+        // Solo actualizar image_url si:
+        // - No es TikTok, O
+        // - Es TikTok pero no tiene image_url aún (caso raro)
+        // Add image URL if available from raw_response
+        let imageUrl = null;
+        if (metrics.raw_response?.data?.basicInstagramPost?.imageUrl) {
+          imageUrl = metrics.raw_response.data.basicInstagramPost.imageUrl;
+        } else if (
+          metrics.raw_response?.data?.basicInstagramPost?.rawData?.displayUrl
+        ) {
+          imageUrl =
+            metrics.raw_response.data.basicInstagramPost.rawData.displayUrl;
+        } else if (metrics.platform_data?.imageUrl) {
+          imageUrl = metrics.platform_data.imageUrl;
+        } else if (metrics.raw_response?.data?.basicTikTokVideo?.cover && !isTikTok) {
+          // 🎵 TikTok thumbnail from raw response (solo si no es TikTok, porque para TikTok ya se procesó)
+          imageUrl = metrics.raw_response.data.basicTikTokVideo.cover;
+        } else if ((metrics as any).thumbnail_url && !isTikTok) {
+          // 🎵 TikTok thumbnail from direct field (solo si no es TikTok)
+          imageUrl = (metrics as any).thumbnail_url;
+        }
+
+        // For Instagram URLs, use proxy to avoid CORS issues
+        if (
+          imageUrl &&
+          (imageUrl.includes('instagram.com') ||
+            imageUrl.includes('fbcdn.net') ||
+            imageUrl.includes('cdninstagram.com'))
+        ) {
+          updateData.image_url = `https://images.weserv.nl/?url=${encodeURIComponent(
+            imageUrl,
+          )}&w=800&h=800&fit=cover&output=webp`;
+        } else if (imageUrl) {
+          updateData.image_url = imageUrl;
+        }
       }
 
       const { error } = await supabase
