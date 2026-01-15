@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react"
-import { ChevronDown, ChevronRight, Calendar, FileSpreadsheet } from "lucide-react"
+import { ChevronDown, ChevronRight, Calendar } from "lucide-react"
 import { ContentItem, TimelineColumn, ZoomLevel } from "../types"
 import { GanttHeader } from "./GanttHeader"
 import { GanttRow } from "./GanttRow"
@@ -86,15 +86,6 @@ export const GanttView = ({
             <p className="text-gray-500 text-center mb-6 max-w-md">
               Comienza a planificar tu campaña agregando contenido manualmente o importando desde Excel
             </p>
-            <div className="flex gap-3">
-              <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                Agregar Contenido
-              </button>
-              <button className="px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-300 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-2">
-                <FileSpreadsheet className="w-4 h-4" />
-                Importar Excel
-              </button>
-            </div>
           </div>
         ) : (
           Object.entries(groupedContent).map(([influencerId, items]) => (
