@@ -8,10 +8,12 @@ import { postgresCacheService } from '../../services/cache/postgres-cache.servic
 import { postgresQueueService } from '../../services/queues/postgres-queue.service';
 import { TikTokApiService } from '../../services/social/tiktok-api.service';
 import { SupabaseStorageService } from '../../services/supabase-storage.service';
+import { PostImageUrlService } from '../../services/post-image-urls/post-image-urls.service';
 
 export class InfluencerPostsController {
   private influencerPostService = new InfluencerPostService();
   private postMetricsService = new PostMetricsService();
+  private postImageUrlService = new PostImageUrlService();
 
   // Control de concurrencia para análisis de temas
   private topicAnalysisInProgress = new Set<string>();
@@ -72,6 +74,20 @@ export class InfluencerPostsController {
       const newPost = await this.influencerPostService.createInfluencerPost(
         postData,
       );
+
+      // 1.1. Si el post tiene image_url, guardarlo también en la tabla post_image_urls
+      if (newPost.image_url) {
+        try {
+          await this.postImageUrlService.upsertPostImageUrl({
+            post_id: newPost.id,
+            image_url: newPost.image_url,
+          });
+          console.log(`✅ [POST-CREATION] Image URL saved to post_image_urls for post ${newPost.id}`);
+        } catch (error) {
+          console.error('❌ [POST-CREATION] Error saving image URL to post_image_urls:', error);
+          // No fallar la creación del post si falla guardar en post_image_urls
+        }
+      }
 
       // 2. Respuesta inmediata al usuario
       const responseTime = Date.now() - startTime;

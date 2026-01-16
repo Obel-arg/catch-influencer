@@ -35,6 +35,14 @@ export interface InfluencerPost {
     engagement_rate?: number;
     raw_response?: any;
   };
+  post_image_urls?: {
+    id: string;
+    post_id: string;
+    image_url: string;
+    storage_provider?: string;
+    created_at: string;
+    updated_at: string;
+  };
   influencers?: {
     id: string;
     name: string;

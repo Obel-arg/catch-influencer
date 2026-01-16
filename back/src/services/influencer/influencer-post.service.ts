@@ -17,7 +17,7 @@ export class InfluencerPostService {
   }
 
   /**
-   * Helper method to enrich posts with influencer data
+   * Helper method to enrich posts with influencer data and normalize post_image_urls
    */
   private async enrichPostsWithInfluencers(posts: any[]): Promise<any[]> {
     if (!posts || posts.length === 0) {
@@ -26,6 +26,14 @@ export class InfluencerPostService {
 
     // Normalize post_metrics first
     posts = this.normalizePostMetrics(posts);
+
+    // Normalize post_image_urls (Supabase returns as array, but we need single object)
+    posts = posts.map(post => {
+      if (post.post_image_urls && Array.isArray(post.post_image_urls)) {
+        post.post_image_urls = post.post_image_urls[0] || null;
+      }
+      return post;
+    });
 
     // Get unique influencer IDs
     const influencerIds = [...new Set(posts.map(post => post.influencer_id).filter(Boolean))];
@@ -128,7 +136,7 @@ export class InfluencerPostService {
     // 🚀 SIN LÍMITE: Traer todos los posts (Supabase tiene límite de 1000 por defecto)
     let query = supabase
       .from('influencer_posts')
-      .select('*, post_metrics(*)')
+      .select('*, post_metrics(*), post_image_urls(*)')
       .eq('campaign_id', campaignId)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
@@ -149,7 +157,7 @@ export class InfluencerPostService {
   async getInfluencerPostsByInfluencer(influencerId: string, limit: number = 50, offset: number = 0): Promise<InfluencerPost[]> {
     const { data: influencerPosts, error } = await supabase
       .from('influencer_posts')
-      .select('*, post_metrics(*)')
+      .select('*, post_metrics(*), post_image_urls(*)')
       .eq('influencer_id', influencerId)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -164,7 +172,7 @@ export class InfluencerPostService {
   async getInfluencerPostsByCampaignAndInfluencer(campaignId: string, influencerId: string, limit: number = 50, offset: number = 0): Promise<InfluencerPost[]> {
     const { data: influencerPosts, error } = await supabase
       .from('influencer_posts')
-      .select('*, post_metrics(*)')
+      .select('*, post_metrics(*), post_image_urls(*)')
       .eq('campaign_id', campaignId)
       .eq('influencer_id', influencerId)
       .is('deleted_at', null)
@@ -281,13 +289,17 @@ export class InfluencerPostService {
     const postIds = influencerPosts.map(post => post.id);
     const influencerIds = [...new Set(influencerPosts.map(post => post.influencer_id).filter(Boolean))];
 
-    // Fetch metrics and influencers in parallel
-    const [metricsResult, influencersResult] = await Promise.all([
+    // Fetch metrics, image URLs, and influencers in parallel
+    const [metricsResult, imageUrlsResult, influencersResult] = await Promise.all([
       supabase
         .from('post_metrics')
         .select('post_id, likes_count, comments_count, views_count, engagement_rate, raw_response, created_at')
         .in('post_id', postIds)
         .order('created_at', { ascending: false }),
+      supabase
+        .from('post_image_urls')
+        .select('post_id, image_url, storage_provider, created_at, updated_at')
+        .in('post_id', postIds),
       influencerIds.length > 0
         ? supabase
             .from('influencers')
@@ -297,10 +309,15 @@ export class InfluencerPostService {
     ]);
 
     const { data: postMetrics, error: metricsError } = metricsResult;
+    const { data: postImageUrls, error: imageUrlsError } = imageUrlsResult;
     const { data: influencers, error: influencersError } = influencersResult;
 
     if (metricsError) {
       console.warn('Error fetching post metrics:', metricsError);
+    }
+
+    if (imageUrlsError) {
+      console.warn('Error fetching post image URLs:', imageUrlsError);
     }
 
     if (influencersError) {
@@ -315,16 +332,23 @@ export class InfluencerPostService {
       }
     });
 
+    // Create a map of post_id to image URL
+    const imageUrlsMap = new Map();
+    (postImageUrls || []).forEach(imageUrl => {
+      imageUrlsMap.set(imageUrl.post_id, imageUrl);
+    });
+
     // Create a map of influencer_id to influencer data
     const influencersMap = new Map();
     (influencers || []).forEach(influencer => {
       influencersMap.set(influencer.id, influencer);
     });
 
-    // Combine posts with their metrics and influencer data
+    // Combine posts with their metrics, image URLs, and influencer data
     const transformedPosts = influencerPosts.map(post => ({
       ...post,
       post_metrics: metricsMap.get(post.id) || null,
+      post_image_urls: imageUrlsMap.get(post.id) || null,
       influencers: influencersMap.get(post.influencer_id) || null
     }));
 

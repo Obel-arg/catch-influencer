@@ -5,6 +5,7 @@ import { TikTokMetricsService } from '../tiktok/tiktok-metrics.service';
 import { TwitterMetricsService } from '../twitter/twitter-metrics.service';
 import { InstagramMetricsService } from '../instagram/instagram-metrics.service';
 import { postgresCacheService } from '../cache/postgres-cache.service';
+import { PostImageUrlService } from '../../services/post-image-urls/post-image-urls.service';
 
 // Interface que coincide exactamente con la tabla del usuario
 interface UserPostMetrics {
@@ -550,6 +551,21 @@ export class PostMetricsService {
         .from('influencer_posts')
         .update(updateData)
         .eq('id', postId);
+
+      // Si se actualizó image_url, también guardarlo en post_image_urls
+      if (updateData.image_url) {
+        try {
+          const postImageUrlService = new PostImageUrlService();
+          await postImageUrlService.upsertPostImageUrl({
+            post_id: postId,
+            image_url: updateData.image_url,
+          });
+          console.log(`✅ [SYNC] Image URL saved to post_image_urls for post ${postId}`);
+        } catch (error) {
+          console.error('❌ [SYNC] Error saving image URL to post_image_urls:', error);
+          // No fallar la sincronización si falla guardar en post_image_urls
+        }
+      }
 
       if (error) {
         console.error(

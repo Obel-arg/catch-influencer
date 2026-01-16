@@ -524,6 +524,11 @@ const isBlobUrl = (url: string): boolean => {
  * @returns URL de la imagen a mostrar
  */
 export const getImageUrl = async (post: any): Promise<string> => {
+  // Prioridad 0: Si existe post_image_urls (nueva tabla), usarla primero
+  // Solo si también tiene post_url (según requerimiento del usuario)
+  if (post.post_url && post.post_image_urls?.image_url) {
+    return post.post_image_urls.image_url;
+  }
 
   if (post.platform?.toLowerCase() === 'instagram') {
     // Prioridad 1: Si hay image_url (puede ser blob, proxy o directa), usarla
@@ -553,6 +558,7 @@ export const getImageUrl = async (post: any): Promise<string> => {
     return '';
   } else if (post.platform?.toLowerCase() === 'tiktok') {
     // Prioridad 1: Si hay image_url (puede ser blob, proxy o directa), usarla
+    // (post_image_urls ya se verificó arriba)
     if (post.image_url) {
       return post.image_url;
     }
